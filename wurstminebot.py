@@ -41,12 +41,12 @@ def config(key=None, default_value=None):
         return j
     return j.get(key, default_value)
 
-ASSETS = '/home/wurstmineberg/wmb.de/httpdocs/assets/serverstatus'
+ASSETS = '/var/www/wurstmineberg.de/assets/serverstatus'
 DEATHTWEET = True
 DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
-LOGDIR = '/home/wurstmineberg/mclog'
-SCRIPTS = '/home/wurstmineberg/scripts'
+LOGDIR = '/opt/wurstmineberg/log'
+SCRIPTS = '/opt/wurstmineberg/bin'
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['nick'], ssl=config('irc')['ssl'])
 botops = [None] + config('irc')['op_nicks']
