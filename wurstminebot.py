@@ -18,8 +18,8 @@ import deaths
 from docopt import docopt
 from ircbotframe import ircBot
 import json
-import minecraft2 as minecraft
-import nicksub2 as nicksub
+import minecraft
+import nicksub
 import random
 import re
 import select
