@@ -415,7 +415,7 @@ def endMOTD(sender, headers, message):
 bot.bind('376', endMOTD)
 
 def action(sender, headers, message):
-    if sender == botNick:
+    if sender == config('irc')['nick']:
         return
     if headers[0] == config('irc')['main_channel']:
         minecraft.say('* ' + nicksub.sub(sender, 'irc', 'minecraft') + ' ' + nicksub.textsub(message, 'irc', 'minecraft'))
@@ -430,8 +430,8 @@ def privmsg(sender, headers, message):
     if sender == config('irc')['nick']:
         return
     if headers[0].startswith('#'):
-        if message.startswith(botNick + ': ') or message.startswith(botNick + ', '):
-            cmd = message[len(botNick) + 2:].split(' ')
+        if message.startswith(config('irc')['nick'] + ': ') or message.startswith(config('irc')['nick'] + ', '):
+            cmd = message[len(config('irc')['nick']) + 2:].split(' ')
             if len(cmd):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif message.startswith('!'):
