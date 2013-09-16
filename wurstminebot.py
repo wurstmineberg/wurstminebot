@@ -31,7 +31,7 @@ from datetime import timedelta
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='wurstminebot 1.0.1')
+    arguments = docopt(__doc__, version='wurstminebot 1.0.2')
     CONFIG_FILE = arguments['--config']
 
 def config(key=None, default_value=None):
@@ -427,7 +427,7 @@ def privmsg(sender, headers, message):
         bot.say(config('irc')['main_channel'], msg)
         minecraft.say(msg)
     
-    if sender == botNick:
+    if sender == config('irc')['nick']:
         return
     if headers[0].startswith('#'):
         if message.startswith(botNick + ': ') or message.startswith(botNick + ', '):
