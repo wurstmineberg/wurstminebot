@@ -31,7 +31,7 @@ from datetime import timedelta
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='wurstminebot 1.0.0')
+    arguments = docopt(__doc__, version='wurstminebot 1.0.1')
     CONFIG_FILE = arguments['--config']
 
 def config(key=None, default_value=None):
@@ -48,7 +48,7 @@ LASTDEATH = ''
 LOGDIR = '/opt/wurstmineberg/log'
 SCRIPTS = '/opt/wurstmineberg/bin'
 
-bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['nick'], ssl=config('irc')['ssl'])
+bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 botops = [None] + config('irc')['op_nicks']
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
