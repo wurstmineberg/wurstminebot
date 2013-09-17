@@ -456,9 +456,11 @@ def privmsg(sender, headers, message):
             if len(cmd):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif headers[0] == config('irc')['main_channel']:
-            minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
             if re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
+                minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': message, 'color': 'aqua', 'clickEvent': {'action': 'open_url', 'value': message}}]})
                 command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=tweetpaste)
+            else:
+                minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
     else:
         cmd = message.split(' ')
         if len(cmd):
