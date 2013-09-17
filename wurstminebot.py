@@ -126,10 +126,10 @@ class InputLoop(threading.Thread):
                                 with open(LOGDIR + '/logins.log', 'a') as loginslog:
                                     print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
                                 if joined:
-                                    welcomeMessages = ['I warmed your pickaxe for you.', 'Please don’t make a mess again.', 'Nice to see you haven’t given up. Yet.', 'Check out the new biomes!']
+                                    welcomeMessages = ['I warmed your pickaxe for you.', "Please don't make a mess again.", "Nice to see you haven't given up. Yet.", 'Check out the new biomes!']
                                     if player in ['BenemitC', 'Farthen08', 'naturalismus']:
                                         welcomeMessages += ['Big Brother is watching you.']
-                                    minecraft.command('tell', [player, 'Hello ' + player + '. ' + random.choice(welcomeMessages)])
+                                    minecraft.tellraw({'text': 'Hello ' + player + '. ' + random.choice(welcomeMessages), 'color': 'gray'}, player)
                                 bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                                 minecraft.update_status()
                                 threading.Thread(target=_delayed_update).start()
