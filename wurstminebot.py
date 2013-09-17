@@ -157,12 +157,13 @@ class InputLoop(threading.Thread):
                                             tweet_request = twitter.request('statuses/update', {'status': tweet})
                                             if 'id' in tweet_request.json():
                                                 twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
+                                                minecraft.tellraw({'text': 'Your fail has been reported. Congratulations.', 'color': 'gold', 'clickEvent': {'action': 'open_url', 'value': twid}})
                                             else:
                                                 twid = 'error ' + str(tweet_request.status_code)
-                                            minecraft.say('Your fail has been reported. Congratulations.')
+                                                minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because of '}, {'text': 'reasons', 'hoverEvent': {'action': 'show_text', 'value': str(tweet_request.status_code)}}, {'text': '.'}]})
                                         else:
                                             twid = 'too long for twitter'
-                                            minecraft.say('Your fail has §onot§r been reported because it was too long.')
+                                            minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
                                     else:
                                         twid = 'deathtweets are diabled'
                                     bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
@@ -176,7 +177,22 @@ class TimeLoop(threading.Thread):
             time.sleep(3601 - time.time() % 3600)
             telltime(comment=True)
 
-def telltime(func=minecraft.say, comment=False, restart=False):
+def telltime(func=None, comment=False, restart=False):
+    if func is None:
+        def func(msg):
+            for line in msg.splitlines():
+                minecraft.tellraw({'text': line, 'color': 'gold'})
+        
+        custom_func = False
+    else
+        custom_func = True
+    def warning(msg):
+        if custom_func:
+            func(msg)
+        else:
+            for line in msg.splitlines():
+                minecraft.tellraw({'text': line, 'color': 'red'})
+    
     global DST
     localnow = datetime.now()
     utcnow = datetime.utcnow()
@@ -205,15 +221,15 @@ def telltime(func=minecraft.say, comment=False, restart=False):
         elif localnow.hour == 4:
             func('Getting pretty late, huh?')
         elif localnow.hour == 5:
-            func('It is really getting late. You should go to sleep.')
+            warning('It is really getting late. You should go to sleep.')
         elif localnow.hour == 6:
             func('Are you still going, just starting or asking yourself the same thing?')
         elif localnow.hour == 11 and localnow.minute < 5 and restart:
             populated = bool(len(minecraft.online_players()))
             if populated:
-                func('The server is going to restart in 5 minutes.')
+                warning('The server is going to restart in 5 minutes.')
                 time.sleep(240)
-                func('The server is going to restart in 60 seconds.')
+                warning('The server is going to restart in 60 seconds.')
                 time.sleep(50)
             minecraft.stop()
             time.sleep(30)
@@ -236,7 +252,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
                 else:
                     bot.say(sender, msg)
             elif context == 'minecraft':
-                minecraft.say(sender + ': ' + msg)
+                minecraft.tellraw({'text': msg, 'color': 'gold'}, sender)
             elif context == 'console':
                 print(msg)
     
@@ -308,7 +324,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
                     tweet_author = '<@' + request.json()['user']['screen_name'] + ' RT @' + retweeted_request.json()['user']['screen_name'] + '> '
                 else:
                     tweet_author = '<@' + request.json()['user']['screen_name'] + '> '
-                reply(tweet_author + re.sub('\n', ' ', request.json()['text']) + ((' [https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str'] + ']') if link else ''))
+                reply(tweet_author + request.json()['text'] + ((' [https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str'] + ']') if link else ''))
             else:
                 reply('Error ' + str(request.status_code))
         else:
@@ -321,7 +337,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
         if isbotop:
             quitMsg = ' '.join(args) if len(args) else None
             if context != 'minecraft':
-                minecraft.say(('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...')
+                minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
             if (context != 'irc') or (chan is None):
                 bot.say(config('irc')['main_channel'], ('brb, ' + quitMsg) if quitMsg else random.choice(['Please wait while I reinstall the universe.', 'brb', 'Please hang tight, I seem to have exploded.']))
             bot.disconnect(quitMsg if quitMsg else 'brb')
@@ -408,7 +424,7 @@ def endMOTD(sender, headers, message):
         print('joining ' + chan) #DEBUG
         bot.joinchan(chan)
     bot.say(config('irc')['main_channel'], "aaand I'm back.")
-    minecraft.say("aaand I'm back.")
+    minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
     print("aaand I'm back.") #DEBUG
     InputLoop().start()
 
@@ -423,9 +439,10 @@ def action(sender, headers, message):
 bot.bind('ACTION', action)
 
 def privmsg(sender, headers, message):
-    def sayboth(msg):
-        bot.say(config('irc')['main_channel'], msg)
-        minecraft.say(msg)
+    def tweetpaste(msg):
+        for line in msg.splitlines():
+            bot.say(config('irc')['main_channel'], line)
+            minecraft.tellraw({'text': line, 'color': 'gold'})
     
     if sender == config('irc')['nick']:
         return
@@ -441,7 +458,7 @@ def privmsg(sender, headers, message):
         elif headers[0] == config('irc')['main_channel']:
             minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
             if re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
-                command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=sayboth)
+                command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=tweetpaste)
     else:
         cmd = message.split(' ')
         if len(cmd):
