@@ -322,9 +322,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
                 if 'retweeted_status' in request.json():
                     retweeted_request = twitter.request('statuses/show', {'id': request.json()['retweeted_status']['id']})
                     tweet_author = '<@' + request.json()['user']['screen_name'] + ' RT @' + retweeted_request.json()['user']['screen_name'] + '> '
+                    text = retweeted_request.json()['text']
                 else:
                     tweet_author = '<@' + request.json()['user']['screen_name'] + '> '
-                reply(tweet_author + request.json()['text'] + ((' [https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str'] + ']') if link else ''))
+                    text = request.json()['text']
+                reply(tweet_author + text + ((' [https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str'] + ']') if link else ''))
             else:
                 reply('Error ' + str(request.status_code))
         else:
