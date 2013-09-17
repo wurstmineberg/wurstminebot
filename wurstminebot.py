@@ -184,7 +184,7 @@ def telltime(func=None, comment=False, restart=False):
                 minecraft.tellraw({'text': line, 'color': 'gold'})
         
         custom_func = False
-    else
+    else:
         custom_func = True
     def warning(msg):
         if custom_func:
