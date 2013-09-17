@@ -418,7 +418,7 @@ def action(sender, headers, message):
     if sender == config('irc')['nick']:
         return
     if headers[0] == config('irc')['main_channel']:
-        minecraft.say('* ' + nicksub.sub(sender, 'irc', 'minecraft') + ' ' + nicksub.textsub(message, 'irc', 'minecraft'))
+        minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
 
 bot.bind('ACTION', action)
 
@@ -439,7 +439,7 @@ def privmsg(sender, headers, message):
             if len(cmd):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif headers[0] == config('irc')['main_channel']:
-            minecraft.say('<' + nicksub.sub(sender, 'irc', 'minecraft') + '> ' + nicksub.textsub(message, 'irc', 'minecraft'))
+            minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
             if re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
                 command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=sayboth)
     else:
