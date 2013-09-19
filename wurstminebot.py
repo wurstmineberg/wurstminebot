@@ -37,8 +37,8 @@ if __name__ == '__main__':
 def config(key=None, default_value=None):
     default_config = {
         'comment_lines': {
-            'death': [],
-            'server_join': []
+            'death': ['Well done.'],
+            'server_join': ['']
         },
         'irc': {
             'channels': [],
@@ -143,7 +143,7 @@ class InputLoop(threading.Thread):
                                 with open(LOGDIR + '/logins.log', 'a') as loginslog:
                                     print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
                                 if joined:
-                                    welcomeMessages = ['I warmed your pickaxe for you.', "Please don't make a mess again.", "Nice to see you haven't given up. Yet.", 'Check out the new biomes!']
+                                    welcomeMessages = config('comment_lines').get('server_join', [''])
                                     if player in ['BenemitC', 'Farthen08', 'naturalismus']:
                                         welcomeMessages += ['Big Brother is watching you.']
                                     minecraft.tellraw({'text': 'Hello ' + player + '. ' + random.choice(welcomeMessages), 'color': 'gray'}, player)
@@ -165,7 +165,7 @@ class InputLoop(threading.Thread):
                                         if message == LASTDEATH:
                                             comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
                                         else:
-                                            comment = ' … ' + random.choice(["It's funny because it's true.", 'INSERT CHEECKY RESPONSE.', 'Like a bauhu5.', 'Like a champ.', "I've never been so proud."])
+                                            comment = ' … ' + random.choice(config('comment_lines').get('death', ['Well done.']))
                                         LASTDEATH = message
                                         tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
                                         if len(tweet + comment) <= 140:
