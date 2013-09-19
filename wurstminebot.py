@@ -35,11 +35,28 @@ if __name__ == '__main__':
     CONFIG_FILE = arguments['--config']
 
 def config(key=None, default_value=None):
-    with open(CONFIG_FILE) as config_file:
-        j = json.load(config_file)
+    default_config = {
+        'comment_lines': {
+            'death': [],
+            'server_join': []
+        },
+        'irc': {
+            'channels': [],
+            'op_nicks': [],
+            'password': '',
+            'port': 6667,
+            'ssl': False
+        },
+        'twitter': {}
+    }
+    try:
+        with open(CONFIG_FILE) as config_file:
+            j = json.load(config_file)
+    except:
+        j = default_config
     if key is None:
         return j
-    return j.get(key, default_value)
+    return j.get(key, default_config.get(key)) if default_value is None else j.get(key, default_value)
 
 ASSETS = '/var/www/wurstmineberg.de/assets/serverstatus'
 DEATHTWEET = True
