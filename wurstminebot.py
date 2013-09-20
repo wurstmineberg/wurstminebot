@@ -166,7 +166,12 @@ class InputLoop(threading.Thread):
                                         if message == LASTDEATH:
                                             comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
                                         else:
-                                            comment = ' … ' + random.choice(config('comment_lines').get('death', ['Well done.']))
+                                            death_comments = config('comment_lines').get('death', ['Well done.'])
+                                            if deathid == 7: # was blown up by Creeper
+                                                death_comments.append('Creepers gonna creep.')
+                                            if deathid == 28: # was slain by Zombie
+                                                death_comments.append('Zombies gonna zomb.')
+                                            comment = ' … ' + random.choice(death_comments)
                                         LASTDEATH = message
                                         tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
                                         if len(tweet + comment) <= 140:
