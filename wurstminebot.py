@@ -47,6 +47,7 @@ def config(key=None, default_value=None):
             'port': 6667,
             'ssl': False
         },
+        'paths': {},
         'twitter': {}
     }
     try:
