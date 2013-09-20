@@ -190,6 +190,7 @@ class InputLoop(threading.Thread):
                                     else:
                                         twid = 'deathtweets are diabled'
                                     bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
+                                    break
 
 class TimeLoop(threading.Thread):
     def run(self):
