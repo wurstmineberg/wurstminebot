@@ -67,7 +67,6 @@ LOGDIR = '/opt/wurstmineberg/log'
 SCRIPTS = '/opt/wurstmineberg/bin'
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
-botops = [None] + config('irc')['op_nicks']
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
@@ -280,7 +279,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
             elif context == 'console':
                 print(msg)
     
-    isbotop = nicksub.sub(sender, context, 'irc', strict=False) in botops
+    isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
     if cmd == 'command':
         # perform Minecraft server command
         if isbotop:
