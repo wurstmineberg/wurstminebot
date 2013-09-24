@@ -450,7 +450,8 @@ def endMOTD(sender, headers, message):
         bot.joinchan(chan)
     bot.say(config('irc')['main_channel'], "aaand I'm back.")
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
-    print("aaand I'm back.") #DEBUG
+    minecraft.update_status()
+    threading.Thread(target=_delayed_update).start()
     InputLoop().start()
 
 bot.bind('376', endMOTD)
