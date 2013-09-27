@@ -31,7 +31,7 @@ from datetime import timedelta
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='wurstminebot 1.0.3')
+    arguments = docopt(__doc__, version='wurstminebot 1.0.4')
     CONFIG_FILE = arguments['--config']
 
 def config(key=None, default_value=None):
@@ -40,6 +40,7 @@ def config(key=None, default_value=None):
             'death': ['Well done.'],
             'server_join': ['']
         },
+        'debug': False,
         'irc': {
             'channels': [],
             'op_nicks': [],
@@ -495,5 +496,6 @@ def privmsg(sender, headers, message):
 bot.bind('PRIVMSG', privmsg)
 
 if __name__ == '__main__':
+    bot.debugging(config('debug'))
     bot.start()
     TimeLoop().start()
