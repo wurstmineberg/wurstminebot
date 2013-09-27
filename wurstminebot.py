@@ -31,7 +31,7 @@ from datetime import timedelta
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='wurstminebot 1.0.4')
+    arguments = docopt(__doc__, version='wurstminebot 1.0.5')
     CONFIG_FILE = arguments['--config']
 
 def config(key=None, default_value=None):
@@ -396,7 +396,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
                     reply('Online players: ' + ', '.join(map(lambda nick: nicksub.sub(nick, 'minecraft', context), players)))
                 else:
                     reply('The server is currently empty.')
-            reply('Minecraft version ' + minecraft.version())
+            version = minecraft.version()
+            if version is None:
+                reply('unknown Minecraft version')
+            else:
+                reply('Minecraft version ' + str(minecraft.version()))
         else:
             reply('The server is currently offline.')
     elif cmd == 'stop':
