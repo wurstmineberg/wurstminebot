@@ -34,6 +34,10 @@ if __name__ == '__main__':
     arguments = docopt(__doc__, version='wurstminebot 1.0.5')
     CONFIG_FILE = arguments['--config']
 
+def _debug_print(msg):
+    if config('debug'):
+        print('DEBUG] ' + msg)
+
 def config(key=None, default_value=None):
     default_config = {
         'comment_lines': {
@@ -118,6 +122,7 @@ class InputLoop(threading.Thread):
                 except KeyboardInterrupt as e:
                     command(None, None, 'quit', ['KeyboardInterrupt'], context='console')
                     break
+                _debug_print('[logpipe] ' + logLine)
                 else:
                     match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\] \\* (' + minecraft.regexes.player + ') (.*)', logLine)
                     if match:
@@ -280,6 +285,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
             elif context == 'console':
                 print(msg)
     
+    _debug_print('[command] [' + context + '] ' + (('<' + sender + '> ') if sender else '') + cmd + ' ' + ' '.join(args))
     isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
     if cmd == 'command':
         # perform Minecraft server command
@@ -451,10 +457,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
 
 def endMOTD(sender, headers, message):
     for chan in config('irc')['channels']:
-        print('joining ' + chan) #DEBUG
         bot.joinchan(chan)
     bot.say(config('irc')['main_channel'], "aaand I'm back.")
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
+    _debug_print("aaand I'm back.")
     minecraft.update_status()
     threading.Thread(target=_delayed_update).start()
     InputLoop().start()
@@ -475,6 +481,7 @@ def privmsg(sender, headers, message):
             bot.say(config('irc')['main_channel'], line)
             minecraft.tellraw({'text': line, 'color': 'gold'})
     
+    _debug_print('[irc] <' + sender + '> ' + message)
     if sender == config('irc')['nick']:
         return
     if headers[0].startswith('#'):
