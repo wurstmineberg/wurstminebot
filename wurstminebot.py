@@ -122,8 +122,8 @@ class InputLoop(threading.Thread):
                 except KeyboardInterrupt as e:
                     command(None, None, 'quit', ['KeyboardInterrupt'], context='console')
                     break
-                _debug_print('[logpipe] ' + logLine)
                 else:
+                    _debug_print('[logpipe] ' + logLine)
                     match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\] \\* (' + minecraft.regexes.player + ') (.*)', logLine)
                     if match:
                         # action
