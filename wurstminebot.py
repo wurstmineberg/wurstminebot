@@ -124,13 +124,13 @@ class InputLoop(threading.Thread):
                     break
                 else:
                     _debug_print('[logpipe] ' + logLine)
-                    match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\] \\* (' + minecraft.regexes.player + ') (.*)', logLine)
+                    match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)', logLine)
                     if match:
                         # action
                         player, message = match.group(1, 2)
                         bot.say(config('irc')['main_channel'], '* ' + nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc'))
                     else:
-                        match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\] <(' + minecraft.regexes.player + ')> (.*)', logLine)
+                        match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)', logLine)
                         if match:
                             player, message = match.group(1, 2)
                             if message.startswith('!') and len(message) > 1:
@@ -141,7 +141,7 @@ class InputLoop(threading.Thread):
                                 # chat message
                                 bot.say(config('irc')['main_channel'], '<' + nicksub.sub(player, 'minecraft', 'irc') + '> ' + nicksub.textsub(message, 'minecraft', 'irc'))
                         else:
-                            match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\] (' + minecraft.regexes.player + ') (left|joined) the game', logLine)
+                            match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game', logLine)
                             if match:
                                 # join/leave
                                 timestamp, player = match.group(1, 2)
@@ -158,7 +158,7 @@ class InputLoop(threading.Thread):
                                 threading.Thread(target=_delayed_update).start()
                             else:
                                 for deathid, death in enumerate(deaths.regexes):
-                                    match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\] (' + minecraft.regexes.player + ') ' + death + '$', logLine)
+                                    match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
                                     if not match:
                                         continue
                                     # death
