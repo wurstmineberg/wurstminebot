@@ -12,6 +12,10 @@ Options:
   --version          Print version info and exit.
 """
 
+import sys
+
+sys.path.append('/opt/py')
+
 from TwitterAPI import TwitterAPI
 from datetime import datetime
 import deaths
@@ -24,7 +28,6 @@ import random
 import re
 import select
 import subprocess
-import sys
 import threading
 import time
 from datetime import timedelta
