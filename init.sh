@@ -12,7 +12,7 @@
 ### END INIT INFO
 
 start() {
-    start-stop-daemon --start --exec /opt/wurstmineberg/bin/wurstminebot
+    start-stop-daemon --start --background --exec /opt/wurstmineberg/bin/wurstminebot
 }
 
 stop() {
