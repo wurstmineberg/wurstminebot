@@ -5,4 +5,4 @@ This is `wurstminebot` version 1.0.5 ([semver](http://semver.org/)). The version
 Configuration
 =============
 
-If your system has `service`, you can move [`init.sh`](init.sh) to `/etc/init.d/wurstminebot`. You can then start, stop, or restart the bot with `service wurstminebot start` etc.
+If your system has `service`, you can move [`init.py`](init.py) to `/etc/init.d/wurstminebot`. You can then start, stop, or restart the bot with `service wurstminebot start` etc.
