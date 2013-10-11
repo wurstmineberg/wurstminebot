@@ -11,12 +11,15 @@ Options:
   --version   Print version info and exit.
 """
 
+import sys
+
+sys.path.append('/opt/py')
+
 from docopt import docopt
 import os
 import os.path
 import signal
 import subprocess
-import sys
 
 KEEPALIVE = '/var/local/wurstmineberg/wurstminebot_keepalive'
 
