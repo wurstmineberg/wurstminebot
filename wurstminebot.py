@@ -537,7 +537,7 @@ def run():
 def start():
     def _start():
         with open(config('paths')['keepalive'], 'a') as keepalive:
-            print(str(os.getpid()), keepalive) # create the keepalive file
+            print(str(os.getpid()), file=keepalive) # create the keepalive file
         while os.path.exists(config('paths')['keepalive']):
             try:
                 run()
