@@ -2,7 +2,7 @@
 """Minecraft IRC bot.
 
 Usage:
-  wurstminebot [options]
+  wurstminebot [options] [start | stop | restart | status]
   wurstminebot -h | --help
   wurstminebot --version
 
@@ -24,10 +24,12 @@ from ircbotframe import ircBot
 import json
 import minecraft
 import nicksub
+import os
 import os.path
 import random
 import re
 import select
+import signal
 import subprocess
 import threading
 import time
@@ -35,12 +37,39 @@ from datetime import timedelta
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='wurstminebot 1.0.6')
+    arguments = docopt(__doc__, version='wurstminebot 1.1.0')
     CONFIG_FILE = arguments['--config']
 
 def _debug_print(msg):
     if config('debug'):
         print('DEBUG] ' + msg)
+
+def _fork(func):
+    #FROM http://stackoverflow.com/a/6011298/667338
+    # do the UNIX double-fork magic, see Stevens' "Advanced Programming in the UNIX Environment" for details (ISBN 0201563177)
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # parent process, return and keep running
+            return
+    except OSError as e:
+        print("fork #1 failed: %d (%s)" % (e.errno, e.strerror), file=sys.stderr)
+        sys.exit(1)
+    os.setsid()
+    # do second fork
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # exit from second parent
+            sys.exit(0)
+    except OSError as e:
+        print("fork #2 failed: %d (%s)" % (e.errno, e.strerror), file=sys.stderr)
+        sys.exit(1)
+    with open(os.path.devnull) as devnull:
+        sys.stdin = devnull
+        sys.stdout = devnull
+        func() # do stuff
+        os._exit(os.EX_OK) # all done
 
 def _logtail(timeout=0.5):
     logpath = os.path.join(config('paths')['minecraft_server'], 'logs', 'latest.log')
@@ -70,6 +99,7 @@ def config(key=None, default_value=None):
         },
         'paths': {
             'assets': '/var/www/wurstmineberg.de/assets/serverstatus',
+            'keepalive': '/var/local/wurstmineberg/wurstminebot_keepalive',
             'logs': '/opt/wurstmineberg/log',
             'minecraft_server': '/opt/wurstmineberg/server',
             'scripts': '/opt/wurstmineberg/bin'
@@ -499,7 +529,48 @@ def privmsg(sender, headers, message):
 
 bot.bind('PRIVMSG', privmsg)
 
-if __name__ == '__main__':
+def run():
     bot.debugging(config('debug'))
-    bot.start()
     TimeLoop().start()
+    bot.run()
+
+def start():
+    def _start():
+        with open(config('paths')['keepalive'], 'a') as keepalive:
+            print(str(os.getpid()), keepalive) # create the keepalive file
+        while os.path.exists(config('paths')['keepalive']):
+            try:
+                run()
+            except:
+                continue
+    
+    _fork(_start)
+
+def status():
+    return os.path.exists(config('paths')['keepalive'])
+
+def stop():
+    pid = None
+    try:
+        with open(config('paths')['keepalive']) as keepalive:
+            for line in keepalive:
+                pid = int(line.strip())
+    except FileNotFoundError:
+        return # not running
+    else:
+        os.remove(config('paths')['keepalive'])
+        if pid is not None:
+            os.kill(pid, signal.SIGKILL)
+
+if __name__ == '__main__':
+    if arguments['start']:
+        start()
+    elif arguments['stop']:
+        stop()
+    elif arguments['restart']:
+        stop()
+        start()
+    elif arguments['status']:
+        print('wurstminebot ' + ('is' if status() else 'is not') + ' running.')
+    else:
+        run()
