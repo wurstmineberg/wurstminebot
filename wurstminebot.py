@@ -297,21 +297,25 @@ def telltime(func=None, comment=False, restart=False):
                 bot.say('Please help! Something went wrong with the server restart!')
     DST = dst
 
-def command(sender, chan, cmd, args, context='irc', reply=None):
+def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
     global DEATHTWEET
     if reply is None:
-        def reply(msg):
-            if context == 'irc':
-                if not sender:
+        if reply_format == 'tellraw':
+            def reply(msg):
+                minecraft.tellraw(msg)
+        else:
+            def reply(msg):
+                if context == 'irc':
+                    if not sender:
+                        print(msg)
+                    elif chan:
+                        bot.say(chan, sender + ': ' + msg)
+                    else:
+                        bot.say(sender, msg)
+                elif context == 'minecraft':
+                    minecraft.tellraw({'text': msg, 'color': 'gold'}, sender)
+                elif context == 'console':
                     print(msg)
-                elif chan:
-                    bot.say(chan, sender + ': ' + msg)
-                else:
-                    bot.say(sender, msg)
-            elif context == 'minecraft':
-                minecraft.tellraw({'text': msg, 'color': 'gold'}, sender)
-            elif context == 'console':
-                print(msg)
     
     _debug_print('[command] [' + context + '] ' + (('<' + sender + '> ') if sender else '') + cmd + ' ' + ' '.join(args))
     isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
@@ -380,11 +384,73 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
                 if 'retweeted_status' in request.json():
                     retweeted_request = twitter.request('statuses/show', {'id': request.json()['retweeted_status']['id']})
                     tweet_author = '<@' + request.json()['user']['screen_name'] + ' RT @' + retweeted_request.json()['user']['screen_name'] + '> '
+                    tweet_author_tellraw = [
+                        {
+                            'text': '@' + request.json()['user']['screen_name'],
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': 'https://twitter.com/' + request.json()['user']['screen_name']
+                            },
+                            'color': 'gold'
+                        },
+                        {
+                            'text': ' RT ',
+                            'color': 'gold'
+                        },
+                        {
+                            'text': '@' + retweeted_request.json()['user']['screen_name'],
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': 'https://twitter.com/' + retweeted_request.json()['user']['screen_name']
+                            },
+                            'color': 'gold'
+                        }
+                    ]
                     text = retweeted_request.json()['text']
                 else:
                     tweet_author = '<@' + request.json()['user']['screen_name'] + '> '
+                    tweet_author_tellraw = [
+                        {
+                            'text': '@' + request.json()['user']['screen_name'],
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': 'https://twitter.com/' + request.json()['user']['screen_name']
+                            },
+                            'color': 'gold'
+                        }
+                    ]
                     text = request.json()['text']
-                reply(tweet_author + text + ((' [https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str'] + ']') if link else ''))
+                tweet_url = 'https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str']
+                if reply_format == 'tellraw':
+                    reply({
+                        'text': '<',
+                        'color': 'gold',
+                        'extra': tweet_author_tellraw + [
+                            {
+                                'text': '> ' + text,
+                                'color': 'gold'
+                            }
+                        ] + ([
+                            {
+                                'text': ' [',
+                                'color': 'gold'
+                            },
+                            {
+                                'text': tweet_url,
+                                'clickEvent': {
+                                    'action': 'open_url',
+                                    'value': tweet_url
+                                },
+                                'color': 'gold'
+                            },
+                            {
+                                'text': ']',
+                                'color': 'gold'
+                            }
+                        ] if link else [])
+                    })
+                else:
+                    reply(tweet_author + text + ((' [' + tweet_url + ']') if link else ''))
             else:
                 reply('Error ' + str(request.status_code))
         else:
@@ -456,7 +522,27 @@ def command(sender, chan, cmd, args, context='irc', reply=None):
                 else:
                     r = twitter.request('statuses/update', {'status': tweet})
                     if 'id' in r.json():
-                        reply('https://twitter.com/wurstmineberg/status/' + str(r.json()['id']))
+                        url = 'https://twitter.com/wurstmineberg/status/' + str(r.json()['id'])
+                        if context == 'minecraft':
+                            minecraft.tellraw({
+                                'text': '',
+                                'extra': [
+                                    {
+                                        'text': message,
+                                        'color': 'gold',
+                                        'clickEvent': {
+                                            'action': 'open_url',
+                                            'value': message
+                                        }
+                                    }
+                                ]
+                            })
+                        else:
+                            command(None, None, 'pastetweet', [r.json()['id']], reply_format='tellraw')
+                        if context == 'irc' and chan == config('irc')['main_channel']:
+                            bot.say(chan, url)
+                        else:
+                            command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(chan, msg))
                     else:
                         reply('Error ' + str(r.status_code))
             else:
@@ -504,10 +590,9 @@ def action(sender, headers, message):
 bot.bind('ACTION', action)
 
 def privmsg(sender, headers, message):
-    def tweetpaste(msg):
+    def botsay(msg):
         for line in msg.splitlines():
             bot.say(config('irc')['main_channel'], line)
-            minecraft.tellraw({'text': line, 'color': 'gold'})
     
     _debug_print('[irc] <' + sender + '> ' + message)
     if sender == config('irc')['nick']:
@@ -523,10 +608,61 @@ def privmsg(sender, headers, message):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif headers[0] == config('irc')['main_channel']:
             if re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
-                minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': message, 'color': 'aqua', 'clickEvent': {'action': 'open_url', 'value': message}}]})
-                command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=tweetpaste)
+                minecraft.tellraw({
+                    'text': '',
+                    'extra': [
+                        {
+                            'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                            'color': 'aqua',
+                            'hoverEvent': {
+                                'action': 'show_text',
+                                'value': sender + ' in ' + headers[0]
+                            },
+                            'clickEvent': {
+                                'action': 'suggest_command',
+                                'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                            }
+                        },
+                        {
+                            'text': ' '
+                        },
+                        {
+                            'text': message,
+                            'color': 'aqua',
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': message
+                            }
+                        }
+                    ]
+                })
+                command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
+                command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
             else:
-                minecraft.tellraw({'text': '', 'extra': [{'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>', 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
+                minecraft.tellraw({
+                    'text': '',
+                    'extra': [
+                        {
+                            'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                            'color': 'aqua',
+                            'hoverEvent': {
+                                'action': 'show_text',
+                                'value': sender + ' in ' + headers[0]
+                            },
+                            'clickEvent': {
+                                'action': 'suggest_command',
+                                'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                            }
+                        },
+                        {
+                            'text': ' '
+                        },
+                        {
+                            'text': nicksub.textsub(message, 'irc', 'minecraft'),
+                            'color': 'aqua'
+                        }
+                    ]
+                })
     else:
         cmd = message.split(' ')
         if len(cmd):
