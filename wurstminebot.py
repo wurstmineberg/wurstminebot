@@ -12,6 +12,8 @@ Options:
   --version          Print version info and exit.
 """
 
+__version__ = '1.1.1'
+
 import sys
 
 sys.path.append('/opt/py')
@@ -37,7 +39,7 @@ from datetime import timedelta
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='wurstminebot 1.1.0')
+    arguments = docopt(__doc__, version='wurstminebot ' + __version__)
     CONFIG_FILE = arguments['--config']
 
 def _debug_print(msg):
@@ -538,11 +540,14 @@ def start():
     def _start():
         with open(config('paths')['keepalive'], 'a') as keepalive:
             print(str(os.getpid()), file=keepalive) # create the keepalive file
-        while os.path.exists(config('paths')['keepalive']):
+        if os.path.exists(config('paths')['keepalive']):
             try:
-                run()
-            except:
-                continue
+                bot.debugging(config('debug'))
+                TimeLoop().start()
+                bot.start()
+            finally:
+                if os.path.exists(config('paths')['keepalive']):
+                    os.remove(config('paths')['keepalive'])
     
     _fork(_start)
 
