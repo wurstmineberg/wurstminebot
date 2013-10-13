@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 import sys
 
@@ -300,22 +300,34 @@ def telltime(func=None, comment=False, restart=False):
 def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
     global DEATHTWEET
     if reply is None:
-        if reply_format == 'tellraw':
+        if reply_format == 'tellraw' or context == 'minecraft':
+            reply_format = 'tellraw'
             def reply(msg):
-                minecraft.tellraw(msg)
+                if isinstance(msg, str):
+                    for line in msg.splitlines():
+                        minecraft.tellraw({'text': line, 'color': 'gold'}, '@a' if sender is None else sender)
+                else:
+                    minecraft.tellraw(msg, '@a' if sender is None else sender)
         else:
             def reply(msg):
                 if context == 'irc':
                     if not sender:
-                        print(msg)
+                        for line in msg.splitlines():
+                            bot.say(config('irc')['main_channel'] if chan is None else chan, line)
                     elif chan:
-                        bot.say(chan, sender + ': ' + msg)
+                        for line in msg.splitlines():
+                            bot.say(chan, sender + ': ' + line)
                     else:
-                        bot.say(sender, msg)
-                elif context == 'minecraft':
-                    minecraft.tellraw({'text': msg, 'color': 'gold'}, sender)
+                        for line in msg.splitlines():
+                            bot.say(sender, line)
                 elif context == 'console':
                     print(msg)
+    
+    def warning(msg):
+        if reply_format == 'tellraw':
+            reply({'text': msg, 'color': 'red'})
+        else:
+            reply(msg)
     
     _debug_print('[command] [' + context + '] ' + (('<' + sender + '> ') if sender else '') + cmd + ' ' + ' '.join(args))
     isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
@@ -323,13 +335,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         # perform Minecraft server command
         if isbotop:
             if args[0]:
-                cmdResult = minecraft.command(args[0], args[1:])
-                for line in cmdResult.splitlines():
-                    reply(line)
+                reply(minecraft.command(args[0], args[1:]))
             else:
-                reply(errors.argc(1, len(args), atleast=True))
+                warning(errors.argc(1, len(args), atleast=True))
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif cmd == 'deathtweet':
         # toggle death message tweeting
         if not len(args):
@@ -341,10 +351,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             DEATHTWEET = False
             reply('Deathtweeting is now disabled')
         else:
-            reply('first argument needs to be “on” or “off”')
+            warning('first argument needs to be “on” or “off”')
     elif cmd == 'exitreader':
         # logpipereader quit function, now deprecated
-        reply('This is not logpipereader, this is wurstminebot. Quit using the quit command.')
+        warning('This is not logpipereader, this is wurstminebot. Quit using the quit command.')
     elif cmd == 'fixstatus':
         # update the server status on the website
         minecraft.update_status()
@@ -355,7 +365,27 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             player = args[0]
             mcplayer = nicksub.sub(player, context, 'minecraft', strict=False)
             if mcplayer in minecraft.online_players():
-                reply(player + ' is currently on the server.')
+                if reply_format == 'tellraw':
+                    reply([
+                        {
+                            'text': player,
+                            'hoverEvent': {
+                                'action': 'show_text',
+                                'value': mcplayer + ' in Minecraft'
+                            },
+                            'clickEvent': {
+                                'action': 'suggest_command',
+                                'value': mcplayer + ': '
+                            },
+                            'color': 'gold',
+                        },
+                        {
+                            'text': ' is currently on the server.',
+                            'color': 'gold'
+                        }
+                    ])
+                else:
+                    reply(player + ' is currently on the server.')
             else:
                 lastseen = minecraft.last_seen(mcplayer)
                 if lastseen is None:
@@ -363,13 +393,63 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 else:
                     if lastseen.date() == datetime.utcnow().date():
                         datestr = 'today at ' + lastseen.strftime('%H:%M UTC')
+                        tellraw_date = [
+                            {
+                                'text': 'today',
+                                'hoverEvent': {
+                                    'action': 'show_text',
+                                    'value': lastseen.strftime('%Y-%m-%d')
+                                },
+                                'color': 'gold'
+                            },
+                            {
+                                'text': ' at ' + lastseen.strftime('%H:%M UTC.'),
+                                'color': 'gold'
+                            }
+                        ]
                     elif lastseen.date() == datetime.utcnow().date() - timedelta(days=1):
                         datestr = 'yesterday at ' + lastseen.strftime('%H:%M UTC')
+                        tellraw_date = [
+                            {
+                                'text': 'yesterday',
+                                'hoverEvent': {
+                                    'action': 'show_text',
+                                    'value': lastseen.strftime('%Y-%m-%d')
+                                },
+                                'color': 'gold'
+                            },
+                            {
+                                'text': ' at ' + lastseen.strftime('%H:%M UTC.'),
+                                'color': 'gold'
+                            }
+                        ]
                     else:
                         datestr = lastseen.strftime('on %Y-%m-%d at %H:%M UTC')
-                    reply(player + ' was last seen ' + datestr + '.')
+                        tellraw_date = [
+                            {
+                                'text': datestr + '.',
+                                'color': 'gold'
+                            }
+                        ]
+                    if reply_format == 'tellraw':
+                        reply([
+                            {
+                                'text': player,
+                                'hoverEvent': {
+                                    'action': 'show_text',
+                                    'value': mcplayer + ' in Minecraft'
+                                },
+                                'color': 'gold',
+                            },
+                            {
+                                'text': ' was last seen ',
+                                'color': 'gold'
+                            }
+                        ] + tellraw_date)
+                    else:
+                        reply(player + ' was last seen ' + datestr + '.')
         else:
-            reply(errors.argc(1, len(args)))
+            warning(errors.argc(1, len(args)))
     elif cmd == 'pastetweet':
         # print the contents of a tweet
         link = True
@@ -452,9 +532,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 else:
                     reply(tweet_author + text + ((' [' + tweet_url + ']') if link else ''))
             else:
-                reply('Error ' + str(request.status_code))
+                warning('Error ' + str(request.status_code))
         else:
-            reply(errors.argc(1, len(args)))
+            warning(errors.argc(1, len(args)))
     elif cmd == 'ping':
         # say pong
         reply('pong')
@@ -470,37 +550,50 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             bot.stop()
             sys.exit()
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif cmd == 'raw':
         # send raw message to IRC
         if isbotop:
             if len(args):
                 bot.send(' '.join(args))
             else:
-                reply(errors.argc(1, len(args), atleast=True))
+                warning(errors.argc(1, len(args), atleast=True))
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif cmd == 'restart':
         # restart the Minecraft server
         if isbotop:
             minecraft.stop()
             minecraft.start()
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif cmd == 'status':
         # print some server status
         if minecraft.status():
             if context != 'minecraft':
                 players = minecraft.online_players()
                 if len(players):
-                    reply('Online players: ' + ', '.join(map(lambda nick: nicksub.sub(nick, 'minecraft', context), players)))
+                    reply('Online players: ' + ', '.join(nicksub.sub(nick, 'minecraft', context) for nick in players))
                 else:
                     reply('The server is currently empty.')
             version = minecraft.version()
             if version is None:
                 reply('unknown Minecraft version')
+            elif reply_format == 'tellraw':
+                reply({
+                    'text': 'Minecraft version ',
+                    'extra': [
+                        {
+                            'text': version,
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': 'http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if 'pre' in version or version[2:3] == 'w' else '#') + version
+                            }
+                        }
+                    ]
+                })
             else:
-                reply('Minecraft version ' + str(minecraft.version()))
+                reply('Minecraft version ' + version)
         else:
             reply('The server is currently offline.')
     elif cmd == 'stop':
@@ -508,7 +601,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         if isbotop:
             minecraft.stop()
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif cmd == 'time':
         # reply with the current time
         telltime(func=reply)
@@ -518,7 +611,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             if len(args):
                 tweet = nicksub.textsub(' '.join(args), context, 'twitter')
                 if len(tweet) > 140:
-                    reply('too long')
+                    warning('too long')
                 else:
                     r = twitter.request('statuses/update', {'status': tweet})
                     if 'id' in r.json():
@@ -544,11 +637,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         else:
                             command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(chan, msg))
                     else:
-                        reply('Error ' + str(r.status_code))
+                        warning('Error ' + str(r.status_code))
             else:
-                reply(errors.argc(1, len(args), atleast=True))
+                warning(errors.argc(1, len(args), atleast=True))
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif cmd == 'update':
         # update Minecraft
         if isbotop:
@@ -557,17 +650,17 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     if len(args) == 2:
                         minecraft.update(args[1], snapshot=True)
                     else:
-                        reply(errors.argc(2, len(args)))
+                        warning(errors.argc(2, len(args)))
                 elif len(args) == 1:
                     minecraft.update(args[0], snapshot=False)
                 else:
-                    reply(errors.argc(1, len(args)))
+                    warning(errors.argc(1, len(args)))
             else:
-                reply(errors.argc(1, len(args), atleast=True))
+                warning(errors.argc(1, len(args), atleast=True))
         else:
-            reply(errors.botop)
+            warning(errors.botop)
     elif not chan:
-        reply(errors.unknown)
+        warning(errors.unknown)
 
 def endMOTD(sender, headers, message):
     for chan in config('irc')['channels']:
