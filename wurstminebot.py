@@ -621,11 +621,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                                 'text': '',
                                 'extra': [
                                     {
-                                        'text': message,
+                                        'text': url,
                                         'color': 'gold',
                                         'clickEvent': {
                                             'action': 'open_url',
-                                            'value': message
+                                            'value': url
                                         }
                                     }
                                 ]
