@@ -634,7 +634,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         if context == 'irc' and chan == config('irc')['main_channel']:
                             bot.say(chan, url)
                         else:
-                            command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(chan, msg))
+                            command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(config('irc')['main_channel'] if chan is None else chan, msg))
                     else:
                         warning('Error ' + str(r.status_code))
             else:
