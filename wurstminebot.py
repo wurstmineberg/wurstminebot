@@ -139,6 +139,7 @@ def _delayed_update():
 
 class errors:
     botop = 'you must be a bot op to do this'
+    log = "I can't find that in my chatlog"
     unknown = 'unknown command'
     
     @staticmethod
@@ -458,6 +459,30 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         reply(player + ' was last seen ' + datestr + '.')
         else:
             warning(errors.argc(1, len(args)))
+    elif cmd == 'leak':
+        # tweet the last chatlog line
+        if len(args) == 0:
+            if len(bot.channel_data[config('irc')['main_channel']]['log']):
+                messages = [bot.channel_data[config('irc')['main_channel']]['log'][-1]]
+            else:
+                warning(errors.log)
+                return
+        elif len(args) == 1:
+            if re.match('[0-9]+$', args[0]) and len(bot.channel_data[config('irc')['main_channel']]['log']) >= int(args[0]):
+                messages = bot.channel_data[config('irc')['main_channel']]['log'][-int(args[0]):]
+            else:
+                warning(errors.log)
+                return
+        else:
+            warning(errors.argc(1, len(args)))
+            return
+        tweet = '\n'.join('<' + nicksub.sub(sender, 'irc', 'twitter') + '> ' + nicksub.textsub(message, 'irc', 'twitter'))
+        if len(tweet + ' #ircleaks') <= 140:
+            if '\n' in tweet:
+                tweet += '\n#ircleaks'
+            else:
+                tweet += ' #ircleaks'
+        command(sender, chan, 'tweet', [tweet], context=context, reply=reply, reply_format=reply_format)
     elif cmd == 'pastetweet':
         # print the contents of a tweet
         link = True
