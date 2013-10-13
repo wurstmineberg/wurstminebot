@@ -329,7 +329,6 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply(msg)
     
-    _debug_print('[command] [' + context + '] ' + (('<' + sender + '> ') if sender else '') + cmd + ' ' + ' '.join(args))
     isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
     if cmd == 'command':
         # perform Minecraft server command
