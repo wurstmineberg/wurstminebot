@@ -456,7 +456,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             link = False
             args = [args[0]]
         if len(args) == 1:
-            match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', args[0])
+            match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', str(args[0]))
             twid = match.group(1) if match else args[0]
             request = twitter.request('statuses/show', {'id': twid})
             if 'id' in request.json():
