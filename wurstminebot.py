@@ -124,6 +124,7 @@ DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
+bot.log_own_messages = False
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
@@ -154,7 +155,11 @@ class InputLoop(threading.Thread):
             if match:
                 # action
                 player, message = match.group(1, 2)
-                bot.say(config('irc')['main_channel'], '* ' + nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc'))
+                chan = config('irc')['main_channel']
+                sender = nicksub.sub(player, 'minecraft', 'irc')
+                subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
+                bot.__log(chan, 'ACTION', sender, [chan], subbed_message)
+                bot.say(chan, '* ' + sender + ' ' + subbed_message)
             else:
                 match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)', logLine)
                 if match:
@@ -165,7 +170,11 @@ class InputLoop(threading.Thread):
                         command(sender=player, chan=None, cmd=cmd[0], args=cmd[1:], context='minecraft')
                     else:
                         # chat message
-                        bot.say(config('irc')['main_channel'], '<' + nicksub.sub(player, 'minecraft', 'irc') + '> ' + nicksub.textsub(message, 'minecraft', 'irc'))
+                        chan = config('irc')['main_channel']
+                        sender = nicksub.sub(player, 'minecraft', 'irc')
+                        subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
+                        bot.__log(chan, 'PRIVMSG', sender, [chan], subbed_message)
+                        bot.say(chan, '<' + sender + '> ' + subbed_message)
                 else:
                     match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game', logLine)
                     if match:
