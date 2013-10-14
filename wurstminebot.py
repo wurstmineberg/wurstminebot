@@ -133,9 +133,12 @@ def _timed_input(timeout=1): #FROM http://stackoverflow.com/a/2904057
     if i:
         return sys.stdin.readline().strip()
 
-def _delayed_update():
-    time.sleep(20)
-    minecraft.update_status()
+def _delayed(timeout, func):
+    def _func():
+        time.sleep(timeout)
+        func()
+    
+    threading.Thread(target=_func).start()
 
 class errors:
     botop = 'you must be a bot op to do this'
@@ -191,7 +194,7 @@ class InputLoop(threading.Thread):
                             minecraft.tellraw({'text': 'Hello ' + player + '. ' + random.choice(welcomeMessages), 'color': 'gray'}, player)
                         bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                         minecraft.update_status()
-                        threading.Thread(target=_delayed_update).start()
+                        _delayed(20, minecraft.update_status)
                     else:
                         for deathid, death in enumerate(deaths.regexes):
                             match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
@@ -357,6 +360,21 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             DEATHTWEET = True
             reply('Deathtweeting is now enabled')
         elif args[0] == 'off':
+            def _reenable_death_tweets():
+                global DEATHTWEET
+                DEATHTWEET = True
+            
+            if len(args) == 2:
+                match = re.match('([0-9]+)([dhms])', args[1])
+                if match:
+                    number, unit = match.group(1, 2)
+                    number *= {'d': 86400, 'h': 3600, 'm': 60, 's': 1}[unit]
+                elif re.match('[0-9]+', args[1]):
+                    number = int(args[1])
+                else:
+                    warning(args[1] + ' is not a time value')
+                    return
+                _delayed(number, _reenable_death_tweets)
             DEATHTWEET = False
             reply('Deathtweeting is now disabled')
         else:
@@ -367,7 +385,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     elif cmd == 'fixstatus':
         # update the server status on the website
         minecraft.update_status()
-        threading.Thread(target=_delayed_update).start()
+        _delayed(20, minecraft.update_status)
     elif cmd == 'lastseen':
         # when was the player last seen logging in or out on Minecraft
         if len(args):
@@ -702,7 +720,7 @@ def endMOTD(sender, headers, message):
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
     _debug_print("aaand I'm back.")
     minecraft.update_status()
-    threading.Thread(target=_delayed_update).start()
+    _delayed(20, minecraft.update_status)
     InputLoop().start()
 
 bot.bind('376', endMOTD)
