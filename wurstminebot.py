@@ -229,7 +229,7 @@ class InputLoop(threading.Thread):
                                     twid = 'too long for twitter'
                                     minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
                             else:
-                                twid = 'deathtweets are diabled'
+                                twid = 'deathtweets are disabled'
                             bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
                             break
             if not bot.keepGoing:
