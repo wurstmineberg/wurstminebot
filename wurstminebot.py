@@ -162,7 +162,7 @@ class InputLoop(threading.Thread):
                 chan = config('irc')['main_channel']
                 sender = nicksub.sub(player, 'minecraft', 'irc')
                 subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
-                bot.__log(chan, 'ACTION', sender, [chan], subbed_message)
+                bot.log(chan, 'ACTION', sender, [chan], subbed_message)
                 bot.say(chan, '* ' + sender + ' ' + subbed_message)
             else:
                 match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)', logLine)
@@ -177,7 +177,7 @@ class InputLoop(threading.Thread):
                         chan = config('irc')['main_channel']
                         sender = nicksub.sub(player, 'minecraft', 'irc')
                         subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
-                        bot.__log(chan, 'PRIVMSG', sender, [chan], subbed_message)
+                        bot.log(chan, 'PRIVMSG', sender, [chan], subbed_message)
                         bot.say(chan, '<' + sender + '> ' + subbed_message)
                 else:
                     match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game', logLine)
