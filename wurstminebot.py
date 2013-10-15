@@ -494,7 +494,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
             return
-        tweet = '\n'.join('<' + nicksub.sub(sender, 'irc', 'twitter') + '> ' + nicksub.textsub(message, 'irc', 'twitter'))
+        tweet = '\n'.join(('<' + nicksub.sub(msg_sender, 'irc', 'twitter') + '> ' + nicksub.textsub(message, 'irc', 'twitter')) for _, msg_sender, _, message in messages)
         if len(tweet + ' #ircleaks') <= 140:
             if '\n' in tweet:
                 tweet += '\n#ircleaks'
