@@ -500,7 +500,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 tweet += '\n#ircleaks'
             else:
                 tweet += ' #ircleaks'
-        command(sender, chan, 'tweet', [tweet], context=context, reply=reply, reply_format=reply_format)
+        command(sender, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
     elif cmd == 'pastetweet':
         # print the contents of a tweet
         link = True
