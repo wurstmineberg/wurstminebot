@@ -36,6 +36,7 @@ import subprocess
 import threading
 import time
 from datetime import timedelta
+import xml.sax.saxutils
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
@@ -537,7 +538,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                             'color': 'gold'
                         }
                     ]
-                    text = retweeted_request.json()['text']
+                    text = xml.sax.saxutils.unescape(retweeted_request.json()['text'])
                 else:
                     tweet_author = '<@' + request.json()['user']['screen_name'] + '> '
                     tweet_author_tellraw = [
@@ -550,7 +551,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                             'color': 'gold'
                         }
                     ]
-                    text = request.json()['text']
+                    text = xml.sax.saxutils.unescape(request.json()['text'])
                 tweet_url = 'https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str']
                 if reply_format == 'tellraw':
                     reply({
