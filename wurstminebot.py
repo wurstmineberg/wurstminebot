@@ -120,6 +120,7 @@ def config(key=None, default_value=None):
         return j
     return j.get(key, default_config.get(key)) if default_value is None else j.get(key, default_value)
 
+ACHIEVEMENTTWEET = True
 DEATHTWEET = True
 DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
@@ -197,45 +198,63 @@ class InputLoop(threading.Thread):
                         minecraft.update_status()
                         _delayed(20, minecraft.update_status)
                     else:
-                        for deathid, death in enumerate(deaths.regexes):
-                            match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
-                            if not match:
-                                continue
-                            # death
-                            timestamp, player = match.group(1, 2)
-                            groups = match.groups()[2:]
-                            message = deaths.partial_message(deathid, groups)
-                            with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
-                                print(timestamp + ' ' + player + ' ' + message, file=deathslog)
-                            if DEATHTWEET:
-                                if message == LASTDEATH:
-                                    comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
-                                else:
-                                    death_comments = config('comment_lines').get('death', ['Well done.'])
-                                    if deathid == 7: # was blown up by Creeper
-                                        death_comments.append('Creepers gonna creep.')
-                                    if deathid == 28: # was slain by Zombie
-                                        death_comments.append('Zombies gonna zomb.')
-                                    comment = ' … ' + random.choice(death_comments)
-                                LASTDEATH = message
-                                tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
-                                if len(tweet + comment) <= 140:
-                                    tweet += comment
+                        match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$', logLine)
+                        if match:
+                            # achievement
+                            player, achievement = match.group(1, 2)
+                            if ACHIEVEMENTTWEET:
+                                tweet = '[Achievement Get] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' got ' + achievement
                                 if len(tweet) <= 140:
                                     tweet_request = twitter.request('statuses/update', {'status': tweet})
                                     if 'id' in tweet_request.json():
                                         twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
-                                        minecraft.tellraw({'text': 'Your fail has been reported. Congratulations.', 'color': 'gold', 'clickEvent': {'action': 'open_url', 'value': twid}})
                                     else:
                                         twid = 'error ' + str(tweet_request.status_code)
-                                        minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because of '}, {'text': 'reasons', 'hoverEvent': {'action': 'show_text', 'value': str(tweet_request.status_code)}}, {'text': '.'}]})
                                 else:
                                     twid = 'too long for twitter'
-                                    minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
                             else:
-                                twid = 'deathtweets are disabled'
-                            bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
-                            break
+                                twid = 'achievement tweets are disabled'
+                            bot.say(config('irc')['main_channel'], 'Achievement Get: ' + nicksub.sub(player, 'minecraft', 'irc') + ' got ' + achievement + ' [' + twid + ']')
+                        else:
+                            for deathid, death in enumerate(deaths.regexes):
+                                match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
+                                if not match:
+                                    continue
+                                # death
+                                timestamp, player = match.group(1, 2)
+                                groups = match.groups()[2:]
+                                message = deaths.partial_message(deathid, groups)
+                                with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
+                                    print(timestamp + ' ' + player + ' ' + message, file=deathslog)
+                                if DEATHTWEET:
+                                    if message == LASTDEATH:
+                                        comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
+                                    else:
+                                        death_comments = config('comment_lines').get('death', ['Well done.'])
+                                        if deathid == 7: # was blown up by Creeper
+                                            death_comments.append('Creepers gonna creep.')
+                                        if deathid == 28: # was slain by Zombie
+                                            death_comments.append('Zombies gonna zomb.')
+                                        comment = ' … ' + random.choice(death_comments)
+                                    LASTDEATH = message
+                                    tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
+                                    if len(tweet + comment) <= 140:
+                                        tweet += comment
+                                    if len(tweet) <= 140:
+                                        tweet_request = twitter.request('statuses/update', {'status': tweet})
+                                        if 'id' in tweet_request.json():
+                                            twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
+                                            minecraft.tellraw({'text': 'Your fail has been reported. Congratulations.', 'color': 'gold', 'clickEvent': {'action': 'open_url', 'value': twid}})
+                                        else:
+                                            twid = 'error ' + str(tweet_request.status_code)
+                                            minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because of '}, {'text': 'reasons', 'hoverEvent': {'action': 'show_text', 'value': str(tweet_request.status_code)}}, {'text': '.'}]})
+                                    else:
+                                        twid = 'too long for twitter'
+                                        minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
+                                else:
+                                    twid = 'deathtweets are disabled'
+                                bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
+                                break
             if not bot.keepGoing:
                 break
 
@@ -312,6 +331,7 @@ def telltime(func=None, comment=False, restart=False):
     DST = dst
 
 def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
+    global ACHIEVEMENTTWEET
     global DEATHTWEET
     if reply is None:
         if reply_format == 'tellraw' or context == 'minecraft':
@@ -344,7 +364,34 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply(msg)
     
     isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
-    if cmd == 'command':
+    if cmd == 'achievementtweet':
+        # toggle achievement message tweeting
+        if not len(args):
+            reply('Achievement tweeting is currently ' + ('enabled' if ACHIEVEMENTTWEET else 'disabled'))
+        elif args[0] == 'on':
+            ACHIEVEMENTTWEET = True
+            reply('Achievement tweeting is now enabled')
+        elif args[0] == 'off':
+            def _reenable_death_tweets():
+                global ACHIEVEMENTTWEET
+                ACHIEVEMENTTWEET = True
+            
+            if len(args) == 2:
+                match = re.match('([0-9]+)([dhms])', args[1])
+                if match:
+                    number, unit = match.group(1, 2)
+                    number *= {'d': 86400, 'h': 3600, 'm': 60, 's': 1}[unit]
+                elif re.match('[0-9]+', args[1]):
+                    number = int(args[1])
+                else:
+                    warning(args[1] + ' is not a time value')
+                    return
+                _delayed(number, _reenable_death_tweets)
+            DEATHTWEET = False
+            reply('Achievement tweeting is now disabled')
+        else:
+            warning('first argument needs to be “on” or “off”')
+    elif cmd == 'command':
         # perform Minecraft server command
         if isbotop:
             if args[0]:
