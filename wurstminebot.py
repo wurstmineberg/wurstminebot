@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 
 import sys
 
@@ -238,7 +238,7 @@ class InputLoop(threading.Thread):
                                 with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
                                     print(timestamp + ' ' + player + ' ' + message, file=deathslog)
                                 if DEATHTWEET:
-                                    if message == LASTDEATH:
+                                    if player + ' ' + message == LASTDEATH:
                                         comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
                                     else:
                                         death_comments = config('comment_lines').get('death', ['Well done.'])
@@ -247,7 +247,7 @@ class InputLoop(threading.Thread):
                                         if deathid == 28: # was slain by Zombie
                                             death_comments.append('Zombies gonna zomb.')
                                         comment = ' … ' + random.choice(death_comments)
-                                    LASTDEATH = message
+                                    LASTDEATH = player + ' ' + message
                                     tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
                                     if len(tweet + comment) <= 140:
                                         tweet += comment
