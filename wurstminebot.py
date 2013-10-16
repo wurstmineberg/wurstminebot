@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 import sys
 
@@ -187,13 +187,24 @@ class InputLoop(threading.Thread):
                         # join/leave
                         timestamp, player = match.group(1, 2)
                         joined = bool(match.group(3) == 'joined')
+                        with open(os.path.join(config('paths')['logs'], 'logins.log')) as loginslog:
+                            for line in loginslog:
+                                if player in line:
+                                    new_player = False
+                                    break
+                            else:
+                                new_player = True
                         with open(os.path.join(config('paths')['logs'], 'logins.log'), 'a') as loginslog:
                             print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
                         if joined:
-                            welcomeMessages = config('comment_lines').get('server_join', [''])
-                            if player in ['BenemitC', 'Farthen08', 'naturalismus']:
-                                welcomeMessages += ['Big Brother is watching you.']
-                            minecraft.tellraw({'text': 'Hello ' + player + '. ' + random.choice(welcomeMessages), 'color': 'gray'}, player)
+                            if new_player:
+                                welcome_message = 'Welcome to the server!'
+                            else:
+                                welcome_messages = config('comment_lines').get('server_join', [''])
+                                if player in ['BenemitC', 'Farthen08', 'naturalismus']:
+                                    welcome_messages += ['Big Brother is watching you.']
+                                welcome_message = random.choice(welcome_messages)
+                            minecraft.tellraw({'text': 'Hello ' + player + '. ' + welcome_message, 'color': 'gray'}, player)
                         bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                         minecraft.update_status()
                         _delayed(20, minecraft.update_status)
