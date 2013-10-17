@@ -107,9 +107,12 @@ def config(key=None, default_value=None):
             'keepalive': '/var/local/wurstmineberg/wurstminebot_keepalive',
             'logs': '/opt/wurstmineberg/log',
             'minecraft_server': '/opt/wurstmineberg/server',
+            'people': '/opt/wurstmineberg/config/people.json',
             'scripts': '/opt/wurstmineberg/bin'
         },
-        'twitter': {}
+        'twitter': {
+            'screen_name': 'wurstmineberg'
+        }
     }
     try:
         with open(CONFIG_FILE) as config_file:
@@ -645,6 +648,36 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 warning('Error ' + str(request.status_code))
         else:
             warning(errors.argc(1, len(args)))
+    elif cmd == 'people':
+        # people.json management
+        if len(args) >= 2:
+            with open(config('paths')['people']) as people_json:
+                people = json.load(people_json)
+            for person in people:
+                if person['id'] == args[0]:
+                    break
+            else:
+                warning('no person with id ' + str(args[0]) + ' in people.json')
+                return
+            if args[1] == 'twitter':
+                if len(args) == 2:
+                    reply(('@' + person['twitter']) if 'twitter' in person else 'no twitter nick')
+                    return
+                else:
+                    screen_name = args[2][1:] if args[2].startswith('@') else args[2]
+                    person['twitter'] = screen_name
+                    with open(config('paths')['people'], 'w') as people_json:
+                        json.dump(people, people_json, indent=4, separators=(',', ': '))
+                    twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
+                    twitter.request('friendships/add', {'screen_name': screen_name})
+                    reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
+            else:
+                warning('no such people attribute: ' + str(args[1]))
+                return
+        elif len(args) == 1:
+            pass #TODO info about player
+        else:
+            reply('http://wurstmineberg.de/people')
     elif cmd == 'ping':
         # say pong
         reply('pong')
