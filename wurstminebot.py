@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 
 import sys
 
@@ -767,6 +767,20 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     warning(errors.argc(1, len(args)))
             else:
                 warning(errors.argc(1, len(args), atleast=True))
+        else:
+            warning(errors.botop)
+    elif cmd == 'whitelist':
+        # add person to whitelist
+        if isbotop:
+            if len(args) == 2:
+                try:
+                    minecraft.whitelist_add(args[0], args[1])
+                except ValueError:
+                    warning('id ' + str(args[0]) + ' already exists')
+                else:
+                    reply(str(args[1]) + ' is now whitelisted')
+            else:
+                warning('Usage: whitelist <unique-id> <minecraft-name>')
         else:
             warning(errors.botop)
     elif not chan:
