@@ -737,7 +737,44 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 return
             can_edit = isbotop or (context == 'minecraft' and 'minecraft' in person and person['minecraft'] == sender) or (context == 'irc' and 'irc' in person and 'nicks' in person['irc'] and sender in person['irc']['nicks'])
             if len(args) >= 2:
-                if args[1] == 'twitter':
+                if args[1] == 'description':
+                    if len(args) == 2:
+                        reply(person.get('description', 'no description'))
+                        return
+                    elif can_edit:
+                        person['description'] = ' '.join(args[2:])
+                        with open(config('paths')['people'], 'w') as people_json:
+                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                        reply('description updated')
+                    else:
+                        warning(errors.botop)
+                        return
+                elif args[2] == 'name':
+                    if len(args) == 2:
+                        reply(person.get('name', 'no name, using id: ' + person['id']))
+                    elif can_edit:
+                        had_name = 'name' in person
+                        person['name'] = ' '.join(args[2:])
+                        with open(config('paths')['people'], 'w') as people_json:
+                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                        reply('name ' + ('changed' if had_name else 'added'))
+                    else:
+                        warning(errors.botop)
+                        return
+                elif args[1] == 'reddit':
+                    if len(args) == 2:
+                        reply(('/u/' + person['reddit']) if 'reddit' in person else 'no reddit nick')
+                    elif can_edit:
+                        had_reddit_nick = 'reddit' in person
+                        reddit_nick = args[2][3:] if args[2].startswith('/u/') else args[2]
+                        person['reddit'] = reddit_nick
+                        with open(config('paths')['people'], 'w') as people_json:
+                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                        reply('reddit nick ' + ('changed' if had_reddit_nick else 'added'))
+                    else:
+                        warning(errors.botop)
+                        return
+                elif args[1] == 'twitter':
                     if len(args) == 2:
                         reply(('@' + person['twitter']) if 'twitter' in person else 'no twitter nick')
                         return
@@ -749,6 +786,18 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
                         twitter.request('friendships/add', {'screen_name': screen_name})
                         reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
+                    else:
+                        warning(errors.botop)
+                        return
+                elif args[1] == 'website':
+                    if len(args) == 2:
+                        reply(person['website'] if 'website' in person else 'no website')
+                    elif can_edit:
+                        had_website = 'website' in person
+                        person['website'] = str(args[2])
+                        with open(config('paths')['people'], 'w') as people_json:
+                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                        reply('website ' + ('changed' if had_website else 'added'))
                     else:
                         warning(errors.botop)
                         return
