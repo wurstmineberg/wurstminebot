@@ -615,7 +615,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
     elif cmd == 'leak':
-        # tweet the last chatlog line
+        # tweet the last n chatlog lines
         messages = [(msg_type, msg_sender, msg_text) for msg_type, msg_sender, msg_headers, msg_text in bot.channel_data[config('irc')['main_channel']]['log'] if msg_type == 'ACTION' or (msg_type == 'PRIVMSG' and (not msg_text.startswith('!')) and (not msg_text.startswith(config('irc')['nick'] + ': ')) and (not msg_text.startswith(config('irc')['nick'] + ', ')))]
         if len(args) == 0:
             if len(messages):
@@ -726,7 +726,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning(errors.argc(1, len(args)))
     elif cmd == 'people':
         # people.json management
-        if len(args) >= 2:
+        if len(args):
             with open(config('paths')['people']) as people_json:
                 people = json.load(people_json)
             for person in people:
@@ -735,23 +735,31 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             else:
                 warning('no person with id ' + str(args[0]) + ' in people.json')
                 return
-            if args[1] == 'twitter':
-                if len(args) == 2:
-                    reply(('@' + person['twitter']) if 'twitter' in person else 'no twitter nick')
-                    return
+            can_edit = isbotop or (context == 'minecraft' and 'minecraft' in person and person['minecraft'] == sender) or (context == 'irc' and 'irc' in person and 'nicks' in person['irc'] and sender in person['irc']['nicks'])
+            if len(args) >= 2:
+                if args[1] == 'twitter':
+                    if len(args) == 2:
+                        reply(('@' + person['twitter']) if 'twitter' in person else 'no twitter nick')
+                        return
+                    elif can_edit:
+                        screen_name = args[2][1:] if args[2].startswith('@') else args[2]
+                        person['twitter'] = screen_name
+                        with open(config('paths')['people'], 'w') as people_json:
+                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                        twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
+                        twitter.request('friendships/add', {'screen_name': screen_name})
+                        reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
+                    else:
+                        warning(errors.botop)
+                        return
                 else:
-                    screen_name = args[2][1:] if args[2].startswith('@') else args[2]
-                    person['twitter'] = screen_name
-                    with open(config('paths')['people'], 'w') as people_json:
-                        json.dump(people, people_json, indent=4, separators=(',', ': '))
-                    twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
-                    twitter.request('friendships/add', {'screen_name': screen_name})
-                    reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
+                    warning('no such people attribute: ' + str(args[1]))
+                    return
             else:
-                warning('no such people attribute: ' + str(args[1]))
-                return
-        elif len(args) == 1:
-            pass #TODO info about player
+                if 'name' in person:
+                    reply('person with id ' + str(args[0]) + ' and name ' + person['name'])
+                else:
+                    reply('person with id ' + str(args[0]) + ' and no name')
         else:
             reply('http://wurstmineberg.de/people')
     elif cmd == 'ping':
