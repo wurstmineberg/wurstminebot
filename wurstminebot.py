@@ -749,7 +749,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     else:
                         warning(errors.botop)
                         return
-                elif args[2] == 'name':
+                elif args[1] == 'name':
                     if len(args) == 2:
                         reply(person.get('name', 'no name, using id: ' + person['id']))
                     elif can_edit:
