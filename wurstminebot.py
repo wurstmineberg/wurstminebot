@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.8'
+__version__ = '1.1.9'
 
 import sys
 
@@ -100,7 +100,8 @@ def config(key=None, default_value=None):
             'op_nicks': [],
             'password': '',
             'port': 6667,
-            'ssl': False
+            'ssl': False,
+            'topic': None
         },
         'paths': {
             'assets': '/var/www/wurstmineberg.de/assets/serverstatus',
@@ -127,6 +128,7 @@ ACHIEVEMENTTWEET = True
 DEATHTWEET = True
 DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
+TOPIC = config('irc')['topic']
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 bot.log_own_messages = False
@@ -344,9 +346,20 @@ def telltime(func=None, comment=False, restart=False):
                 bot.say('Please help! Something went wrong with the server restart!')
     DST = dst
 
+def update_topic():
+    players = minecraft.online_players()
+    player_list = ('Currently online: ' + ', '.join(players)) if len(players) else ''
+    if TOPIC is None:
+        bot.topic(config('irc')['main_channel'], player_list)
+    elif len(players):
+        bot.topic(config('irc')['main_channel'], TOPIC + ' | ' + player_list)
+    else:
+        bot.topic(config('irc')['main_channel'], TOPIC)
+
 def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
     global ACHIEVEMENTTWEET
     global DEATHTWEET
+    global TOPIC
     if reply is None:
         if reply_format == 'tellraw' or context == 'minecraft':
             reply_format = 'tellraw'
@@ -749,6 +762,17 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     elif cmd == 'time':
         # reply with the current time
         telltime(func=reply)
+    elif cmd == 'topic':
+        # set the channel topic
+        if isbotop:
+            if len(args):
+                TOPIC = ' '.join(args)
+                update_topic()
+                reply('Topic changed temporarily. To change permanently, edit /opt/wurstmineberg/config/wurstminebot.json')
+            else:
+                warning(errors.argc(1, len(args), atleast=True))
+        else:
+            warning(errors.botop)
     elif cmd == 'tweet':
         # tweet message
         if isbotop:
