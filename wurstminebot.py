@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 
 import sys
 
@@ -541,22 +541,23 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning(errors.argc(1, len(args)))
     elif cmd == 'leak':
         # tweet the last chatlog line
+        messages = [(msg_type, msg_sender, msg_text) for msg_type, msg_sender, msg_headers, msg_text in bot.channel_data[config('irc')['main_channel']]['log'] if msg_type == 'ACTION' or (msg_type == 'PRIVMSG' and (not msg_text.startswith('!')) and (not msg_text.startswith(config('irc')['nick'] + ': ')) and (not msg_text.startswith(config('irc')['nick'] + ', ')))]
         if len(args) == 0:
-            if len(bot.channel_data[config('irc')['main_channel']]['log']):
-                messages = [bot.channel_data[config('irc')['main_channel']]['log'][-1]]
+            if len(messages):
+                messages = [messages[-1]]
             else:
                 warning(errors.log)
                 return
         elif len(args) == 1:
-            if re.match('[0-9]+$', args[0]) and len(bot.channel_data[config('irc')['main_channel']]['log']) >= int(args[0]):
-                messages = bot.channel_data[config('irc')['main_channel']]['log'][-int(args[0]):]
+            if re.match('[0-9]+$', args[0]) and len(messages) >= int(args[0]):
+                messages = messages[-int(args[0]):]
             else:
                 warning(errors.log)
                 return
         else:
             warning(errors.argc(1, len(args)))
             return
-        tweet = '\n'.join(('<' + nicksub.sub(msg_sender, 'irc', 'twitter') + '> ' + nicksub.textsub(message, 'irc', 'twitter')) for _, msg_sender, _, message in messages)
+        tweet = '\n'.join(((('* ' + nicksub.sub(msg_sender, 'irc', 'twitter') + ' ') if msg_type == 'ACTION' else ('<' + nicksub.sub(msg_sender, 'irc', 'twitter') + '> ')) + nicksub.textsub(message, 'irc', 'twitter')) for msg_type, msg_sender, message in messages)
         if len(tweet + ' #ircleaks') <= 140:
             if '\n' in tweet:
                 tweet += '\n#ircleaks'
