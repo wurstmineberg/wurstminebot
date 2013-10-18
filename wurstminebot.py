@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.10'
+__version__ = '1.1.11'
 
 import sys
 
@@ -214,8 +214,65 @@ class InputLoop(threading.Thread):
                                 welcome_messages = config('comment_lines').get('server_join', [''])
                                 if player in ['BenemitC', 'Farthen08', 'naturalismus']:
                                     welcome_messages += ['Big Brother is watching you.']
+                                with open(config('paths')['people']) as people_json:
+                                    people = json.load(people_json)
+                                for person in people:
+                                    if person['minecraft'] == player:
+                                        if 'description' not in person:
+                                            welcome_messages += [False]
+                                        break
+                                else:
+                                    welcome_messages = ['How did you do that?']
                                 welcome_message = random.choice(welcome_messages)
-                            minecraft.tellraw({'text': 'Hello ' + player + '. ' + welcome_message, 'color': 'gray'}, player)
+                            if welcome_message is False:
+                                minecraft.tellraw([
+                                    {
+                                        'text': 'Hello ' + player + ". You still don't have a description for ",
+                                        'color': 'gray'
+                                    },
+                                    {
+                                        'text': 'the people page',
+                                        'hoverEvent': {
+                                            'action': 'show_text',
+                                            'value': 'http://wurstmineberg.de/people'
+                                        },
+                                        'clickEvent': {
+                                            'action': 'open_url',
+                                            'value': 'http://wurstmineberg.de/people'
+                                        },
+                                        'color': 'gray'
+                                    },
+                                    {
+                                        'text': '. Write one today and send it to ',
+                                        'color': 'gray'
+                                    },
+                                    {
+                                        'text': 'Jemus42',
+                                        'clickEvent': {
+                                            'action': 'suggest_command',
+                                            'value': 'Jemus42: '
+                                        },
+                                        'color': 'gray'
+                                    },
+                                    {
+                                        'text': ' or ',
+                                        'color': 'gray'
+                                    },
+                                    {
+                                        'text': 'Fenhl',
+                                        'clickEvent': {
+                                            'action': 'suggest_command',
+                                            'value': 'Fenhl: '
+                                        },
+                                        'color': 'gray'
+                                    },
+                                    {
+                                        'text': '!',
+                                        'color': 'gray'
+                                    }
+                                ])
+                            else:
+                                minecraft.tellraw({'text': 'Hello ' + player + '. ' + welcome_message, 'color': 'gray'}, player)
                         #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                         update_all()
                     else:
