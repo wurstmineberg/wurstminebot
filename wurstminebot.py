@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.11'
+__version__ = '1.1.12'
 
 import sys
 
@@ -744,7 +744,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     elif can_edit:
                         person['description'] = ' '.join(args[2:])
                         with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                         reply('description updated')
                     else:
                         warning(errors.botop)
@@ -756,7 +756,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         had_name = 'name' in person
                         person['name'] = ' '.join(args[2:])
                         with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                         reply('name ' + ('changed' if had_name else 'added'))
                     else:
                         warning(errors.botop)
@@ -769,7 +769,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         reddit_nick = args[2][3:] if args[2].startswith('/u/') else args[2]
                         person['reddit'] = reddit_nick
                         with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                         reply('reddit nick ' + ('changed' if had_reddit_nick else 'added'))
                     else:
                         warning(errors.botop)
@@ -782,7 +782,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         screen_name = args[2][1:] if args[2].startswith('@') else args[2]
                         person['twitter'] = screen_name
                         with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                         twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
                         twitter.request('friendships/add', {'screen_name': screen_name})
                         reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
@@ -796,7 +796,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         had_website = 'website' in person
                         person['website'] = str(args[2])
                         with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '))
+                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                         reply('website ' + ('changed' if had_website else 'added'))
                     else:
                         warning(errors.botop)
