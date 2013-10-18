@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.9'
+__version__ = '1.1.10'
 
 import sys
 
@@ -156,6 +156,12 @@ class errors:
     def argc(expected, given, atleast=False):
         return ('not enough' if given < expected else 'too many') + ' arguments, expected ' + ('at least ' if atleast else '') + str(expected)
 
+def update_all():
+    minecraft.update_status()
+    minecraft.update_whitelist()
+    update_topic()
+    _delayed(20, minecraft.update_status)
+
 class InputLoop(threading.Thread):
     def run(self):
         global LASTDEATH
@@ -210,9 +216,8 @@ class InputLoop(threading.Thread):
                                     welcome_messages += ['Big Brother is watching you.']
                                 welcome_message = random.choice(welcome_messages)
                             minecraft.tellraw({'text': 'Hello ' + player + '. ' + welcome_message, 'color': 'gray'}, player)
-                        bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
-                        minecraft.update_status()
-                        _delayed(20, minecraft.update_status)
+                        #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
+                        update_all()
                     else:
                         match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$', logLine)
                         if match:
