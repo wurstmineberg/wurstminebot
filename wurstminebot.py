@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.12'
+__version__ = '1.1.13'
 
 import sys
 
@@ -969,7 +969,7 @@ def endMOTD(sender, headers, message):
     bot.say(config('irc')['main_channel'], "aaand I'm back.")
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
     _debug_print("aaand I'm back.")
-    minecraft.update_status()
+    update_all()
     _delayed(20, minecraft.update_status)
     InputLoop().start()
 
