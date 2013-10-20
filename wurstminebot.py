@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.2.1'
+__version__ = '1.3.0'
 
 import sys
 
@@ -1032,7 +1032,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         elif len(args) == 0:
             help_text = 'Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.\nExecute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.\nTo execute a command, send it to me in private chat (here) or address me in ' + config('irc').get('main_channel', '#wurstmineberg') + ' (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
         elif args[0] == 'commands':
-            help_text = 'Available commands: ' + ', '.join(commands.keys())
+            help_text = 'Available commands: ' + ', '.join(sorted(list(commands.keys()) + ['help']))
         elif args[0] == 'help':
             help_text = 'help: get help on a command\nUsage: help [commands | <command>]'
         elif args[0].lower() in commands:
