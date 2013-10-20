@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 import sys
 
@@ -1037,7 +1037,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             help_text = 'help: get help on a command\nUsage: help [commands | <command>]'
         elif args[0].lower() in commands:
             help_cmd = args[0].lower()
-            help_text = help_cmd + ': ' commands[help_cmd]['description'] + (' (requires bot op)' if commands[help_cmd].get('botop_only', False) else '') + '\nUsage: ' + help_cmd + ('' if commands[help_cmd].get('usage') is None else (' ' + commands[help_cmd]['usage']))
+            help_text = help_cmd + ': ' + commands[help_cmd]['description'] + (' (requires bot op)' if commands[help_cmd].get('botop_only', False) else '') + '\nUsage: ' + help_cmd + ('' if commands[help_cmd].get('usage') is None else (' ' + commands[help_cmd]['usage']))
         else:
             help_text = '“' + str(args[0]) + '” is not a command. Type “help commands” for a list of commands.'
         if context == 'irc':
