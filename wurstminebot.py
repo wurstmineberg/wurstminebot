@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.1.13'
+__version__ = '1.2.0'
 
 import sys
 
@@ -140,13 +140,6 @@ def _timed_input(timeout=1): #FROM http://stackoverflow.com/a/2904057
     if i:
         return sys.stdin.readline().strip()
 
-def _delayed(timeout, func):
-    def _func():
-        time.sleep(timeout)
-        func()
-    
-    threading.Thread(target=_func).start()
-
 class errors:
     botop = 'you must be a bot op to do this'
     log = "I can't find that in my chatlog"
@@ -156,11 +149,11 @@ class errors:
     def argc(expected, given, atleast=False):
         return ('not enough' if given < expected else 'too many') + ' arguments, expected ' + ('at least ' if atleast else '') + str(expected)
 
-def update_all():
+def update_all(*args, **kwargs):
     minecraft.update_status()
     minecraft.update_whitelist()
     update_topic()
-    _delayed(20, minecraft.update_status)
+    threading.Timer(20, minecraft.update_status).start()
 
 class InputLoop(threading.Thread):
     def run(self):
@@ -419,9 +412,6 @@ def update_topic():
         bot.topic(config('irc')['main_channel'], TOPIC)
 
 def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
-    global ACHIEVEMENTTWEET
-    global DEATHTWEET
-    global TOPIC
     if reply is None:
         if reply_format == 'tellraw' or context == 'minecraft':
             reply_format = 'tellraw'
@@ -452,20 +442,19 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply(msg)
     
-    isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
-    if cmd == 'achievementtweet':
-        # toggle achievement message tweeting
+    def _command_achievementtweet(args=[], botop=False):
+        global ACHIEVEMENTTWEET
         if not len(args):
             reply('Achievement tweeting is currently ' + ('enabled' if ACHIEVEMENTTWEET else 'disabled'))
         elif args[0] == 'on':
             ACHIEVEMENTTWEET = True
             reply('Achievement tweeting is now enabled')
         elif args[0] == 'off':
-            def _reenable_death_tweets():
+            def _reenable_achievement_tweets():
                 global ACHIEVEMENTTWEET
                 ACHIEVEMENTTWEET = True
             
-            if len(args) == 2:
+            if len(args) >= 2:
                 match = re.match('([0-9]+)([dhms])', args[1])
                 if match:
                     number, unit = match.group(1, 2)
@@ -475,22 +464,23 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 else:
                     warning(args[1] + ' is not a time value')
                     return
-                _delayed(number, _reenable_death_tweets)
-            DEATHTWEET = False
+                threading.Timer(number, _reenable_death_tweets).start()
+            elif not botop:
+                warning(errors.botop)
+                return
+            ACHIEVEMENTTWEET = False
             reply('Achievement tweeting is now disabled')
         else:
             warning('first argument needs to be “on” or “off”')
-    elif cmd == 'command':
-        # perform Minecraft server command
-        if isbotop:
-            if args[0]:
-                reply(minecraft.command(args[0], args[1:]))
-            else:
-                warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_command(args=[], botop=False):
+        if args[0]:
+            reply(minecraft.command(args[0], args[1:]))
         else:
-            warning(errors.botop)
-    elif cmd == 'deathtweet':
-        # toggle death message tweeting
+            warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_deathtweet(args=[], botop=False):
+        global DEATHTWEET
         if not len(args):
             reply('Deathtweeting is currently ' + ('enabled' if DEATHTWEET else 'disabled'))
         elif args[0] == 'on':
@@ -501,7 +491,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 global DEATHTWEET
                 DEATHTWEET = True
             
-            if len(args) == 2:
+            if len(args) >= 2:
                 match = re.match('([0-9]+)([dhms])', args[1])
                 if match:
                     number, unit = match.group(1, 2)
@@ -511,20 +501,16 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 else:
                     warning(args[1] + ' is not a time value')
                     return
-                _delayed(number, _reenable_death_tweets)
+                threading.Timer(number, _reenable_death_tweets).start()
+            elif not botop:
+                warning(errors.botop)
+                return
             DEATHTWEET = False
             reply('Deathtweeting is now disabled')
         else:
             warning('first argument needs to be “on” or “off”')
-    elif cmd == 'exitreader':
-        # logpipereader quit function, now deprecated
-        warning('This is not logpipereader, this is wurstminebot. Quit using the quit command.')
-    elif cmd == 'fixstatus':
-        # update the server status on the website
-        minecraft.update_status()
-        _delayed(20, minecraft.update_status)
-    elif cmd == 'lastseen':
-        # when was the player last seen logging in or out on Minecraft
+    
+    def _command_lastseen(args=[], botop=False):
         if len(args):
             player = args[0]
             mcplayer = nicksub.sub(player, context, 'minecraft', strict=False)
@@ -614,8 +600,8 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         reply(player + ' was last seen ' + datestr + '.')
         else:
             warning(errors.argc(1, len(args)))
-    elif cmd == 'leak':
-        # tweet the last n chatlog lines
+    
+    def _command_leak(args=[], botop=False):
         messages = [(msg_type, msg_sender, msg_text) for msg_type, msg_sender, msg_headers, msg_text in bot.channel_data[config('irc')['main_channel']]['log'] if msg_type == 'ACTION' or (msg_type == 'PRIVMSG' and (not msg_text.startswith('!')) and (not msg_text.startswith(config('irc')['nick'] + ': ')) and (not msg_text.startswith(config('irc')['nick'] + ', ')))]
         if len(args) == 0:
             if len(messages):
@@ -638,9 +624,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 tweet += '\n#ircleaks'
             else:
                 tweet += ' #ircleaks'
-        command(sender, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
-    elif cmd == 'pastetweet':
-        # print the contents of a tweet
+        command(None, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
+    
+    def _command_pastetweet(args=[], botop=False):
         link = True
         if len(args) == 2 and args[1] == 'nolink':
             link = False
@@ -724,8 +710,8 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 warning('Error ' + str(request.status_code))
         else:
             warning(errors.argc(1, len(args)))
-    elif cmd == 'people':
-        # people.json management
+    
+    def _command_people(args=[], botop=False):
         if len(args):
             with open(config('paths')['people']) as people_json:
                 people = json.load(people_json)
@@ -811,40 +797,30 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     reply('person with id ' + str(args[0]) + ' and no name')
         else:
             reply('http://wurstmineberg.de/people')
-    elif cmd == 'ping':
-        # say pong
-        reply('pong')
-    elif cmd == 'quit':
-        # quit the IRC bot
-        if isbotop:
-            quitMsg = ' '.join(args) if len(args) else None
-            if context != 'minecraft':
-                minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
-            if (context != 'irc') or (chan is None):
-                bot.say(config('irc')['main_channel'], ('brb, ' + quitMsg) if quitMsg else random.choice(['Please wait while I reinstall the universe.', 'brb', 'Please hang tight, I seem to have exploded.']))
-            bot.disconnect(quitMsg if quitMsg else 'brb')
-            bot.stop()
-            sys.exit()
+    
+    def _command_ping(args=[], botop=False):
+        if random.randrange(1024) == 0:
+            reply('BWO' + 'R' * random.randint(3, 20) + 'N' * random.randing(1, 5) + 'G') # PINGCEPTION
         else:
-            warning(errors.botop)
-    elif cmd == 'raw':
-        # send raw message to IRC
-        if isbotop:
-            if len(args):
-                bot.send(' '.join(args))
-            else:
-                warning(errors.argc(1, len(args), atleast=True))
+            reply('pong')
+    
+    def _command_quit(args=[], botop=False):
+        quitMsg = ' '.join(args) if len(args) else None
+        if context != 'minecraft':
+            minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
+        if (context != 'irc') or (chan is None):
+            bot.say(config('irc')['main_channel'], ('brb, ' + quitMsg) if quitMsg else random.choice(['Please wait while I reinstall the universe.', 'brb', 'Please hang tight, I seem to have exploded.']))
+        bot.disconnect(quitMsg if quitMsg else 'brb')
+        bot.stop()
+        sys.exit()
+    
+    def _command_raw(args=[], botop=False):
+        if len(args):
+            bot.send(' '.join(args))
         else:
-            warning(errors.botop)
-    elif cmd == 'restart':
-        # restart the Minecraft server
-        if isbotop:
-            minecraft.stop()
-            minecraft.start()
-        else:
-            warning(errors.botop)
-    elif cmd == 'status':
-        # print some server status
+            warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_status(args=[], botop=False):
         if minecraft.status():
             if context != 'minecraft':
                 players = minecraft.online_players()
@@ -872,92 +848,207 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 reply('Minecraft version ' + version)
         else:
             reply('The server is currently offline.')
-    elif cmd == 'stop':
-        # stop the Minecraft server
-        if isbotop:
-            minecraft.stop()
-        else:
-            warning(errors.botop)
-    elif cmd == 'time':
-        # reply with the current time
+    
+    def _command_time(args=[], botop=False):
         telltime(func=reply)
-    elif cmd == 'topic':
-        # set the channel topic
-        if isbotop:
-            if len(args):
-                TOPIC = ' '.join(args)
-                update_topic()
-                reply('Topic changed temporarily. To change permanently, edit /opt/wurstmineberg/config/wurstminebot.json')
-            else:
-                warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_topic(args=[], botop=False):
+        if len(args):
+            TOPIC = ' '.join(args)
+            update_topic()
+            reply('Topic changed temporarily. To change permanently, edit /opt/wurstmineberg/config/wurstminebot.json')
         else:
-            warning(errors.botop)
-    elif cmd == 'tweet':
-        # tweet message
-        if isbotop:
-            if len(args):
-                tweet = nicksub.textsub(' '.join(args), context, 'twitter')
-                if len(tweet) > 140:
-                    warning('too long')
-                else:
-                    r = twitter.request('statuses/update', {'status': tweet})
-                    if 'id' in r.json():
-                        url = 'https://twitter.com/wurstmineberg/status/' + str(r.json()['id'])
-                        if context == 'minecraft':
-                            minecraft.tellraw({
-                                'text': '',
-                                'extra': [
-                                    {
-                                        'text': url,
-                                        'color': 'gold',
-                                        'clickEvent': {
-                                            'action': 'open_url',
-                                            'value': url
-                                        }
+            warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_tweet(args=[], botop=False):
+        if len(args):
+            tweet = nicksub.textsub(' '.join(args), context, 'twitter')
+            if len(tweet) > 140:
+                warning('too long')
+            else:
+                r = twitter.request('statuses/update', {'status': tweet})
+                if 'id' in r.json():
+                    url = 'https://twitter.com/wurstmineberg/status/' + str(r.json()['id'])
+                    if context == 'minecraft':
+                        minecraft.tellraw({
+                            'text': '',
+                            'extra': [
+                                {
+                                    'text': url,
+                                    'color': 'gold',
+                                    'clickEvent': {
+                                        'action': 'open_url',
+                                        'value': url
                                     }
-                                ]
-                            })
-                        else:
-                            command(None, None, 'pastetweet', [r.json()['id']], reply_format='tellraw')
-                        if context == 'irc' and chan == config('irc')['main_channel']:
-                            bot.say(chan, url)
-                        else:
-                            command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(config('irc')['main_channel'] if chan is None else chan, msg))
+                                }
+                            ]
+                        })
                     else:
-                        warning('Error ' + str(r.status_code))
-            else:
-                warning(errors.argc(1, len(args), atleast=True))
-        else:
-            warning(errors.botop)
-    elif cmd == 'update':
-        # update Minecraft
-        if isbotop:
-            if len(args):
-                if args[0] == 'snapshot':
-                    if len(args) == 2:
-                        minecraft.update(args[1], snapshot=True)
+                        command(None, None, 'pastetweet', [r.json()['id']], reply_format='tellraw')
+                    if context == 'irc' and chan == config('irc')['main_channel']:
+                        bot.say(chan, url)
                     else:
-                        warning(errors.argc(2, len(args)))
-                elif len(args) == 1:
-                    minecraft.update(args[0], snapshot=False)
+                        command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(config('irc')['main_channel'] if chan is None else chan, msg))
                 else:
-                    warning(errors.argc(1, len(args)))
-            else:
-                warning(errors.argc(1, len(args), atleast=True))
+                    warning('Error ' + str(r.status_code))
         else:
-            warning(errors.botop)
-    elif cmd == 'whitelist':
-        # add person to whitelist
-        if isbotop:
-            if len(args) == 2:
-                try:
-                    minecraft.whitelist_add(args[0], args[1])
-                except ValueError:
-                    warning('id ' + str(args[0]) + ' already exists')
+            warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_update(args=[], botop=False):
+        if len(args):
+            if args[0] == 'snapshot':
+                if len(args) == 2:
+                    minecraft.update(args[1], snapshot=True)
                 else:
-                    reply(str(args[1]) + ' is now whitelisted')
+                    warning('Usage: update (snapshot <snapshot_id> | <version>)')
+            elif len(args) == 1:
+                minecraft.update(args[0], snapshot=False)
             else:
-                warning('Usage: whitelist <unique-id> <minecraft-name>')
+                warning('Usage: update (snapshot <snapshot_id> | <version>)')
+        else:
+            warning('Usage: update (snapshot <snapshot_id> | <version>)')
+    
+    def _command_whitelist(args=[], botop=False):
+        if len(args) == 2:
+            try:
+                minecraft.whitelist_add(args[0], args[1])
+            except ValueError:
+                warning('id ' + str(args[0]) + ' already exists')
+            else:
+                reply(str(args[1]) + ' is now whitelisted')
+        else:
+            warning('Usage: whitelist <unique_id> <minecraft_name>')
+    
+    commands = {
+        'achievementtweet': {
+            'description': 'toggle achievement message tweeting',
+            'function': _command_achievementtweet,
+            'usage': '[on | off [<time>]]'
+        },
+        'command': {
+            'botop_only': True,
+            'description': 'perform Minecraft server command',
+            'function': _command_command,
+            'usage': '<command> [<arguments>...]',
+        },
+        'deathtweet': {
+            'description': 'toggle death message tweeting',
+            'function': _command_deathtweet,
+            'usage': '[on | off [<time>]]'
+        },
+        'fixstatus': {
+            'description': 'update the server status on the website and in the channel topic',
+            'function': update_all,
+            'usage': None
+        },
+        'lastseen': {
+            'description': 'when was the player last seen logging in or out on Minecraft',
+            'function': _command_lastseen,
+            'usage': '<player>'
+        },
+        'leak': {
+            'description': 'tweet the last line_count (defaults to 1) chatlog lines',
+            'function': _command_leak,
+            'usage': '[<line_count>]'
+        },
+        'pastetweet': {
+            'description': 'print the contents of a tweet',
+            'function': _command_pastetweet,
+            'usage': '(<url> | <status_id>) [nolink]'
+        },
+        'people': {
+            'description': 'people.json management',
+            'function': _command_people,
+            'usage': '[<person> [<attribute> [<value>]]]'
+        },
+        'ping': {
+            'description': 'say pong',
+            'function': _command_ping,
+            'usage': None
+        },
+        'quit': {
+            'botop_only': True,
+            'description': 'quit the IRC bot',
+            'function': _command_quit,
+            'usage': '[<quit_message>...]'
+        },
+        'raw': {
+            'botop_only': True,
+            'description': 'send raw message to IRC',
+            'function': _command_raw,
+            'usage': '<raw_message>...'
+        },
+        'restart': {
+            'botop_only': True,
+            'description': 'restart the Minecraft server',
+            'function': minecraft.restart,
+            'usage': None
+        },
+        'status': {
+            'description': 'print some server status',
+            'function': _command_status,
+            'usage': None
+        },
+        'stop': {
+            'botop_only': True,
+            'description': 'stop the Minecraft server',
+            'function': minecraft.stop,
+            'usage': None
+        },
+        'time': {
+            'description': 'reply with the current time',
+            'function': _command_time,
+            'usage': None
+        },
+        'topic': {
+            'botop_only': True,
+            'description': 'temporarily set the channel topic',
+            'function': _command_topic,
+            'usage': '<topic>...'
+        },
+        'tweet': {
+            'botop_only': True,
+            'description': 'tweet message',
+            'function': _command_tweet,
+            'usage': '<message>...'
+        },
+        'update': {
+            'botop_only': True,
+            'description': 'update Minecraft',
+            'function': _command_update,
+            'usage': '(snapshot <snapshot_id> | <version>)'
+        },
+        'whitelist': {
+            'botop_only': True,
+            'description': 'add person to whitelist',
+            'function': _command_whitelist,
+            'usage': 'whitelist <unique_id> <minecraft_name>'
+        }
+    }
+    
+    if cmd == 'help':
+        if len(args) >= 2:
+            help_text = 'Usage: help [commands | <command>]'
+        elif len(args) == 0:
+            help_text = 'Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.\nExecute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.\nTo execute a command, send it to me in private chat (here) or address me in ' + config('irc').get('main_channel', '#wurstmineberg') + ' (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
+        elif args[0] == 'commands':
+            help_text = 'Available commands: ' + ', '.join(commands.keys())
+        elif args[0] == 'help':
+            help_text = 'help: get help on a command\nUsage: help [commands | <command>]'
+        elif args[0].lower() in commands:
+            help_cmd = args[0].lower()
+            help_text = help_cmd + ': ' commands[help_cmd]['description'] + (' (requires bot op)' if commands[help_cmd].get('botop_only', False) else '') + '\nUsage: ' + help_cmd + ('' if commands[help_cmd].get('usage') is None else (' ' + commands[help_cmd]['usage']))
+        else:
+            help_text = '“' + str(args[0]) + '” is not a command. Type “help commands” for a list of commands.'
+        if context == 'irc':
+            for line in help_text.splitlines():
+                bot.say(sender, line)
+        else:
+            reply(sender, help_text)
+    elif cmd in commands:
+        isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
+        if isbotop or not cmd.get('botop_only', False):
+            commands[cmd]['function'](args=args, botop=isbotop)
         else:
             warning(errors.botop)
     elif not chan:
@@ -970,7 +1061,7 @@ def endMOTD(sender, headers, message):
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
     _debug_print("aaand I'm back.")
     update_all()
-    _delayed(20, minecraft.update_status)
+    threading.Timer(20, minecraft.update_status).start()
     InputLoop().start()
 
 bot.bind('376', endMOTD)
