@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 import sys
 
@@ -30,6 +30,7 @@ import os
 import os.path
 import random
 import re
+import requests
 import select
 import signal
 import subprocess
@@ -626,6 +627,50 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 tweet += ' #ircleaks'
         command(None, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
     
+    def _command_pastemojira(args=[], botop=False):
+        link = True
+        if len(args) == 3 and args[2] == 'nolink':
+            link = False
+            args = args[:2]
+        elif len(args) == 2 and args[1] == 'nolink':
+            link = False
+            args = [args[0]]
+        if len(args) == 2:
+            project_key = str(args[0])
+            issue_id = int(args[0])
+        elif len(args) == 1:
+            match = re.match('(https?://mojang.atlassian.net/browse/)?([A-Z]+)-([0-9]+)', str(args[0]))
+            if match:
+                project_key = str(match.group(2))
+                issue_id = int(match.group(3))
+            else:
+                project_key = 'MC'
+                issue_id = int(args[0])
+        else:
+            reply('http://mojang.atlassian.net/browse/MC')
+            return
+        request = requests.get('http://mojang.atlassian.net/browse/' + project_key + '-' + str(issue_id))
+        if request.status_code == 200:
+            match = re.match('<title>\\[([A-Z]+)-([0-9]+)\\] (.+) - Mojira</title>', r.text.splitlines()[18])
+            if not match:
+                warning('could not get title')
+                return
+            project_key, issue_id, title = match.group(1, 2, 3)
+            if reply_format == 'tellraw':
+                reply({
+                    'text': '[' + project_key + '-' + issue_id + '] ' + title,
+                    'color': 'gold',
+                    'clickEvent': {
+                        'action': 'open_url',
+                        'value': 'http://mojang.atlassian.net/browse/' + project_key + '-' + issue_id
+                    }
+                })
+            else:
+                reply('[' + project_key + '-' + issue_id + '] ' + title + (' [http://mojang.atlassian.net/browse/' + project_key + '-' + issue_id + ']' if link else ''))
+        else:
+            warning('Error ' + str(request.status_code))
+            return
+    
     def _command_pastetweet(args=[], botop=False):
         link = True
         if len(args) == 2 and args[1] == 'nolink':
@@ -951,6 +996,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'function': _command_leak,
             'usage': '[<line_count>]'
         },
+        'pastemojira': {
+            'description': 'print the title of a bug in Mojangs bug tracker',
+            'function': _command_pastemojira,
+            'usage': '(<url> | [<project_key>] <issue_id>) [nolink]'
+        },
         'pastetweet': {
             'description': 'print the contents of a tweet',
             'function': _command_pastetweet,
@@ -1092,35 +1142,60 @@ def privmsg(sender, headers, message):
             if len(cmd):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif headers[0] == config('irc')['main_channel']:
-            if re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
-                minecraft.tellraw({
-                    'text': '',
-                    'extra': [
-                        {
-                            'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
-                            'color': 'aqua',
-                            'hoverEvent': {
-                                'action': 'show_text',
-                                'value': sender + ' in ' + headers[0]
-                            },
-                            'clickEvent': {
-                                'action': 'suggest_command',
-                                'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
-                            }
+            if re.match('https?://mojang.atlassian.net/browse/[A-Z]+-[0-9]+', message):
+                minecraft.tellraw([
+                    {
+                        'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                        'color': 'aqua',
+                        'hoverEvent': {
+                            'action': 'show_text',
+                            'value': sender + ' in ' + headers[0]
                         },
-                        {
-                            'text': ' '
-                        },
-                        {
-                            'text': message,
-                            'color': 'aqua',
-                            'clickEvent': {
-                                'action': 'open_url',
-                                'value': message
-                            }
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
                         }
-                    ]
-                })
+                    },
+                    {
+                        'text': ' '
+                    },
+                    {
+                        'text': message,
+                        'color': 'aqua',
+                        'clickEvent': {
+                            'action': 'open_url',
+                            'value': message
+                        }
+                    }
+                ])
+                command(None, None, 'pastemojira', [message, 'nolink'], reply_format='tellraw')
+                command(sender, headers[0], 'pastemojira', [message, 'nolink'], reply=botsay)
+            elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
+                minecraft.tellraw([
+                    {
+                        'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                        'color': 'aqua',
+                        'hoverEvent': {
+                            'action': 'show_text',
+                            'value': sender + ' in ' + headers[0]
+                        },
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                        }
+                    },
+                    {
+                        'text': ' '
+                    },
+                    {
+                        'text': message,
+                        'color': 'aqua',
+                        'clickEvent': {
+                            'action': 'open_url',
+                            'value': message
+                        }
+                    }
+                ])
                 command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
                 command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
             else:
