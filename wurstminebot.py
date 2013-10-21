@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 import sys
 
@@ -651,7 +651,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             return
         request = requests.get('http://mojang.atlassian.net/browse/' + project_key + '-' + str(issue_id))
         if request.status_code == 200:
-            match = re.match('<title>\\[([A-Z]+)-([0-9]+)\\] (.+) - Mojira</title>', r.text.splitlines()[18])
+            match = re.match('<title>\\[([A-Z]+)-([0-9]+)\\] (.+) - Mojira</title>', request.text.splitlines()[18])
             if not match:
                 warning('could not get title')
                 return
