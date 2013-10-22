@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.2'
+__version__ = '1.4.3'
 
 import sys
 
@@ -91,9 +91,13 @@ def _logtail(timeout=0.5):
 
 def config(key=None, default_value=None):
     default_config = {
+        'advanced_comment_lines': {
+            'death': [],
+            'server_join': []
+        },
         'comment_lines': {
             'death': ['Well done.'],
-            'server_join': ['']
+            'server_join': []
         },
         'debug': False,
         'irc': {
@@ -205,19 +209,29 @@ class InputLoop(threading.Thread):
                             if new_player:
                                 welcome_message = 'Welcome to the server!'
                             else:
-                                welcome_messages = config('comment_lines').get('server_join', [''])
-                                if player in ['BenemitC', 'Farthen08', 'naturalismus']:
-                                    welcome_messages += ['Big Brother is watching you.']
+                                welcome_messages = dict((line, 1.0) for line in config('comment_lines').get('server_join', []))
                                 with open(config('paths')['people']) as people_json:
                                     people = json.load(people_json)
                                 for person in people:
                                     if person['minecraft'] == player:
                                         if 'description' not in person:
-                                            welcome_messages += [False]
+                                            welcome_messages[False] = 1.0
                                         break
                                 else:
-                                    welcome_messages = ['How did you do that?']
-                                welcome_message = random.choice(welcome_messages)
+                                    welcome_messages['How did you do that?'] = 16.0
+                                for adv_welcome_msg in config('advanced_comment_lines').get('server_join', []):
+                                    if 'text' not in adv_welcome_msg:
+                                        continue
+                                    welcome_messages[adv_welcome_msg['text']] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
+                                random_index = random.uniform(0.0, sum(welcome_messages.values()))
+                                index = 0.0
+                                for welcome_message, weight in welcome_messages.enumerate():
+                                    if random_index - index < weight:
+                                        break
+                                    else:
+                                        index += weight
+                                else:
+                                    welcome_message = ''
                             if welcome_message is False:
                                 minecraft.tellraw([
                                     {
