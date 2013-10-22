@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 
 import sys
 
@@ -1117,7 +1117,7 @@ def endMOTD(sender, headers, message):
 bot.bind('376', endMOTD)
 
 def action(sender, headers, message):
-    if sender == config('irc')['nick']:
+    if sender == config('irc').get('nick', 'wurstminebot'):
         return
     if headers[0] == config('irc')['main_channel']:
         minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
@@ -1130,11 +1130,11 @@ def privmsg(sender, headers, message):
             bot.say(config('irc')['main_channel'], line)
     
     _debug_print('[irc] <' + sender + '> ' + message)
-    if sender == config('irc')['nick']:
+    if sender == config('irc').get('nick', 'wurstminebot'):
         return
     if headers[0].startswith('#'):
-        if message.startswith(config('irc')['nick'] + ': ') or message.startswith(config('irc')['nick'] + ', '):
-            cmd = message[len(config('irc')['nick']) + 2:].split(' ')
+        if message.startswith(config('irc').get('nick', 'wurstminebot') + ': ') or message.startswith(config('irc')['nick'] + ', '):
+            cmd = message[len(config('irc').get('nick', 'wurstminebot')) + 2:].split(' ')
             if len(cmd):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif message.startswith('!'):
