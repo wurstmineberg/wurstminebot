@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.3'
+__version__ = '1.4.4'
 
 import sys
 
@@ -225,7 +225,7 @@ class InputLoop(threading.Thread):
                                     welcome_messages[adv_welcome_msg['text']] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
                                 random_index = random.uniform(0.0, sum(welcome_messages.values()))
                                 index = 0.0
-                                for welcome_message, weight in welcome_messages.enumerate():
+                                for welcome_message, weight in welcome_messages.items():
                                     if random_index - index < weight:
                                         break
                                     else:
