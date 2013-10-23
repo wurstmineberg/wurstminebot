@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.6'
+__version__ = '1.4.7'
 
 import sys
 
@@ -46,15 +46,6 @@ CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='wurstminebot ' + __version__)
     CONFIG_FILE = arguments['--config']
-
-pidfile = daemon.pidlockfile.PIDLockFile("/var/run/wurstmineberg/wurstminebot.pid")
-logfile = open("/opt/wurstmineberg/log/wurstminebot.log", "a")
-daemoncontext = daemon.DaemonContext(working_directory = '/opt/wurstmineberg/',
-                                     pidfile = pidfile,
-                                     uid = 1000, gid = 1000,
-                                     stdout = logfile, stderr = logfile)
-
-daemoncontext.files_preserve = [logfile]
 
 def _debug_print(msg):
     if config('debug'):
@@ -1234,64 +1225,76 @@ def run():
     TimeLoop().start()
     bot.run()
 
-def start():
+def newDaemonContext(pidfilename):
     if not os.geteuid() == 0:
         sys.exit("\nOnly root can start/stop the daemon!\n")
     
+    pidfile = daemon.pidlockfile.PIDLockFile(pidfilename)
+    logfile = open("/opt/wurstmineberg/log/wurstminebot.log", "a")
+    daemoncontext = daemon.DaemonContext(working_directory = '/opt/wurstmineberg/',
+                                         pidfile = pidfile,
+                                         uid = 1000, gid = 1000,
+                                         stdout = logfile, stderr = logfile)
+    
+    daemoncontext.files_preserve = [logfile]
+    daemoncontext.signal_map = {
+        signal.SIGTERM: bot.stop,
+        signal.SIGHUP: bot.stop,
+    }
+    return daemoncontext
+
+def start(context):
     print("Starting wurstminebot version", __version__)
 
-    if status():
+    if status(context.pidfile):
         print("Already running!")
         return
     else:
         # Removes the PID file
-        stop()
+        stop(context)
     
     print("Daemonizing...")
-    with daemoncontext:
+    with context:
         print("Daemonized.")
         run()
         print("Terminating...")
 
-def status():
+def status(pidfile):
     if pidfile.is_locked():
         return os.path.exists("/proc/" + str(pidfile.read_pid()))
     return False
 
-def stop():
-    if not os.geteuid() == 0:
-        sys.exit("\nOnly root can start/stop the daemon!\n")
-    
-    if status():
+def stop(context):
+    if status(context.pidfile):
         print("Stopping the service...")
-        if daemoncontext.is_open:
-            daemoncontext.close()
+        if context.is_open:
+            context.close()
         else:
             # We don't seem to be able to stop the context so we just kill the bot
-            os.kill(pidfile.read_pid(), signal.SIGKILL)
+            os.kill(context.pidfile.read_pid(), signal.SIGKILL)
         try:
-            pidfile.release()
+            context.pidfile.release()
         except lockfile.NotMyLock:
-            pidfile.break_lock()
+            context.pidfile.break_lock()
         
-    if pidfile.is_locked():
+    if context.pidfile.is_locked():
         print("Service did not shutdown correctly. Cleaning up...")
-        pidfile.break_lock()
-
-daemoncontext.signal_map = {                                                                                                                         
-    signal.SIGTERM: stop,
-    signal.SIGHUP: stop,
-}
+        context.pidfile.break_lock()
 
 if __name__ == '__main__':
+    pidfilename = "/var/run/wurstmineberg/wurstminebot.pid"
     if arguments['start']:
-        start()
+        context = newDaemonContext(pidfilename)
+        start(context)
     elif arguments['stop']:
-        stop()
+        context = newDaemonContext(pidfilename)
+        stop(context)
     elif arguments['restart']:
-        stop()
-        start()
+        context = newDaemonContext(pidfilename)
+        stop(context)
+        start(context)
     elif arguments['status']:
-        print('wurstminebot ' + ('is' if status() else 'is not') + ' running.')
+        pidfile = daemon.pidlockfile.PIDLockFile(pidfilename)
+        print('wurstminebot ' + ('is' if status(pidfile) else 'is not') + ' running.')
     else:
         run()
