@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.7'
+__version__ = '1.4.8'
 
 import sys
 
@@ -185,20 +185,20 @@ class InputLoop(threading.Thread):
                             if new_player:
                                 welcome_message = 'Welcome to the server!'
                             else:
-                                welcome_messages = dict((line, 1.0) for line in config('comment_lines').get('server_join', []))
+                                welcome_messages = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('server_join', []))))
                                 with open(config('paths')['people']) as people_json:
                                     people = json.load(people_json)
                                 for person in people:
                                     if person['minecraft'] == player:
                                         if 'description' not in person:
-                                            welcome_messages[False] = 1.0
+                                            welcome_messages[0, 1] = 1.0
                                         break
                                 else:
-                                    welcome_messages['How did you do that?'] = 16.0
-                                for adv_welcome_msg in config('advanced_comment_lines').get('server_join', []):
+                                    welcome_messages[0, 2] = 16.0
+                                for index, adv_welcome_msg in enumerate(config('advanced_comment_lines').get('server_join', [])):
                                     if 'text' not in adv_welcome_msg:
                                         continue
-                                    welcome_messages[adv_welcome_msg['text']] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
+                                    welcome_messages[2, index] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
                                 random_index = random.uniform(0.0, sum(welcome_messages.values()))
                                 index = 0.0
                                 for welcome_message, weight in welcome_messages.items():
@@ -207,8 +207,10 @@ class InputLoop(threading.Thread):
                                     else:
                                         index += weight
                                 else:
-                                    welcome_message = ''
-                            if welcome_message is False:
+                                    welcome_message = (0, 0)
+                            if welcome_message == (0, 0):
+                                minecraft.tellraw({'text': 'Hello ' + player + '. Um... sup?', 'color': 'gray'}, player)
+                            if welcome_message == (0, 1):
                                 minecraft.tellraw([
                                     {
                                         'text': 'Hello ' + player + ". You still don't have a description for ",
@@ -255,8 +257,22 @@ class InputLoop(threading.Thread):
                                         'color': 'gray'
                                     }
                                 ])
+                            elif welcome_message[0] == 1:
+                                minecraft.tellraw({'text': 'Hello ' + player + '. ' + config('comment_lines')['server_join'][welcome_message[1]], 'color': 'gray'}, player)
+                            elif welcome_message[0] == 2:
+                                message_list = config('advanced_comment_lines')['server_join'][welcome_message[1]]
+                                if isinstance(message_list, str):
+                                    message_list = [{'text': message_list, 'color': 'gray'}]
+                                elif isinstance(message_list, dict):
+                                    message_list = [message_list]
+                                minecraft.tellraw([
+                                    {
+                                        'text': 'Hello ' + player + '. ',
+                                        'color': 'gray'
+                                    }
+                                ] + message_list)
                             else:
-                                minecraft.tellraw({'text': 'Hello ' + player + '. ' + welcome_message, 'color': 'gray'}, player)
+                                minecraft.tellraw({'text': 'Hello ' + player + '. How did you do that?', 'color': 'gray'}, player)
                         #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                         update_all()
                     else:
