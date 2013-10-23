@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.5'
+__version__ = '1.4.6'
 
 import sys
 
@@ -42,16 +42,13 @@ import time
 from datetime import timedelta
 import xml.sax.saxutils
 
-if not os.geteuid() == 0:
-    sys.exit("\nOnly root can run this script\n")
-
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='wurstminebot ' + __version__)
     CONFIG_FILE = arguments['--config']
 
 pidfile = daemon.pidlockfile.PIDLockFile("/var/run/wurstmineberg/wurstminebot.pid")
-logfile = open("/opt/wurstmineberg/log/wurstminebot.log", "w")
+logfile = open("/opt/wurstmineberg/log/wurstminebot.log", "a")
 daemoncontext = daemon.DaemonContext(working_directory = '/opt/wurstmineberg/',
                                      pidfile = pidfile,
                                      uid = 1000, gid = 1000,
@@ -62,33 +59,6 @@ daemoncontext.files_preserve = [logfile]
 def _debug_print(msg):
     if config('debug'):
         print('DEBUG] ' + msg)
-
-def _fork(func):
-    #FROM http://stackoverflow.com/a/6011298/667338
-    # do the UNIX double-fork magic, see Stevens' "Advanced Programming in the UNIX Environment" for details (ISBN 0201563177)
-    try:
-        pid = os.fork()
-        if pid > 0:
-            # parent process, return and keep running
-            return
-    except OSError as e:
-        print("fork #1 failed: %d (%s)" % (e.errno, e.strerror), file=sys.stderr)
-        sys.exit(1)
-    os.setsid()
-    # do second fork
-    try:
-        pid = os.fork()
-        if pid > 0:
-            # exit from second parent
-            sys.exit(0)
-    except OSError as e:
-        print("fork #2 failed: %d (%s)" % (e.errno, e.strerror), file=sys.stderr)
-        sys.exit(1)
-    with open(os.path.devnull) as devnull:
-        sys.stdin = devnull
-        sys.stdout = devnull
-        func() # do stuff
-        os._exit(os.EX_OK) # all done
 
 def _logtail(timeout=0.5):
     logpath = os.path.join(config('paths')['minecraft_server'], 'logs', 'latest.log')
@@ -1265,38 +1235,48 @@ def run():
     bot.run()
 
 def start():
+    if not os.geteuid() == 0:
+        sys.exit("\nOnly root can start/stop the daemon!\n")
+    
+    print("Starting wurstminebot version", __version__)
+
     if status():
         print("Already running!")
         return
+    else:
+        # Removes the PID file
+        stop()
     
+    print("Daemonizing...")
     with daemoncontext:
         print("Daemonized.")
         run()
         print("Terminating...")
-#        with open(config('paths')['keepalive'], 'a') as keepalive:
-#            print(str(os.getpid()), file=keepalive) # create the keepalive file
-#        if os.path.exists(config('paths')['keepalive']):
-#            try:
-#                bot.debugging(config('debug'))
-#                TimeLoop().start()
-#                bot.start()
-#            finally:
-#                if os.path.exists(config('paths')['keepalive']):
-#                    os.remove(config('paths')['keepalive'])
 
 def status():
     if pidfile.is_locked():
         return os.path.exists("/proc/" + str(pidfile.read_pid()))
     return False
-#    return os.path.exists(config('paths')['keepalive'])
 
 def stop():
-    if daemoncontext.is_open:
-        daemoncontext.close()
-    else:
-        os.kill(pidfile.read_pid(), signal.SIGKILL)
-        if pidfile.is_locked():
+    if not os.geteuid() == 0:
+        sys.exit("\nOnly root can start/stop the daemon!\n")
+    
+    if status():
+        print("Stopping the service...")
+        if daemoncontext.is_open:
+            daemoncontext.close()
+        else:
+            # We don't seem to be able to stop the context so we just kill the bot
+            os.kill(pidfile.read_pid(), signal.SIGKILL)
+        try:
+            pidfile.release()
+        except lockfile.NotMyLock:
             pidfile.break_lock()
+        
+    if pidfile.is_locked():
+        print("Service did not shutdown correctly. Cleaning up...")
+        pidfile.break_lock()
 
 daemoncontext.signal_map = {                                                                                                                         
     signal.SIGTERM: stop,
