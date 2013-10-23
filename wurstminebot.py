@@ -12,18 +12,21 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.4'
+__version__ = '1.4.5'
 
 import sys
 
 sys.path.append('/opt/py')
 
 from TwitterAPI import TwitterAPI
+import daemon
+import daemon.pidlockfile
 from datetime import datetime
 import deaths
 from docopt import docopt
 from ircbotframe import ircBot
 import json
+import lockfile
 import minecraft
 import nicksub
 import os
@@ -39,10 +42,22 @@ import time
 from datetime import timedelta
 import xml.sax.saxutils
 
+if not os.geteuid() == 0:
+    sys.exit("\nOnly root can run this script\n")
+
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='wurstminebot ' + __version__)
     CONFIG_FILE = arguments['--config']
+
+pidfile = daemon.pidlockfile.PIDLockFile("/var/run/wurstmineberg/wurstminebot.pid")
+logfile = open("/opt/wurstmineberg/log/wurstminebot.log", "w")
+daemoncontext = daemon.DaemonContext(working_directory = '/opt/wurstmineberg/',
+                                     pidfile = pidfile,
+                                     uid = 1000, gid = 1000,
+                                     stdout = logfile, stderr = logfile)
+
+daemoncontext.files_preserve = [logfile]
 
 def _debug_print(msg):
     if config('debug'):
@@ -1250,35 +1265,43 @@ def run():
     bot.run()
 
 def start():
-    def _start():
-        with open(config('paths')['keepalive'], 'a') as keepalive:
-            print(str(os.getpid()), file=keepalive) # create the keepalive file
-        if os.path.exists(config('paths')['keepalive']):
-            try:
-                bot.debugging(config('debug'))
-                TimeLoop().start()
-                bot.start()
-            finally:
-                if os.path.exists(config('paths')['keepalive']):
-                    os.remove(config('paths')['keepalive'])
+    if status():
+        print("Already running!")
+        return
     
-    _fork(_start)
+    with daemoncontext:
+        print("Daemonized.")
+        run()
+        print("Terminating...")
+#        with open(config('paths')['keepalive'], 'a') as keepalive:
+#            print(str(os.getpid()), file=keepalive) # create the keepalive file
+#        if os.path.exists(config('paths')['keepalive']):
+#            try:
+#                bot.debugging(config('debug'))
+#                TimeLoop().start()
+#                bot.start()
+#            finally:
+#                if os.path.exists(config('paths')['keepalive']):
+#                    os.remove(config('paths')['keepalive'])
 
 def status():
-    return os.path.exists(config('paths')['keepalive'])
+    if pidfile.is_locked():
+        return os.path.exists("/proc/" + str(pidfile.read_pid()))
+    return False
+#    return os.path.exists(config('paths')['keepalive'])
 
 def stop():
-    pid = None
-    try:
-        with open(config('paths')['keepalive']) as keepalive:
-            for line in keepalive:
-                pid = int(line.strip())
-    except FileNotFoundError:
-        return # not running
+    if daemoncontext.is_open:
+        daemoncontext.close()
     else:
-        os.remove(config('paths')['keepalive'])
-        if pid is not None:
-            os.kill(pid, signal.SIGKILL)
+        os.kill(pidfile.read_pid(), signal.SIGKILL)
+        if pidfile.is_locked():
+            pidfile.break_lock()
+
+daemoncontext.signal_map = {                                                                                                                         
+    signal.SIGTERM: stop,
+    signal.SIGHUP: stop,
+}
 
 if __name__ == '__main__':
     if arguments['start']:
