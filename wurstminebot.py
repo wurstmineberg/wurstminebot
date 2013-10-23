@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.8'
+__version__ = '1.4.9'
 
 import sys
 
@@ -643,7 +643,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             args = [args[0]]
         if len(args) == 2:
             project_key = str(args[0])
-            issue_id = int(args[0])
+            try:
+                issue_id = int(args[1])
+            except ValueError:
+                warning('Invalid issue ID: ' + str(args[0]))
+                return
         elif len(args) == 1:
             match = re.match('(https?://mojang.atlassian.net/browse/)?([A-Z]+)-([0-9]+)', str(args[0]))
             if match:
@@ -651,7 +655,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 issue_id = int(match.group(3))
             else:
                 project_key = 'MC'
-                issue_id = int(args[0])
+                try:
+                    issue_id = int(args[0])
+                except ValueError:
+                    warning('Invalid issue ID: ' + str(args[0]))
         else:
             reply('http://mojang.atlassian.net/browse/MC')
             return
