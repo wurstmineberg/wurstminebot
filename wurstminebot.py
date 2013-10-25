@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.10'
+__version__ = '1.4.11'
 
 import sys
 
@@ -256,7 +256,7 @@ class InputLoop(threading.Thread):
                                         'text': '!',
                                         'color': 'gray'
                                     }
-                                ])
+                                ], player)
                             elif welcome_message[0] == 1:
                                 minecraft.tellraw({'text': 'Hello ' + player + '. ' + config('comment_lines')['server_join'][welcome_message[1]], 'color': 'gray'}, player)
                             elif welcome_message[0] == 2:
@@ -271,7 +271,7 @@ class InputLoop(threading.Thread):
                                         'text': 'Hello ' + player + '. ',
                                         'color': 'gray'
                                     }
-                                ] if message_dict.get('hello_prefix', True) else []) + message_list)
+                                ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
                             else:
                                 minecraft.tellraw({'text': 'Hello ' + player + '. How did you do that?', 'color': 'gray'}, player)
                         #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
