@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.12'
+__version__ = '1.4.13'
 
 import sys
 
@@ -829,7 +829,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         with open(config('paths')['people'], 'w') as people_json:
                             json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                         twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
-                        twitter.request('friendships/add', {'screen_name': screen_name})
+                        twitter.request('friendships/create', {'screen_name': screen_name})
                         reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
                     else:
                         warning(errors.botop)
