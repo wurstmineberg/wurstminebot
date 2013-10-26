@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.11'
+__version__ = '1.4.12'
 
 import sys
 
@@ -1086,7 +1086,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'botop_only': True,
             'description': 'add person to whitelist',
             'function': _command_whitelist,
-            'usage': 'whitelist <unique_id> <minecraft_name>'
+            'usage': '<unique_id> <minecraft_name>'
         }
     }
     
