@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.13'
+__version__ = '1.4.14'
 
 import sys
 
@@ -40,6 +40,7 @@ import subprocess
 import threading
 import time
 from datetime import timedelta
+import traceback
 import xml.sax.saxutils
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     CONFIG_FILE = arguments['--config']
 
 def _debug_print(msg):
-    if config('debug'):
+    if config('debug', False):
         print('DEBUG] ' + msg)
 
 def _logtail(timeout=0.5):
@@ -139,203 +140,209 @@ def update_all(*args, **kwargs):
 class InputLoop(threading.Thread):
     def run(self):
         global LASTDEATH
-        for logLine in _logtail():
-            # server log output processing
-            _debug_print('[logpipe] ' + logLine)
-            match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)', logLine)
-            if match:
-                # action
-                player, message = match.group(1, 2)
-                chan = config('irc')['main_channel']
-                sender = nicksub.sub(player, 'minecraft', 'irc')
-                subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
-                bot.log(chan, 'ACTION', sender, [chan], subbed_message)
-                bot.say(chan, '* ' + sender + ' ' + subbed_message)
-            else:
-                match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)', logLine)
+        try:
+            for logLine in _logtail():
+                # server log output processing
+                _debug_print('[logpipe] ' + logLine)
+                match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)', logLine)
                 if match:
+                    # action
                     player, message = match.group(1, 2)
-                    if message.startswith('!') and len(message) > 1:
-                        # command
-                        cmd = message[1:].split(' ')
-                        command(sender=player, chan=None, cmd=cmd[0], args=cmd[1:], context='minecraft')
-                    else:
-                        # chat message
-                        chan = config('irc')['main_channel']
-                        sender = nicksub.sub(player, 'minecraft', 'irc')
-                        subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
-                        bot.log(chan, 'PRIVMSG', sender, [chan], subbed_message)
-                        bot.say(chan, '<' + sender + '> ' + subbed_message)
+                    chan = config('irc')['main_channel']
+                    sender = nicksub.sub(player, 'minecraft', 'irc')
+                    subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
+                    bot.log(chan, 'ACTION', sender, [chan], subbed_message)
+                    bot.say(chan, '* ' + sender + ' ' + subbed_message)
                 else:
-                    match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game', logLine)
+                    match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)', logLine)
                     if match:
-                        # join/leave
-                        timestamp, player = match.group(1, 2)
-                        joined = bool(match.group(3) == 'joined')
-                        with open(os.path.join(config('paths')['logs'], 'logins.log')) as loginslog:
-                            for line in loginslog:
-                                if player in line:
-                                    new_player = False
-                                    break
-                            else:
-                                new_player = True
-                        with open(os.path.join(config('paths')['logs'], 'logins.log'), 'a') as loginslog:
-                            print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
-                        if joined:
-                            if new_player:
-                                welcome_message = 'Welcome to the server!'
-                            else:
-                                welcome_messages = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('server_join', []))))
-                                with open(config('paths')['people']) as people_json:
-                                    people = json.load(people_json)
-                                for person in people:
-                                    if person['minecraft'] == player:
-                                        if 'description' not in person:
-                                            welcome_messages[0, 1] = 1.0
-                                        break
-                                else:
-                                    welcome_messages[0, 2] = 16.0
-                                for index, adv_welcome_msg in enumerate(config('advanced_comment_lines').get('server_join', [])):
-                                    if 'text' not in adv_welcome_msg:
-                                        continue
-                                    welcome_messages[2, index] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
-                                random_index = random.uniform(0.0, sum(welcome_messages.values()))
-                                index = 0.0
-                                for welcome_message, weight in welcome_messages.items():
-                                    if random_index - index < weight:
-                                        break
-                                    else:
-                                        index += weight
-                                else:
-                                    welcome_message = (0, 0)
-                            if welcome_message == (0, 0):
-                                minecraft.tellraw({'text': 'Hello ' + player + '. Um... sup?', 'color': 'gray'}, player)
-                            if welcome_message == (0, 1):
-                                minecraft.tellraw([
-                                    {
-                                        'text': 'Hello ' + player + ". You still don't have a description for ",
-                                        'color': 'gray'
-                                    },
-                                    {
-                                        'text': 'the people page',
-                                        'hoverEvent': {
-                                            'action': 'show_text',
-                                            'value': 'http://wurstmineberg.de/people'
-                                        },
-                                        'clickEvent': {
-                                            'action': 'open_url',
-                                            'value': 'http://wurstmineberg.de/people'
-                                        },
-                                        'color': 'gray'
-                                    },
-                                    {
-                                        'text': '. Write one today and send it to ',
-                                        'color': 'gray'
-                                    },
-                                    {
-                                        'text': 'Jemus42',
-                                        'clickEvent': {
-                                            'action': 'suggest_command',
-                                            'value': 'Jemus42: '
-                                        },
-                                        'color': 'gray'
-                                    },
-                                    {
-                                        'text': ' or ',
-                                        'color': 'gray'
-                                    },
-                                    {
-                                        'text': 'Fenhl',
-                                        'clickEvent': {
-                                            'action': 'suggest_command',
-                                            'value': 'Fenhl: '
-                                        },
-                                        'color': 'gray'
-                                    },
-                                    {
-                                        'text': '!',
-                                        'color': 'gray'
-                                    }
-                                ], player)
-                            elif welcome_message[0] == 1:
-                                minecraft.tellraw({'text': 'Hello ' + player + '. ' + config('comment_lines')['server_join'][welcome_message[1]], 'color': 'gray'}, player)
-                            elif welcome_message[0] == 2:
-                                message_dict = config('advanced_comment_lines')['server_join'][welcome_message[1]]
-                                message_list = message_dict['text']
-                                if isinstance(message_list, str):
-                                    message_list = [{'text': message_list, 'color': 'gray'}]
-                                elif isinstance(message_list, dict):
-                                    message_list = [message_list]
-                                minecraft.tellraw(([
-                                    {
-                                        'text': 'Hello ' + player + '. ',
-                                        'color': 'gray'
-                                    }
-                                ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
-                            else:
-                                minecraft.tellraw({'text': 'Hello ' + player + '. How did you do that?', 'color': 'gray'}, player)
-                        #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
-                        update_all()
-                    else:
-                        match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$', logLine)
-                        if match:
-                            # achievement
-                            player, achievement = match.group(1, 2)
-                            if ACHIEVEMENTTWEET:
-                                tweet = '[Achievement Get] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' got ' + achievement
-                                if len(tweet) <= 140:
-                                    tweet_request = twitter.request('statuses/update', {'status': tweet})
-                                    if 'id' in tweet_request.json():
-                                        twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
-                                    else:
-                                        twid = 'error ' + str(tweet_request.status_code)
-                                else:
-                                    twid = 'too long for twitter'
-                            else:
-                                twid = 'achievement tweets are disabled'
-                            bot.say(config('irc')['main_channel'], 'Achievement Get: ' + nicksub.sub(player, 'minecraft', 'irc') + ' got ' + achievement + ' [' + twid + ']')
+                        player, message = match.group(1, 2)
+                        if message.startswith('!') and len(message) > 1:
+                            # command
+                            cmd = message[1:].split(' ')
+                            command(sender=player, chan=None, cmd=cmd[0], args=cmd[1:], context='minecraft')
                         else:
-                            for deathid, death in enumerate(deaths.regexes):
-                                match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
-                                if not match:
-                                    continue
-                                # death
-                                timestamp, player = match.group(1, 2)
-                                groups = match.groups()[2:]
-                                message = deaths.partial_message(deathid, groups)
-                                with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
-                                    print(timestamp + ' ' + player + ' ' + message, file=deathslog)
-                                if DEATHTWEET:
-                                    if player + ' ' + message == LASTDEATH:
-                                        comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
+                            # chat message
+                            chan = config('irc')['main_channel']
+                            sender = nicksub.sub(player, 'minecraft', 'irc')
+                            subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
+                            bot.log(chan, 'PRIVMSG', sender, [chan], subbed_message)
+                            bot.say(chan, '<' + sender + '> ' + subbed_message)
+                    else:
+                        match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game', logLine)
+                        if match:
+                            # join/leave
+                            timestamp, player = match.group(1, 2)
+                            joined = bool(match.group(3) == 'joined')
+                            with open(os.path.join(config('paths')['logs'], 'logins.log')) as loginslog:
+                                for line in loginslog:
+                                    if player in line:
+                                        new_player = False
+                                        break
+                                else:
+                                    new_player = True
+                            with open(os.path.join(config('paths')['logs'], 'logins.log'), 'a') as loginslog:
+                                print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
+                            if joined:
+                                if new_player:
+                                    welcome_message = 'Welcome to the server!'
+                                else:
+                                    welcome_messages = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('server_join', []))))
+                                    with open(config('paths')['people']) as people_json:
+                                        people = json.load(people_json)
+                                    for person in people:
+                                        if person['minecraft'] == player:
+                                            if 'description' not in person:
+                                                welcome_messages[0, 1] = 1.0
+                                            break
                                     else:
-                                        death_comments = config('comment_lines').get('death', ['Well done.'])
-                                        if deathid == 7: # was blown up by Creeper
-                                            death_comments.append('Creepers gonna creep.')
-                                        if deathid == 28: # was slain by Zombie
-                                            death_comments.append('Zombies gonna zomb.')
-                                        comment = ' … ' + random.choice(death_comments)
-                                    LASTDEATH = player + ' ' + message
-                                    tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
-                                    if len(tweet + comment) <= 140:
-                                        tweet += comment
+                                        welcome_messages[0, 2] = 16.0
+                                    for index, adv_welcome_msg in enumerate(config('advanced_comment_lines').get('server_join', [])):
+                                        if 'text' not in adv_welcome_msg:
+                                            continue
+                                        welcome_messages[2, index] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
+                                    random_index = random.uniform(0.0, sum(welcome_messages.values()))
+                                    index = 0.0
+                                    for welcome_message, weight in welcome_messages.items():
+                                        if random_index - index < weight:
+                                            break
+                                        else:
+                                            index += weight
+                                    else:
+                                        welcome_message = (0, 0)
+                                if welcome_message == (0, 0):
+                                    minecraft.tellraw({'text': 'Hello ' + player + '. Um... sup?', 'color': 'gray'}, player)
+                                if welcome_message == (0, 1):
+                                    minecraft.tellraw([
+                                        {
+                                            'text': 'Hello ' + player + ". You still don't have a description for ",
+                                            'color': 'gray'
+                                        },
+                                        {
+                                            'text': 'the people page',
+                                            'hoverEvent': {
+                                                'action': 'show_text',
+                                                'value': 'http://wurstmineberg.de/people'
+                                            },
+                                            'clickEvent': {
+                                                'action': 'open_url',
+                                                'value': 'http://wurstmineberg.de/people'
+                                            },
+                                            'color': 'gray'
+                                        },
+                                        {
+                                            'text': '. Write one today and send it to ',
+                                            'color': 'gray'
+                                        },
+                                        {
+                                            'text': 'Jemus42',
+                                            'clickEvent': {
+                                                'action': 'suggest_command',
+                                                'value': 'Jemus42: '
+                                            },
+                                            'color': 'gray'
+                                        },
+                                        {
+                                            'text': ' or ',
+                                            'color': 'gray'
+                                        },
+                                        {
+                                            'text': 'Fenhl',
+                                            'clickEvent': {
+                                                'action': 'suggest_command',
+                                                'value': 'Fenhl: '
+                                            },
+                                            'color': 'gray'
+                                        },
+                                        {
+                                            'text': '!',
+                                            'color': 'gray'
+                                        }
+                                    ], player)
+                                elif welcome_message[0] == 1:
+                                    minecraft.tellraw({'text': 'Hello ' + player + '. ' + config('comment_lines')['server_join'][welcome_message[1]], 'color': 'gray'}, player)
+                                elif welcome_message[0] == 2:
+                                    message_dict = config('advanced_comment_lines')['server_join'][welcome_message[1]]
+                                    message_list = message_dict['text']
+                                    if isinstance(message_list, str):
+                                        message_list = [{'text': message_list, 'color': 'gray'}]
+                                    elif isinstance(message_list, dict):
+                                        message_list = [message_list]
+                                    minecraft.tellraw(([
+                                        {
+                                            'text': 'Hello ' + player + '. ',
+                                            'color': 'gray'
+                                        }
+                                    ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
+                                else:
+                                    minecraft.tellraw({'text': 'Hello ' + player + '. How did you do that?', 'color': 'gray'}, player)
+                            #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
+                            update_all()
+                        else:
+                            match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$', logLine)
+                            if match:
+                                # achievement
+                                player, achievement = match.group(1, 2)
+                                if ACHIEVEMENTTWEET:
+                                    tweet = '[Achievement Get] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' got ' + achievement
                                     if len(tweet) <= 140:
                                         tweet_request = twitter.request('statuses/update', {'status': tweet})
                                         if 'id' in tweet_request.json():
                                             twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
-                                            minecraft.tellraw({'text': 'Your fail has been reported. Congratulations.', 'color': 'gold', 'clickEvent': {'action': 'open_url', 'value': twid}})
                                         else:
                                             twid = 'error ' + str(tweet_request.status_code)
-                                            minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because of '}, {'text': 'reasons', 'hoverEvent': {'action': 'show_text', 'value': str(tweet_request.status_code)}}, {'text': '.'}]})
                                     else:
                                         twid = 'too long for twitter'
-                                        minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
                                 else:
-                                    twid = 'deathtweets are disabled'
-                                bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
-                                break
-            if not bot.keepGoing:
-                break
+                                    twid = 'achievement tweets are disabled'
+                                bot.say(config('irc')['main_channel'], 'Achievement Get: ' + nicksub.sub(player, 'minecraft', 'irc') + ' got ' + achievement + ' [' + twid + ']')
+                            else:
+                                for deathid, death in enumerate(deaths.regexes):
+                                    match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
+                                    if not match:
+                                        continue
+                                    # death
+                                    timestamp, player = match.group(1, 2)
+                                    groups = match.groups()[2:]
+                                    message = deaths.partial_message(deathid, groups)
+                                    with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
+                                        print(timestamp + ' ' + player + ' ' + message, file=deathslog)
+                                    if DEATHTWEET:
+                                        if player + ' ' + message == LASTDEATH:
+                                            comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
+                                        else:
+                                            death_comments = config('comment_lines').get('death', ['Well done.'])
+                                            if deathid == 7: # was blown up by Creeper
+                                                death_comments.append('Creepers gonna creep.')
+                                            if deathid == 28: # was slain by Zombie
+                                                death_comments.append('Zombies gonna zomb.')
+                                            comment = ' … ' + random.choice(death_comments)
+                                        LASTDEATH = player + ' ' + message
+                                        tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
+                                        if len(tweet + comment) <= 140:
+                                            tweet += comment
+                                        if len(tweet) <= 140:
+                                            tweet_request = twitter.request('statuses/update', {'status': tweet})
+                                            if 'id' in tweet_request.json():
+                                                twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
+                                                minecraft.tellraw({'text': 'Your fail has been reported. Congratulations.', 'color': 'gold', 'clickEvent': {'action': 'open_url', 'value': twid}})
+                                            else:
+                                                twid = 'error ' + str(tweet_request.status_code)
+                                                minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because of '}, {'text': 'reasons', 'hoverEvent': {'action': 'show_text', 'value': str(tweet_request.status_code)}}, {'text': '.'}]})
+                                        else:
+                                            twid = 'too long for twitter'
+                                            minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
+                                    else:
+                                        twid = 'deathtweets are disabled'
+                                    bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
+                                    break
+                if not bot.keepGoing:
+                    break
+        except:
+            _debug_print('Exception in log input loop:')
+            if config('debug', False):
+                traceback.print_exc()
+            self.run()
 
 class TimeLoop(threading.Thread):
     def run(self):
