@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.17'
+__version__ = '1.5.0'
 
 import sys
 
@@ -436,6 +436,42 @@ def update_topic():
     else:
         bot.topic(config('irc')['main_channel'], TOPIC)
 
+def mwiki_lookup(article=None, args=[], botop=False, reply=None):
+    if reply is None:
+        def reply(*args, **kwargs):
+            pass
+    
+    if article is None:
+        if args is None:
+            article = ''
+        if isinstance(args, str):
+            article = args
+        elif isinstance(args, list):
+            article = '_'.join(args)
+        else:
+            reply('Unknown article')
+            return 'Unknown article'
+    match = re.match('http://(?:minecraft\\.gamepedia\\.com|minecraftwiki\\.net(?:/wiki)?)/(.*)', article)
+    if match:
+        article = match.group(1)
+    request = requests.get('http://minecraft.gamepedia.com/' + article, params={'action': 'raw'})
+    if request.status_code == 200:
+        if request.text.lower().startswith('#redirect'):
+            match = re.match('#[Rr][Ee][Dd][Ii][Rr][Ee][Cc][Tt] \\[\\[(.+)(\\|.*)?\\]\\]', request.text)
+            if match:
+                redirect_target = 'http://minecraft.gamepedia.com/' + re.sub(' ', '_', match.group(1))
+                reply('Redirect ' + redirect_target)
+                return 'Redirect ' + redirect_target
+            else:
+                reply('Broken redirect')
+                return 'Broken redirect'
+        else:
+            reply('Article http://minecraft.gamepedia.com/' + article)
+            return 'Article http://minecraft.gamepedia.com/' + article
+    else:
+        reply('Error ' + str(request.status_code))
+        return 'Error ' + str(request.status_code)
+
 def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
     if reply is None:
         if reply_format == 'tellraw' or context == 'minecraft':
@@ -467,7 +503,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply(msg)
     
-    def _command_achievementtweet(args=[], botop=False):
+    def _command_achievementtweet(args=[], botop=False, reply=reply):
         global ACHIEVEMENTTWEET
         if not len(args):
             reply('Achievement tweeting is currently ' + ('enabled' if ACHIEVEMENTTWEET else 'disabled'))
@@ -498,13 +534,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('first argument needs to be “on” or “off”')
     
-    def _command_command(args=[], botop=False):
+    def _command_command(args=[], botop=False, reply=reply):
         if args[0]:
             reply(minecraft.command(args[0], args[1:]))
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_deathtweet(args=[], botop=False):
+    def _command_deathtweet(args=[], botop=False, reply=reply):
         global DEATHTWEET
         if not len(args):
             reply('Deathtweeting is currently ' + ('enabled' if DEATHTWEET else 'disabled'))
@@ -535,7 +571,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('first argument needs to be “on” or “off”')
     
-    def _command_lastseen(args=[], botop=False):
+    def _command_lastseen(args=[], botop=False, reply=reply):
         global LAST
         if len(args):
             with LOGLOCK:
@@ -628,7 +664,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
     
-    def _command_leak(args=[], botop=False):
+    def _command_leak(args=[], botop=False, reply=reply):
         messages = [(msg_type, msg_sender, msg_text) for msg_type, msg_sender, msg_headers, msg_text in bot.channel_data[config('irc')['main_channel']]['log'] if msg_type == 'ACTION' or (msg_type == 'PRIVMSG' and (not msg_text.startswith('!')) and (not msg_text.startswith(config('irc')['nick'] + ': ')) and (not msg_text.startswith(config('irc')['nick'] + ', ')))]
         if len(args) == 0:
             if len(messages):
@@ -653,7 +689,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 tweet += ' #ircleaks'
         command(None, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
     
-    def _command_pastemojira(args=[], botop=False):
+    def _command_pastemojira(args=[], botop=False, reply=reply):
         link = True
         if len(args) == 3 and args[2] == 'nolink':
             link = False
@@ -704,7 +740,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning('Error ' + str(request.status_code))
             return
     
-    def _command_pastetweet(args=[], botop=False):
+    def _command_pastetweet(args=[], botop=False, reply=reply):
         link = True
         if len(args) == 2 and args[1] == 'nolink':
             link = False
@@ -789,7 +825,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
     
-    def _command_people(args=[], botop=False):
+    def _command_people(args=[], botop=False, reply=reply):
         if len(args):
             with open(config('paths')['people']) as people_json:
                 people = json.load(people_json)
@@ -876,13 +912,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply('http://wurstmineberg.de/people')
     
-    def _command_ping(args=[], botop=False):
+    def _command_ping(args=[], botop=False, reply=reply):
         if random.randrange(1024) == 0:
             reply('BWO' + 'R' * random.randint(3, 20) + 'N' * random.randing(1, 5) + 'G') # PINGCEPTION
         else:
             reply('pong')
     
-    def _command_quit(args=[], botop=False):
+    def _command_quit(args=[], botop=False, reply=reply):
         quitMsg = ' '.join(args) if len(args) else None
         if context != 'minecraft':
             minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
@@ -892,13 +928,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         bot.stop()
         sys.exit()
     
-    def _command_raw(args=[], botop=False):
+    def _command_raw(args=[], botop=False, reply=reply):
         if len(args):
             bot.send(' '.join(args))
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_status(args=[], botop=False):
+    def _command_status(args=[], botop=False, reply=reply):
         if minecraft.status():
             if context != 'minecraft':
                 players = minecraft.online_players()
@@ -927,10 +963,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply('The server is currently offline.')
     
-    def _command_time(args=[], botop=False):
+    def _command_time(args=[], botop=False, reply=reply):
         telltime(func=reply)
     
-    def _command_topic(args=[], botop=False):
+    def _command_topic(args=[], botop=False, reply=reply):
         if len(args):
             TOPIC = ' '.join(args)
             update_topic()
@@ -938,7 +974,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_tweet(args=[], botop=False):
+    def _command_tweet(args=[], botop=False, reply=reply):
         if len(args):
             tweet = nicksub.textsub(' '.join(args), context, 'twitter')
             if len(tweet) > 140:
@@ -972,7 +1008,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_update(args=[], botop=False):
+    def _command_update(args=[], botop=False, reply=reply):
         if len(args):
             if args[0] == 'snapshot':
                 if len(args) == 2:
@@ -986,7 +1022,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: update (snapshot <snapshot_id> | <version>)')
     
-    def _command_whitelist(args=[], botop=False):
+    def _command_whitelist(args=[], botop=False, reply=reply):
         if len(args) == 2:
             try:
                 minecraft.whitelist_add(args[0], args[1])
@@ -1028,6 +1064,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'description': 'tweet the last line_count (defaults to 1) chatlog lines',
             'function': _command_leak,
             'usage': '[<line_count>]'
+        },
+        'mwiki': {
+            'description': 'look something up in the Minecraft Wiki',
+            'function': mwiki_lookup,
+            'usage': '(<url> | <article>...)'
         },
         'pastemojira': {
             'description': 'print the title of a bug in Mojangs bug tracker',
@@ -1131,7 +1172,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     elif cmd in commands:
         isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
         if isbotop or not cmd.get('botop_only', False):
-            commands[cmd]['function'](args=args, botop=isbotop)
+            commands[cmd]['function'](args=args, botop=isbotop, reply=reply)
         else:
             warning(errors.botop)
     elif not chan:
@@ -1175,7 +1216,7 @@ def privmsg(sender, headers, message):
             if len(cmd):
                 command(sender, headers[0], cmd[0], cmd[1:], context='irc')
         elif headers[0] == config('irc')['main_channel']:
-            if re.match('https?://mojang.atlassian.net/browse/[A-Z]+-[0-9]+', message):
+            if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
                 minecraft.tellraw([
                     {
                         'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
@@ -1232,9 +1273,10 @@ def privmsg(sender, headers, message):
                 command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
                 command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
             else:
-                minecraft.tellraw({
-                    'text': '',
-                    'extra': [
+                match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
+                if match:
+                    url, rest_message = match.group(1, 2)
+                    minecraft.tellraw([
                         {
                             'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
                             'color': 'aqua',
@@ -1251,11 +1293,43 @@ def privmsg(sender, headers, message):
                             'text': ' '
                         },
                         {
-                            'text': nicksub.textsub(message, 'irc', 'minecraft'),
+                            'text': url,
+                            'color': 'aqua',
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': url
+                            }
+                        },
+                        {
+                            'text': remaining_message,
                             'color': 'aqua'
                         }
-                    ]
-                })
+                    ])
+                else:
+                    minecraft.tellraw({
+                        'text': '',
+                        'extra': [
+                            {
+                                'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                                'color': 'aqua',
+                                'hoverEvent': {
+                                    'action': 'show_text',
+                                    'value': sender + ' in ' + headers[0]
+                                },
+                                'clickEvent': {
+                                    'action': 'suggest_command',
+                                    'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                                }
+                            },
+                            {
+                                'text': ' '
+                            },
+                            {
+                                'text': nicksub.textsub(message, 'irc', 'minecraft'),
+                                'color': 'aqua'
+                            }
+                        ]
+                    })
     else:
         cmd = message.split(' ')
         if len(cmd):
