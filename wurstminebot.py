@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.15'
+__version__ = '1.4.16'
 
 import sys
 
@@ -76,6 +76,7 @@ def config(key=None, default_value=None):
             'death': ['Well done.'],
             'server_join': []
         },
+        'daily_restart': True,
         'debug': False,
         'irc': {
             'channels': [],
@@ -357,7 +358,7 @@ class TimeLoop(threading.Thread):
         while True:
             # sleep for the remaining seconds until the next hour
             time.sleep(3601 - time.time() % 3600)
-            telltime(comment=True)
+            telltime(comment=True, restart=config('daily_restart', True))
 
 def telltime(func=None, comment=False, restart=False):
     if func is None:
@@ -407,19 +408,21 @@ def telltime(func=None, comment=False, restart=False):
         elif localnow.hour == 6:
             func('Are you still going, just starting or asking yourself the same thing?')
         elif localnow.hour == 11 and localnow.minute < 5 and restart:
-            populated = bool(len(minecraft.online_players()))
-            if populated:
+            players = minecraft.online_players()
+            if len(players):
                 warning('The server is going to restart in 5 minutes.')
                 time.sleep(240)
                 warning('The server is going to restart in 60 seconds.')
                 time.sleep(50)
+            bot.topic(config('irc')['main_channel'], TOPIC + ' | The server is restarting…')
             minecraft.stop()
             time.sleep(30)
             if minecraft.start():
-                if populated:
-                    bot.say('The server has restarted.')
+                if len(players):
+                    bot.say(', '.join(players) + ': The server has restarted.')
             else:
                 bot.say('Please help! Something went wrong with the server restart!')
+            update_topic()
     DST = dst
 
 def update_topic():
