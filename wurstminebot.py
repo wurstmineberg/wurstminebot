@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 
 import sys
 
@@ -1275,7 +1275,7 @@ def privmsg(sender, headers, message):
             else:
                 match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
                 if match:
-                    url, rest_message = match.group(1, 2)
+                    url, remaining_message = match.group(1, 2)
                     minecraft.tellraw([
                         {
                             'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
