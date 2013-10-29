@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.16'
+__version__ = '1.4.17'
 
 import sys
 
@@ -111,6 +111,7 @@ ACHIEVEMENTTWEET = True
 DEATHTWEET = True
 DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
+LOGLOCK = threading.Lock()
 TOPIC = config('irc')['topic']
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
@@ -535,76 +536,12 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning('first argument needs to be “on” or “off”')
     
     def _command_lastseen(args=[], botop=False):
+        global LAST
         if len(args):
-            player = args[0]
-            mcplayer = nicksub.sub(player, context, 'minecraft', strict=False)
-            if mcplayer in minecraft.online_players():
-                if reply_format == 'tellraw':
-                    reply([
-                        {
-                            'text': player,
-                            'hoverEvent': {
-                                'action': 'show_text',
-                                'value': mcplayer + ' in Minecraft'
-                            },
-                            'clickEvent': {
-                                'action': 'suggest_command',
-                                'value': mcplayer + ': '
-                            },
-                            'color': 'gold',
-                        },
-                        {
-                            'text': ' is currently on the server.',
-                            'color': 'gold'
-                        }
-                    ])
-                else:
-                    reply(player + ' is currently on the server.')
-            else:
-                lastseen = minecraft.last_seen(mcplayer)
-                if lastseen is None:
-                    reply('I have not seen ' + player + ' on the server yet.')
-                else:
-                    if lastseen.date() == datetime.utcnow().date():
-                        datestr = 'today at ' + lastseen.strftime('%H:%M UTC')
-                        tellraw_date = [
-                            {
-                                'text': 'today',
-                                'hoverEvent': {
-                                    'action': 'show_text',
-                                    'value': lastseen.strftime('%Y-%m-%d')
-                                },
-                                'color': 'gold'
-                            },
-                            {
-                                'text': ' at ' + lastseen.strftime('%H:%M UTC.'),
-                                'color': 'gold'
-                            }
-                        ]
-                    elif lastseen.date() == datetime.utcnow().date() - timedelta(days=1):
-                        datestr = 'yesterday at ' + lastseen.strftime('%H:%M UTC')
-                        tellraw_date = [
-                            {
-                                'text': 'yesterday',
-                                'hoverEvent': {
-                                    'action': 'show_text',
-                                    'value': lastseen.strftime('%Y-%m-%d')
-                                },
-                                'color': 'gold'
-                            },
-                            {
-                                'text': ' at ' + lastseen.strftime('%H:%M UTC.'),
-                                'color': 'gold'
-                            }
-                        ]
-                    else:
-                        datestr = lastseen.strftime('on %Y-%m-%d at %H:%M UTC')
-                        tellraw_date = [
-                            {
-                                'text': datestr + '.',
-                                'color': 'gold'
-                            }
-                        ]
+            with LOGLOCK:
+                player = args[0]
+                mcplayer = nicksub.sub(player, context, 'minecraft', strict=False)
+                if mcplayer in minecraft.online_players():
                     if reply_format == 'tellraw':
                         reply([
                             {
@@ -613,15 +550,81 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                                     'action': 'show_text',
                                     'value': mcplayer + ' in Minecraft'
                                 },
+                                'clickEvent': {
+                                    'action': 'suggest_command',
+                                    'value': mcplayer + ': '
+                                },
                                 'color': 'gold',
                             },
                             {
-                                'text': ' was last seen ',
+                                'text': ' is currently on the server.',
                                 'color': 'gold'
                             }
-                        ] + tellraw_date)
+                        ])
                     else:
-                        reply(player + ' was last seen ' + datestr + '.')
+                        reply(player + ' is currently on the server.')
+                else:
+                    lastseen = minecraft.last_seen(mcplayer)
+                    if lastseen is None:
+                        reply('I have not seen ' + player + ' on the server yet.')
+                    else:
+                        if lastseen.date() == datetime.utcnow().date():
+                            datestr = 'today at ' + lastseen.strftime('%H:%M UTC')
+                            tellraw_date = [
+                                {
+                                    'text': 'today',
+                                    'hoverEvent': {
+                                        'action': 'show_text',
+                                        'value': lastseen.strftime('%Y-%m-%d')
+                                    },
+                                    'color': 'gold'
+                                },
+                                {
+                                    'text': ' at ' + lastseen.strftime('%H:%M UTC.'),
+                                    'color': 'gold'
+                                }
+                            ]
+                        elif lastseen.date() == datetime.utcnow().date() - timedelta(days=1):
+                            datestr = 'yesterday at ' + lastseen.strftime('%H:%M UTC')
+                            tellraw_date = [
+                                {
+                                    'text': 'yesterday',
+                                    'hoverEvent': {
+                                        'action': 'show_text',
+                                        'value': lastseen.strftime('%Y-%m-%d')
+                                    },
+                                    'color': 'gold'
+                                },
+                                {
+                                    'text': ' at ' + lastseen.strftime('%H:%M UTC.'),
+                                    'color': 'gold'
+                                }
+                            ]
+                        else:
+                            datestr = lastseen.strftime('on %Y-%m-%d at %H:%M UTC')
+                            tellraw_date = [
+                                {
+                                    'text': datestr + '.',
+                                    'color': 'gold'
+                                }
+                            ]
+                        if reply_format == 'tellraw':
+                            reply([
+                                {
+                                    'text': player,
+                                    'hoverEvent': {
+                                        'action': 'show_text',
+                                        'value': mcplayer + ' in Minecraft'
+                                    },
+                                    'color': 'gold',
+                                },
+                                {
+                                    'text': ' was last seen ',
+                                    'color': 'gold'
+                                }
+                            ] + tellraw_date)
+                        else:
+                            reply(player + ' was last seen ' + datestr + '.')
         else:
             warning(errors.argc(1, len(args)))
     
