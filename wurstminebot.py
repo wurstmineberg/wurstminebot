@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.4.14'
+__version__ = '1.4.15'
 
 import sys
 
@@ -125,11 +125,17 @@ def _timed_input(timeout=1): #FROM http://stackoverflow.com/a/2904057
 class errors:
     botop = 'you must be a bot op to do this'
     log = "I can't find that in my chatlog"
-    unknown = 'unknown command'
     
     @staticmethod
     def argc(expected, given, atleast=False):
         return ('not enough' if given < expected else 'too many') + ' arguments, expected ' + ('at least ' if atleast else '') + str(expected)
+    
+    @staticmethod
+    def unknown(command=None):
+        if command is None or command == '':
+            return 'Unknown command. Execute “help commands” for a list of commands.'
+        else:
+            return '“' + str(command) + '” is not a command. Execute “help commands” for a list of commands.'
 
 def update_all(*args, **kwargs):
     minecraft.update_status()
@@ -1110,7 +1116,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             help_cmd = args[0].lower()
             help_text = help_cmd + ': ' + commands[help_cmd]['description'] + (' (requires bot op)' if commands[help_cmd].get('botop_only', False) else '') + '\nUsage: ' + help_cmd + ('' if commands[help_cmd].get('usage') is None else (' ' + commands[help_cmd]['usage']))
         else:
-            help_text = '“' + str(args[0]) + '” is not a command. Type “help commands” for a list of commands.'
+            help_text = errors.unknown(args[0])
         if context == 'irc':
             for line in help_text.splitlines():
                 bot.say(sender, line)
@@ -1123,7 +1129,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.botop)
     elif not chan:
-        warning(errors.unknown)
+        warning(errors.unknown(cmd))
 
 def endMOTD(sender, headers, message):
     for chan in config('irc')['channels']:
