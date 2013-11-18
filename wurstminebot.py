@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 import sys
 
@@ -565,10 +565,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             player = args[0]
             try:
                 person = nicksub.Person(player, context=context)
-            except ValueError, nicksub.PersonNotFoundError:
+            except (ValueError, nicksub.PersonNotFoundError):
                 try:
                     person = nicksub.Person(player, context='minecraft')
-                except ValueError, nicksub.PersonNotFoundError:
+                except (ValueError, nicksub.PersonNotFoundError):
                     try:
                         person = nicksub.Person(player)
                     except nicksub.PersonNotFoundError:
