@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.5.3'
+__version__ = '1.5.4'
 
 import sys
 
@@ -562,32 +562,45 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     def _command_lastseen(args=[], botop=False, reply=reply):
         global LAST
         if len(args):
-            with LOGLOCK:
-                player = args[0]
-                mcplayer = nicksub.sub(player, context, 'minecraft', strict=False)
-                if mcplayer in minecraft.online_players():
-                    if reply_format == 'tellraw':
-                        reply([
-                            {
-                                'text': player,
-                                'hoverEvent': {
-                                    'action': 'show_text',
-                                    'value': mcplayer + ' in Minecraft'
-                                },
-                                'clickEvent': {
-                                    'action': 'suggest_command',
-                                    'value': mcplayer + ': '
-                                },
-                                'color': 'gold',
+            player = args[0]
+            try:
+                person = nicksub.Person(player, context=context)
+            except ValueError, nicksub.PersonNotFoundError:
+                try:
+                    person = nicksub.Person(player, context='minecraft')
+                except ValueError, nicksub.PersonNotFoundError:
+                    try:
+                        person = nicksub.Person(player)
+                    except nicksub.PersonNotFoundError:
+                        warning('No such person')
+                        return
+            if person.minecraft is None:
+                warning('No Minecraft nick for this person')
+                return
+            if person.minecraft in minecraft.online_players():
+                if reply_format == 'tellraw':
+                    reply([
+                        {
+                            'text': player,
+                            'hoverEvent': {
+                                'action': 'show_text',
+                                'value': mcplayer + ' in Minecraft'
                             },
-                            {
-                                'text': ' is currently on the server.',
-                                'color': 'gold'
-                            }
-                        ])
-                    else:
-                        reply(player + ' is currently on the server.')
+                            'clickEvent': {
+                                'action': 'suggest_command',
+                                'value': mcplayer + ': '
+                            },
+                            'color': 'gold',
+                        },
+                        {
+                            'text': ' is currently on the server.',
+                            'color': 'gold'
+                        }
+                    ])
                 else:
+                    reply(player + ' is currently on the server.')
+            else:
+                with LOGLOCK:
                     lastseen = minecraft.last_seen(mcplayer)
                     if lastseen is None:
                         reply('I have not seen ' + player + ' on the server yet.')
