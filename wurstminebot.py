@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.5.2'
+__version__ = '1.5.3'
 
 import sys
 
@@ -239,26 +239,14 @@ class InputLoop(threading.Thread):
                                             'color': 'gray'
                                         },
                                         {
-                                            'text': '. Write one today and send it to ',
+                                            'text': '. ',
                                             'color': 'gray'
                                         },
                                         {
-                                            'text': 'Jemus42',
+                                            'text': 'Write one today',
                                             'clickEvent': {
                                                 'action': 'suggest_command',
-                                                'value': 'Jemus42: '
-                                            },
-                                            'color': 'gray'
-                                        },
-                                        {
-                                            'text': ' or ',
-                                            'color': 'gray'
-                                        },
-                                        {
-                                            'text': 'Fenhl',
-                                            'clickEvent': {
-                                                'action': 'suggest_command',
-                                                'value': 'Fenhl: '
+                                                'value': '!people ' + person + ' description '
                                             },
                                             'color': 'gray'
                                         },
