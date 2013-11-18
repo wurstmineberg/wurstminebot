@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.6.1'
+__version__ = '1.6.2'
 
 import sys
 
@@ -714,7 +714,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             else:
                 flag = bool(args[0] in default_true_options)
                 is_default = True
-            reply('option ' + str(args[0]) ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
+            reply('option ' + str(args[0]) + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
             return flag
         else:
             flag = bool(args[1] in [True, 1, '1', 'true', 'True', 'on', 'yes', 'y', 'Y'])
