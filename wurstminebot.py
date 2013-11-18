@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.5.4'
+__version__ = '1.5.5'
 
 import sys
 
@@ -1192,10 +1192,15 @@ def endMOTD(sender, headers, message):
 bot.bind('376', endMOTD)
 
 def action(sender, headers, message):
-    if sender == config('irc').get('nick', 'wurstminebot'):
-        return
-    if headers[0] == config('irc')['main_channel']:
-        minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
+    try:
+        if sender == config('irc').get('nick', 'wurstminebot'):
+            return
+        if headers[0] == config('irc')['main_channel']:
+            minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
+    except:
+        _debug_print('Exception in ACTION:')
+        if config('debug', False):
+            traceback.print_exc()
 
 bot.bind('ACTION', action)
 
@@ -1204,79 +1209,21 @@ def privmsg(sender, headers, message):
         for line in msg.splitlines():
             bot.say(config('irc')['main_channel'], line)
     
-    _debug_print('[irc] <' + sender + '> ' + message)
-    if sender == config('irc').get('nick', 'wurstminebot'):
-        return
-    if headers[0].startswith('#'):
-        if message.startswith(config('irc').get('nick', 'wurstminebot') + ': ') or message.startswith(config('irc')['nick'] + ', '):
-            cmd = message[len(config('irc').get('nick', 'wurstminebot')) + 2:].split(' ')
-            if len(cmd):
-                command(sender, headers[0], cmd[0], cmd[1:], context='irc')
-        elif message.startswith('!'):
-            cmd = message[1:].split(' ')
-            if len(cmd):
-                command(sender, headers[0], cmd[0], cmd[1:], context='irc')
-        elif headers[0] == config('irc')['main_channel']:
-            if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
-                minecraft.tellraw([
-                    {
-                        'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
-                        'color': 'aqua',
-                        'hoverEvent': {
-                            'action': 'show_text',
-                            'value': sender + ' in ' + headers[0]
-                        },
-                        'clickEvent': {
-                            'action': 'suggest_command',
-                            'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
-                        }
-                    },
-                    {
-                        'text': ' '
-                    },
-                    {
-                        'text': message,
-                        'color': 'aqua',
-                        'clickEvent': {
-                            'action': 'open_url',
-                            'value': message
-                        }
-                    }
-                ])
-                command(None, None, 'pastemojira', [message, 'nolink'], reply_format='tellraw')
-                command(sender, headers[0], 'pastemojira', [message, 'nolink'], reply=botsay)
-            elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
-                minecraft.tellraw([
-                    {
-                        'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
-                        'color': 'aqua',
-                        'hoverEvent': {
-                            'action': 'show_text',
-                            'value': sender + ' in ' + headers[0]
-                        },
-                        'clickEvent': {
-                            'action': 'suggest_command',
-                            'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
-                        }
-                    },
-                    {
-                        'text': ' '
-                    },
-                    {
-                        'text': message,
-                        'color': 'aqua',
-                        'clickEvent': {
-                            'action': 'open_url',
-                            'value': message
-                        }
-                    }
-                ])
-                command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
-                command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
-            else:
-                match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
-                if match:
-                    url, remaining_message = match.group(1, 2)
+    try:
+        _debug_print('[irc] <' + sender + '> ' + message)
+        if sender == config('irc').get('nick', 'wurstminebot'):
+            return
+        if headers[0].startswith('#'):
+            if message.startswith(config('irc').get('nick', 'wurstminebot') + ': ') or message.startswith(config('irc')['nick'] + ', '):
+                cmd = message[len(config('irc').get('nick', 'wurstminebot')) + 2:].split(' ')
+                if len(cmd):
+                    command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+            elif message.startswith('!'):
+                cmd = message[1:].split(' ')
+                if len(cmd):
+                    command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+            elif headers[0] == config('irc')['main_channel']:
+                if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
                         {
                             'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
@@ -1294,22 +1241,49 @@ def privmsg(sender, headers, message):
                             'text': ' '
                         },
                         {
-                            'text': url,
+                            'text': message,
                             'color': 'aqua',
                             'clickEvent': {
                                 'action': 'open_url',
-                                'value': url
+                                'value': message
+                            }
+                        }
+                    ])
+                    command(None, None, 'pastemojira', [message, 'nolink'], reply_format='tellraw')
+                    command(sender, headers[0], 'pastemojira', [message, 'nolink'], reply=botsay)
+                elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
+                    minecraft.tellraw([
+                        {
+                            'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                            'color': 'aqua',
+                            'hoverEvent': {
+                                'action': 'show_text',
+                                'value': sender + ' in ' + headers[0]
+                            },
+                            'clickEvent': {
+                                'action': 'suggest_command',
+                                'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
                             }
                         },
                         {
-                            'text': remaining_message,
-                            'color': 'aqua'
+                            'text': ' '
+                        },
+                        {
+                            'text': message,
+                            'color': 'aqua',
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': message
+                            }
                         }
                     ])
+                    command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
+                    command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
                 else:
-                    minecraft.tellraw({
-                        'text': '',
-                        'extra': [
+                    match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
+                    if match:
+                        url, remaining_message = match.group(1, 2)
+                        minecraft.tellraw([
                             {
                                 'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
                                 'color': 'aqua',
@@ -1326,15 +1300,51 @@ def privmsg(sender, headers, message):
                                 'text': ' '
                             },
                             {
-                                'text': nicksub.textsub(message, 'irc', 'minecraft'),
+                                'text': url,
+                                'color': 'aqua',
+                                'clickEvent': {
+                                    'action': 'open_url',
+                                    'value': url
+                                }
+                            },
+                            {
+                                'text': remaining_message,
                                 'color': 'aqua'
                             }
-                        ]
-                    })
-    else:
-        cmd = message.split(' ')
-        if len(cmd):
-            command(sender, None, cmd[0], cmd[1:], context='irc')
+                        ])
+                    else:
+                        minecraft.tellraw({
+                            'text': '',
+                            'extra': [
+                                {
+                                    'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                                    'color': 'aqua',
+                                    'hoverEvent': {
+                                        'action': 'show_text',
+                                        'value': sender + ' in ' + headers[0]
+                                    },
+                                    'clickEvent': {
+                                        'action': 'suggest_command',
+                                        'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                                    }
+                                },
+                                {
+                                    'text': ' '
+                                },
+                                {
+                                    'text': nicksub.textsub(message, 'irc', 'minecraft'),
+                                    'color': 'aqua'
+                                }
+                            ]
+                        })
+        else:
+            cmd = message.split(' ')
+            if len(cmd):
+                command(sender, None, cmd[0], cmd[1:], context='irc')
+    except:
+        _debug_print('Exception in PRIVMSG:')
+        if config('debug', False):
+            traceback.print_exc()
 
 bot.bind('PRIVMSG', privmsg)
 
