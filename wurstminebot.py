@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.5.5'
+__version__ = '1.6.0'
 
 import sys
 
@@ -424,7 +424,7 @@ def update_topic():
     else:
         bot.topic(config('irc')['main_channel'], TOPIC)
 
-def mwiki_lookup(article=None, args=[], botop=False, reply=None):
+def mwiki_lookup(article=None, args=[], botop=False, reply=None, sender=None):
     if reply is None:
         def reply(*args, **kwargs):
             pass
@@ -491,7 +491,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply(msg)
     
-    def _command_achievementtweet(args=[], botop=False, reply=reply):
+    def _command_achievementtweet(args=[], botop=False, reply=reply, sender=sender):
         global ACHIEVEMENTTWEET
         if not len(args):
             reply('Achievement tweeting is currently ' + ('enabled' if ACHIEVEMENTTWEET else 'disabled'))
@@ -522,13 +522,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('first argument needs to be “on” or “off”')
     
-    def _command_command(args=[], botop=False, reply=reply):
+    def _command_command(args=[], botop=False, reply=reply, sender=sender):
         if args[0]:
             reply(minecraft.command(args[0], args[1:]))
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_deathtweet(args=[], botop=False, reply=reply):
+    def _command_deathtweet(args=[], botop=False, reply=reply, sender=sender):
         global DEATHTWEET
         if not len(args):
             reply('Deathtweeting is currently ' + ('enabled' if DEATHTWEET else 'disabled'))
@@ -559,7 +559,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('first argument needs to be “on” or “off”')
     
-    def _command_lastseen(args=[], botop=False, reply=reply):
+    def _command_lastseen(args=[], botop=False, reply=reply, sender=sender):
         global LAST
         if len(args):
             player = args[0]
@@ -665,7 +665,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
     
-    def _command_leak(args=[], botop=False, reply=reply):
+    def _command_leak(args=[], botop=False, reply=reply, sender=sender):
         messages = [(msg_type, msg_sender, msg_text) for msg_type, msg_sender, msg_headers, msg_text in bot.channel_data[config('irc')['main_channel']]['log'] if msg_type == 'ACTION' or (msg_type == 'PRIVMSG' and (not msg_text.startswith('!')) and (not msg_text.startswith(config('irc')['nick'] + ': ')) and (not msg_text.startswith(config('irc')['nick'] + ', ')))]
         if len(args) == 0:
             if len(messages):
@@ -690,7 +690,43 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 tweet += ' #ircleaks'
         command(None, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
     
-    def _command_pastemojira(args=[], botop=False, reply=reply):
+    def _command_opt(args=[], botop=False, reply=reply, sender=sender):
+        if len(args) == 0:
+            warning(errors.argc(1, len(args), atleast=True))
+            return
+        option = str(args[0])
+        with open(config('paths')['people']) as people_json:
+            people = json.load(people_json)
+        for person in people:
+            if context == 'irc':
+                if sender in person.get('irc', {}).get('nicks', []):
+                    break
+            elif person.get('id' if context is None else context) == sender:
+                break
+        else:
+            warning("couldn't find you in people.json")
+            return None
+        if len(args) == 1:
+            default_true_options = [] # These options are on by default. All other options are off by default.
+            if 'options' in person and str(args[0]) in person['options']:
+                flag = bool(person['options'][str(args[0])])
+                is_default = False
+            else:
+                flag = bool(args[0] in default_true_options)
+                is_default = True
+            reply('option ' + str(args[0]) ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
+            return flag
+        else:
+            flag = bool(args[1] in [True, 1, '1', 'true', 'True', 'on', 'yes', 'y', 'Y'])
+            if 'options' not in person:
+                person['options'] = {}
+            person['options'][str(args[0])] = flag
+            with open(config('paths')['people'], 'w') as people_json:
+                json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
+            reply('option ' + str(args[0]) + ' is now ' + ('on' if flag else 'off') + ' for you')
+            return flag
+    
+    def _command_pastemojira(args=[], botop=False, reply=reply, sender=sender):
         link = True
         if len(args) == 3 and args[2] == 'nolink':
             link = False
@@ -741,7 +777,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning('Error ' + str(request.status_code))
             return
     
-    def _command_pastetweet(args=[], botop=False, reply=reply):
+    def _command_pastetweet(args=[], botop=False, reply=reply, sender=sender):
         link = True
         if len(args) == 2 and args[1] == 'nolink':
             link = False
@@ -826,7 +862,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
     
-    def _command_people(args=[], botop=False, reply=reply):
+    def _command_people(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
             with open(config('paths')['people']) as people_json:
                 people = json.load(people_json)
@@ -913,13 +949,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply('http://wurstmineberg.de/people')
     
-    def _command_ping(args=[], botop=False, reply=reply):
+    def _command_ping(args=[], botop=False, reply=reply, sender=sender):
         if random.randrange(1024) == 0:
             reply('BWO' + 'R' * random.randint(3, 20) + 'N' * random.randing(1, 5) + 'G') # PINGCEPTION
         else:
             reply('pong')
     
-    def _command_quit(args=[], botop=False, reply=reply):
+    def _command_quit(args=[], botop=False, reply=reply, sender=sender):
         quitMsg = ' '.join(args) if len(args) else None
         if context != 'minecraft':
             minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
@@ -929,13 +965,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         bot.stop()
         sys.exit()
     
-    def _command_raw(args=[], botop=False, reply=reply):
+    def _command_raw(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
             bot.send(' '.join(args))
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_status(args=[], botop=False, reply=reply):
+    def _command_status(args=[], botop=False, reply=reply, sender=sender):
         if minecraft.status():
             if context != 'minecraft':
                 players = minecraft.online_players()
@@ -964,10 +1000,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply('The server is currently offline.')
     
-    def _command_time(args=[], botop=False, reply=reply):
+    def _command_time(args=[], botop=False, reply=reply, sender=sender):
         telltime(func=reply)
     
-    def _command_topic(args=[], botop=False, reply=reply):
+    def _command_topic(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
             TOPIC = ' '.join(args)
             update_topic()
@@ -975,7 +1011,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_tweet(args=[], botop=False, reply=reply):
+    def _command_tweet(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
             tweet = nicksub.textsub(' '.join(args), context, 'twitter')
             if len(tweet) > 140:
@@ -1009,7 +1045,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_update(args=[], botop=False, reply=reply):
+    def _command_update(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
             if args[0] == 'snapshot':
                 if len(args) == 2:
@@ -1023,7 +1059,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: update (snapshot <snapshot_id> | <version>)')
     
-    def _command_whitelist(args=[], botop=False, reply=reply):
+    def _command_whitelist(args=[], botop=False, reply=reply, sender=sender):
         if len(args) == 2:
             try:
                 minecraft.whitelist_add(args[0], args[1])
@@ -1070,6 +1106,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'description': 'look something up in the Minecraft Wiki',
             'function': mwiki_lookup,
             'usage': '(<url> | <article>...)'
+        },
+        'opt': {
+            'description': 'change your options',
+            'function': _command_opt,
+            'usage': '<option> [true|false]'
         },
         'pastemojira': {
             'description': 'print the title of a bug in Mojangs bug tracker',
