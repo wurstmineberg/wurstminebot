@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.6.2'
+__version__ = '1.6.3'
 
 import sys
 
@@ -82,6 +82,7 @@ def config(key=None, default_value=None):
             'channels': [],
             'op_nicks': [],
             'password': '',
+            'player_list': 'announce',
             'port': 6667,
             'ssl': False,
             'topic': None
@@ -112,6 +113,7 @@ DEATHTWEET = True
 DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
 LOGLOCK = threading.Lock()
+PREVIOUS_TOPIC = None
 TOPIC = config('irc')['topic']
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
@@ -142,7 +144,7 @@ class errors:
 def update_all(*args, **kwargs):
     minecraft.update_status()
     minecraft.update_whitelist()
-    update_topic()
+    update_topic(force='reply' in kwargs) # force-update the topic if called from fixstatus command
     threading.Timer(20, minecraft.update_status).start()
 
 class InputLoop(threading.Thread):
@@ -272,7 +274,8 @@ class InputLoop(threading.Thread):
                                     ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
                                 else:
                                     minecraft.tellraw({'text': 'Hello ' + player + '. How did you do that?', 'color': 'gray'}, player)
-                            #bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
+                            if config('irc').get('player_list', 'announce') == 'announce':
+                                bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                             update_all()
                         else:
                             match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$', logLine)
@@ -414,15 +417,19 @@ def telltime(func=None, comment=False, restart=False):
             update_topic()
     DST = dst
 
-def update_topic():
-    players = minecraft.online_players()
+def update_topic(force=False):
+    global PREVIOUS_TOPIC
+    players = minecraft.online_players() if config('irc').get('player_list', 'announce') == 'topic' else []
     player_list = ('Currently online: ' + ', '.join(players)) if len(players) else ''
     if TOPIC is None:
-        bot.topic(config('irc')['main_channel'], player_list)
+        new_topic = player_list
     elif len(players):
-        bot.topic(config('irc')['main_channel'], TOPIC + ' | ' + player_list)
+        new_topic = TOPIC + ' | ' + player_list
     else:
-        bot.topic(config('irc')['main_channel'], TOPIC)
+        new_topic = TOPIC
+    if force or PREVIOUS_TOPIC != new_topic:
+        bot.topic(config('irc')['main_channel'], new_topic)
+    PREVIOUS_TOPIC = new_topic
 
 def mwiki_lookup(article=None, args=[], botop=False, reply=None, sender=None):
     if reply is None:
