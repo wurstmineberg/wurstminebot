@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.6.3'
+__version__ = '1.6.4'
 
 import sys
 
@@ -1251,6 +1251,77 @@ def action(sender, headers, message):
             traceback.print_exc()
 
 bot.bind('ACTION', action)
+
+def join(sender, headers, message):
+    if len(headers):
+        chan = headers[0]
+    elif message is not None and len(message):
+        chan = message
+    else:
+        return
+    with open(config('paths')['people']) as people_json:
+        people = json.load(people_json)
+    for person in people:
+        if 'minecraft' in person and command(None, None, 'opt', [person, 'sync_join_part'], context=None):
+            minecraft.tellraw([
+                {
+                    'text': sender,
+                    'color': 'yellow',
+                    'clickEvent': {
+                        'action': 'suggest_command',
+                        'value': sender + ': '
+                    }
+                },
+                {
+                    'text': ' joined ' + chan,
+                    'color': 'yellow'
+                }
+            ], player=person['minecraft'])
+
+bot.bind('JOIN', join)
+
+def nick(sender, headers, message):
+    if message is None or len(message) == 0:
+        return
+    with open(config('paths')['people']) as people_json:
+        people = json.load(people_json)
+    for person in people:
+        if 'minecraft' in person and command(None, None, 'opt', [person, 'sync_nick_changes'], context=None):
+            minecraft.tellraw([
+                {
+                    'text': sender + ' is now known as ',
+                    'color': 'yellow'
+                },
+                {
+                    'text': message,
+                    'color': 'yellow',
+                    'clickEvent': {
+                        'action': 'suggest_command',
+                        'value': message + ': '
+                    }
+                }
+            ], player=person['minecraft'])
+
+def part(sender, headers, message):
+    chans = headers[0].split(',')
+    if len(chans) == 0:
+        return
+    elif len(chans) == 1:
+        chans = chans[0]
+    elif len(chans) == 2:
+        chans = chans[0] + ' and ' + chans[1]
+    else:
+        chans = ', '.join(chans[:-1]) + ', and ' + chans[-1]
+    with open(config('paths')['people']) as people_json:
+        people = json.load(people_json)
+    for person in people:
+        if 'minecraft' in person and command(None, None, 'opt', [person, 'sync_join_part'], context=None):
+            minecraft.tellraw({
+                'text': sender + ' left ' + chans,
+                'color': 'yellow'
+            }, player=person['minecraft'])
+
+bot.bind('PART', part)
 
 def privmsg(sender, headers, message):
     def botsay(msg):
