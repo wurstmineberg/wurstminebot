@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 
 import sys
 
@@ -68,6 +68,7 @@ def _logtail(timeout=0.5):
 
 def config(key=None, default_value=None):
     default_config = {
+        'aliases': {},
         'advanced_comment_lines': {
             'death': [],
             'server_join': []
@@ -109,13 +110,32 @@ def config(key=None, default_value=None):
         return j
     return j.get(key, default_config.get(key)) if default_value is None else j.get(key, default_value)
 
+def set_config(config_dict):
+    with open(CONFIG_FILE, 'w') as config_file:
+        json.dump(config_dict, config_file, sort_keys=True, indent=4, separators=(',', ': '))
+
+def update_config(path=[], value):
+    config_dict = config()
+    full_config_dict = config_dict
+    if len(path) > 1:
+        for key in path[:-1]:
+            if not isinstance(config_dict, dict):
+                raise KeyError('Trying to update a non-dict config key')
+            if key not in conf:
+                config_dict[key] = {}
+            config_dict = config_dict[key]
+    if len(path) > 0:
+        config_dict[path[-1]] = value
+    else:
+        full_config_dict = value
+    set_config(full_config_dict)
+
 ACHIEVEMENTTWEET = True
 DEATHTWEET = True
 DST = bool(time.localtime().tm_isdst)
 LASTDEATH = ''
 LOGLOCK = threading.Lock()
 PREVIOUS_TOPIC = None
-TOPIC = config('irc')['topic']
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 bot.log_own_messages = False
@@ -138,9 +158,9 @@ class errors:
     @staticmethod
     def unknown(command=None):
         if command is None or command == '':
-            return 'Unknown command. Execute “help commands” for a list of commands.'
+            return 'Unknown command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
         else:
-            return '“' + str(command) + '” is not a command. Execute “help commands” for a list of commands.'
+            return '“' + str(command) + '” is not a command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
 
 def update_all(*args, **kwargs):
     minecraft.update_status()
@@ -385,6 +405,7 @@ def telltime(func=None, comment=False, restart=False):
                 minecraft.tellraw({'text': line, 'color': 'red'})
     
     global DST
+    global PREVIOUS_TOPIC
     localnow = datetime.now()
     utcnow = datetime.utcnow()
     dst = bool(time.localtime().tm_isdst)
@@ -422,10 +443,11 @@ def telltime(func=None, comment=False, restart=False):
                 time.sleep(240)
                 warning('The server is going to restart in 60 seconds.')
                 time.sleep(50)
-            bot.topic(config('irc')['main_channel'], TOPIC + ' | The server is restarting…')
-            minecraft.stop()
+            PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is restarting…'
+            bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
+            minecraft.stop(reply=func)
             time.sleep(30)
-            if minecraft.start():
+            if minecraft.start(reply=func):
                 if len(players):
                     bot.say(', '.join(players) + ': The server has restarted.')
             else:
@@ -437,12 +459,13 @@ def update_topic(force=False):
     global PREVIOUS_TOPIC
     players = minecraft.online_players() if config('irc').get('player_list', 'announce') == 'topic' else []
     player_list = ('Currently online: ' + ', '.join(players)) if len(players) else ''
-    if TOPIC is None:
+    topic = config('irc').get('topic')
+    if topic is None:
         new_topic = player_list
     elif len(players):
-        new_topic = TOPIC + ' | ' + player_list
+        new_topic = topic + ' | ' + player_list
     else:
-        new_topic = TOPIC
+        new_topic = topic
     if force or PREVIOUS_TOPIC != new_topic:
         bot.topic(config('irc')['main_channel'], new_topic)
     PREVIOUS_TOPIC = new_topic
@@ -544,6 +567,29 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply('Achievement tweeting is now disabled')
         else:
             warning('Usage: achievementtweet [on | off [<time>]]')
+    
+    def _command_alias(args=[], botop=False, reply=reply, sender=sender):
+        aliases = config('aliases')
+        if len(args) == 0:
+            warning('Usage: alias <alias_name> [<text>...]')
+        elif len(args) == 1:
+            if botop:
+                if str(args[0]) in aliases:
+                    deleted_alias = str(aliases[str(args[0])])
+                    del aliases[str(args[0])]
+                    config_update(['aliases'], aliases)
+                    reply('Alias deleted. (Was “' + deleted_alias + '”)')
+                else:
+                    warning('The alias you' + (' just ' if random.randrange(0, 1) else ' ') + 'tried to delete ' + ("didn't" if random.randrange(0, 1) else 'did not') + (' even ' if random.randrange(0, 1) else ' ') + 'exist' + (' in the first place!' if random.randrange(0, 1) else '!') + (" So I guess everything's fine then?" if random.randrange(0, 1) else '')) # fun with randomized replies
+            else:
+                warning(errors.botop)
+        elif str(args[0]) in aliases and not botop:
+            warning(errors.botop)
+        else:
+            alias_existed = str(args[0]) in aliases
+            aliases[str(args[0])] = ' '.join(aliases[1:])
+            config_update(['aliases'], aliases)
+            reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(srgs[0]) in commands else 'Alias added.')
     
     def _command_command(args=[], botop=False, reply=reply, sender=sender):
         if args[0]:
@@ -996,6 +1042,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning(errors.argc(1, len(args), atleast=True))
     
     def _command_restart(args=[], botop=False, reply=reply, sender=sender):
+        global PREVIOUS_TOPIC
         if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
             # restart the bot
             minecraft.tellraw({
@@ -1011,8 +1058,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             sys.exit()
         elif len(args) == 1 and args[0] == 'minecraft':
             # restart the Minecraft server
+            PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is restarting…'
+            bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
             if minecraft.restart(args=args, botop=botop, reply=reply, sender=sender):
                 reply('Server restarted.')
+                update_topic()
             else:
                 reply('Could not restart the server!')
         else:
@@ -1048,11 +1098,14 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply('The server is currently offline.')
     
     def _command_stop(args=[], botop=False, reply=reply, sender=sender):
+        global PREVIOUS_TOPIC
         if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
             # stop the bot
             return _command_quit(args=[], botop=botop, reply=reply, sender=sender)
         elif len(args) == 1 and args[0] == 'minecraft':
             # stop the Minecraft server
+            PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is down for now. Blame ' + str(sender) + '.'
+            bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
             if minecraft.stop(args=args, botop=botop, reply=reply, sender=sender):
                 reply('Server stopped.')
             else:
@@ -1065,9 +1118,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     
     def _command_topic(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
-            TOPIC = ' '.join(args)
+            update_config(['irc', 'topic'], ' '.join(str(arg) for arg in args))
             update_topic()
-            reply('Topic changed temporarily. To change permanently, edit /opt/wurstmineberg/config/wurstminebot.json')
+            reply('Topic changed.')
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
@@ -1149,11 +1202,16 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'function': _command_achievementtweet,
             'usage': '[on | off [<time>]]'
         },
+        'alias': {
+            'description': 'add, edit, or remove an alias (you can use aliases like regular commands)',
+            'function': _command_alias,
+            'usage': '<alias_name> [<text>...]'
+        },
         'command': {
             'botop_only': True,
             'description': 'perform Minecraft server command',
             'function': _command_command,
-            'usage': '<command> [<arguments>...]',
+            'usage': '<command> [<arguments>...]'
         },
         'deathtweet': {
             'description': 'toggle death message tweeting',
@@ -1275,8 +1333,15 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             help_text = 'Usage: help [commands | <command>]'
         elif len(args) == 0:
             help_text = 'Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.\nExecute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.\nTo execute a command, send it to me in private chat (here) or address me in ' + config('irc').get('main_channel', '#wurstmineberg') + ' (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
+        elif args[0] == 'aliases':
+            num_aliases = len(list(config('aliases').keys()))
+            if num_aliases > 0:
+                help_text = 'Currently defined aliases: ' + ', '.join(sorted(list(config('aliases').keys()))) + '. For more information, execute “help alias”.'
+            else:
+                help_text = 'No aliases are currently defined. For more information, execute “help alias”.'
         elif args[0] == 'commands':
-            help_text = 'Available commands: ' + ', '.join(sorted(list(commands.keys()) + ['help']))
+            num_aliases = len(list(config('aliases').keys()))
+            help_text = 'Available commands: ' + ', '.join(sorted(list(commands.keys()) + ['help'])) + (', and ' + str(num_aliases) + ' aliases.' + if num_aliases > 0 else '.')
         elif args[0] == 'help':
             help_text = 'help: get help on a command\nUsage: help [commands | <command>]'
         elif args[0].lower() in commands:
@@ -1295,7 +1360,14 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             return commands[cmd]['function'](args=args, botop=isbotop, reply=reply)
         else:
             warning(errors.botop)
-    elif not chan:
+    elif cmd in config('aliases'):
+        if context != 'irc' or chan is not None:
+            minecraft.tellraw({
+                'text': config('aliases')[cmd],
+                'color': 'gold'
+            })
+        bot.say((config('irc').get('main_channel', '#wurstmineberg') if sender is None else sender) if context == 'irc' and chan is None else chan, config('aliases')[cmd])
+    else:
         warning(errors.unknown(cmd))
 
 def endMOTD(sender, headers, message):
