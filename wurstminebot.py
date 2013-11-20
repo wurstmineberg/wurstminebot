@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.3'
+__version__ = '2.1.4'
 
 import sys
 
@@ -1050,9 +1050,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 'color': 'red'
             })
             bot.say(config('irc')['main_channel'], random.choice(config('irc').get('quit_messages', ['brb'])))
-            bot.disconnect(quitMsg if quitMsg else 'brb')
+            bot.disconnect('brb')
             bot.stop()
-            context = newDaemonContext(pidfilename)
+            context = newDaemonContext('/var/run/wurstmineberg/wurstminebot.pid')
             stop(context)
             start(context)
             sys.exit()
