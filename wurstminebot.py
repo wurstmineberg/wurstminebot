@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.4'
+__version__ = '2.1.5'
 
 import sys
 
@@ -577,7 +577,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 if str(args[0]) in aliases:
                     deleted_alias = str(aliases[str(args[0])])
                     del aliases[str(args[0])]
-                    config_update(['aliases'], aliases)
+                    update_config(['aliases'], aliases)
                     reply('Alias deleted. (Was “' + deleted_alias + '”)')
                 else:
                     warning('The alias you' + (' just ' if random.randrange(0, 1) else ' ') + 'tried to delete ' + ("didn't" if random.randrange(0, 1) else 'did not') + (' even ' if random.randrange(0, 1) else ' ') + 'exist' + (' in the first place!' if random.randrange(0, 1) else '!') + (" So I guess everything's fine then?" if random.randrange(0, 1) else '')) # fun with randomized replies
@@ -588,7 +588,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             alias_existed = str(args[0]) in aliases
             aliases[str(args[0])] = ' '.join(args[1:])
-            config_update(['aliases'], aliases)
+            update_config(['aliases'], aliases)
             reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(srgs[0]) in commands else 'Alias added.')
     
     def _command_command(args=[], botop=False, reply=reply, sender=sender):
