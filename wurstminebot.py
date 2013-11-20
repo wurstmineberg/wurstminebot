@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.8.3'
+__version__ = '1.8.4'
 
 import sys
 
@@ -1258,7 +1258,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     elif cmd in commands:
         isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
         if isbotop or not commands[cmd].get('botop_only', False):
-            commands[cmd]['function'](args=args, botop=isbotop, reply=reply)
+            return commands[cmd]['function'](args=args, botop=isbotop, reply=reply)
         else:
             warning(errors.botop)
     elif not chan:
