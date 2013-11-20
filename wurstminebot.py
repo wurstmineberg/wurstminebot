@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.1'
+__version__ = '2.1.2'
 
 import sys
 
@@ -114,7 +114,7 @@ def set_config(config_dict):
     with open(CONFIG_FILE, 'w') as config_file:
         json.dump(config_dict, config_file, sort_keys=True, indent=4, separators=(',', ': '))
 
-def update_config(path=[], value):
+def update_config(path, value):
     config_dict = config()
     full_config_dict = config_dict
     if len(path) > 1:
