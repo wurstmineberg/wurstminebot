@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.7.0'
+__version__ = '1.8.0'
 
 import sys
 
@@ -1066,6 +1066,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: update (snapshot <snapshot_id> | <version>)')
     
+    def _command_version(args=[], botop=False, reply=reply, sender=sender):
+        reply('I am wurstminebot version ' + __version__)
+    
     def _command_whitelist(args=[], botop=False, reply=reply, sender=sender):
         if len(args) in [2, 3]:
             try:
@@ -1196,6 +1199,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'description': 'update Minecraft',
             'function': _command_update,
             'usage': '(snapshot <snapshot_id> | <version>)'
+        },
+        'version': {
+            'description': 'reply with the current wurstminebot version',
+            'function': _command_version,
+            'usage': None
         },
         'whitelist': {
             'botop_only': True,
