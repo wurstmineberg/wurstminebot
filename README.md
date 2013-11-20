@@ -2,6 +2,16 @@
 
 This is `wurstminebot` version 1.8.2 ([semver](http://semver.org/)). The versioned API includes the usage pattern, as found in the docstring of [`wurstminebot.py`](wurstminebot.py), as well as the commands, as explained in the `help` command.
 
+Requirements
+============
+
+*   [Python](http://python.org/) 3.2
+*   [Python-IRC-Bot-Framework](https://github.com/fenhl/Python-IRC-Bot-Framework)
+*   [TwitterAPI](https://github.com/geduldig/TwitterAPI)
+*   [docopt](http://docopt.org/)
+*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.11
+*   [requests](http://www.python-requests.org/) 1.2
+
 Configuration
 =============
 
