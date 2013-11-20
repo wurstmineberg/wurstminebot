@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.8.2'
+__version__ = '1.8.3'
 
 import sys
 
@@ -349,7 +349,7 @@ class InputLoop(threading.Thread):
 
 class TimeLoop(threading.Thread):
     def __init__(self):
-        super().__init__(self)
+        super().__init__()
         self.stopped = False
     
     def run(self):
