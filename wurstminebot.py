@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.8.4'
+__version__ = '2.0.0'
 
 import sys
 
@@ -84,6 +84,7 @@ def config(key=None, default_value=None):
             'password': '',
             'player_list': 'announce',
             'port': 6667,
+            'quit_messages': ['brb'],
             'ssl': False,
             'topic': None
         },
@@ -979,15 +980,12 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     
     def _command_quit(args=[], botop=False, reply=reply, sender=sender):
         quitMsg = ' '.join(args) if len(args) else None
-        minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
-        bot.say(config('irc')['main_channel'], ('brb, ' + quitMsg) if quitMsg else random.choice([
-            'Please wait while I reinstall the universe.',
-            'brb',
-            'Please hang tight, I seem to have exploded.',
-            'Sooner or later, we will rise again.',
-            'Restarting…'
-        ]))
-        bot.disconnect(quitMsg if quitMsg else 'brb')
+        minecraft.tellraw({
+            'text': ('Shutting down the bot: ' + quitMsg) if quitMsg else 'Shutting down the bot...',
+            'color': 'red'
+        })
+        bot.say(config('irc')['main_channel'], ('bye, ' + quitMsg) if quitMsg else random.choice(config('irc').get('quit_messages', ['bye'])))
+        bot.disconnect(quitMsg if quitMsg else 'bye')
         bot.stop()
         sys.exit()
     
@@ -996,6 +994,29 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             bot.send(' '.join(args))
         else:
             warning(errors.argc(1, len(args), atleast=True))
+    
+    def _command_restart(args=[], botop=False, reply=reply, sender=sender):
+        if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
+            # restart the bot
+            minecraft.tellraw({
+                'text': 'Restarting the bot...',
+                'color': 'red'
+            })
+            bot.say(config('irc')['main_channel'], random.choice(config('irc').get('quit_messages', ['brb'])))
+            bot.disconnect(quitMsg if quitMsg else 'brb')
+            bot.stop()
+            context = newDaemonContext(pidfilename)
+            stop(context)
+            start(context)
+            sys.exit()
+        elif len(args) == 1 and args[0] == 'minecraft':
+            # restart the Minecraft server
+            if minecraft.restart(args=args, botop=botop, reply=reply, sender=sender):
+                reply('Server restarted.')
+            else:
+                reply('Could not restart the server!')
+        else:
+            warning('Usage: restart [minecraft | bot]')
     
     def _command_status(args=[], botop=False, reply=reply, sender=sender):
         if minecraft.status():
@@ -1025,6 +1046,19 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 reply('Minecraft version ' + version)
         else:
             reply('The server is currently offline.')
+    
+    def _command_stop(args=[], botop=False, reply=reply, sender=sender):
+        if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
+            # stop the bot
+            return _command_quit(args=[], botop=botop, reply=reply, sender=sender)
+        elif len(args) == 1 and args[0] == 'minecraft':
+            # stop the Minecraft server
+            if minecraft.stop(args=args, botop=botop, reply=reply, sender=sender):
+                reply('Server stopped.')
+            else:
+                warning('The server could not be stopped! D:')
+        else:
+            warning('Usage: stop [minecraft | bot]')
     
     def _command_time(args=[], botop=False, reply=reply, sender=sender):
         telltime(func=reply)
@@ -1173,7 +1207,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         },
         'quit': {
             'botop_only': True,
-            'description': 'quit the IRC bot',
+            'description': 'stop the bot with a custom quit message',
             'function': _command_quit,
             'usage': '[<quit_message>...]'
         },
@@ -1185,9 +1219,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         },
         'restart': {
             'botop_only': True,
-            'description': 'restart the Minecraft server',
-            'function': minecraft.restart,
-            'usage': None
+            'description': 'restart the Minecraft server or the bot',
+            'function': _command_restart,
+            'usage': '[minecraft | bot]'
         },
         'status': {
             'description': 'print some server status',
@@ -1196,9 +1230,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         },
         'stop': {
             'botop_only': True,
-            'description': 'stop the Minecraft server',
-            'function': minecraft.stop,
-            'usage': None
+            'description': 'stop the Minecraft server or the bot',
+            'function': _command_stop,
+            'usage': '[minecraft | bot]'
         },
         'time': {
             'description': 'reply with the current time',
