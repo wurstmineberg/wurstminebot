@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.8.0'
+__version__ = '1.8.1'
 
 import sys
 
@@ -337,6 +337,8 @@ class InputLoop(threading.Thread):
                                     break
                 if not bot.keepGoing:
                     break
+        except SystemExit:
+            raise
         except:
             _debug_print('Exception in log input loop:')
             if config('debug', False):
@@ -527,7 +529,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             ACHIEVEMENTTWEET = False
             reply('Achievement tweeting is now disabled')
         else:
-            warning('first argument needs to be “on” or “off”')
+            warning('Usage: achievementtweet [on | off [<time>]]')
     
     def _command_command(args=[], botop=False, reply=reply, sender=sender):
         if args[0]:
@@ -564,7 +566,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             DEATHTWEET = False
             reply('Deathtweeting is now disabled')
         else:
-            warning('first argument needs to be “on” or “off”')
+            warning('Usage: deathtweet [on | off [<time>]]')
     
     def _command_lastseen(args=[], botop=False, reply=reply, sender=sender):
         global LAST
@@ -964,10 +966,14 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     
     def _command_quit(args=[], botop=False, reply=reply, sender=sender):
         quitMsg = ' '.join(args) if len(args) else None
-        if context != 'minecraft':
-            minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
-        if (context != 'irc') or (chan is None):
-            bot.say(config('irc')['main_channel'], ('brb, ' + quitMsg) if quitMsg else random.choice(['Please wait while I reinstall the universe.', 'brb', 'Please hang tight, I seem to have exploded.']))
+        minecraft.tellraw({'text': ('Restarting the bot: ' + quitMsg) if quitMsg else 'Restarting the bot...', 'color': 'red'})
+        bot.say(config('irc')['main_channel'], ('brb, ' + quitMsg) if quitMsg else random.choice([
+            'Please wait while I reinstall the universe.',
+            'brb',
+            'Please hang tight, I seem to have exploded.',
+            'Sooner or later, we will rise again.',
+            'Restarting…'
+        ]))
         bot.disconnect(quitMsg if quitMsg else 'brb')
         bot.stop()
         sys.exit()
@@ -1056,11 +1062,15 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         if len(args):
             if args[0] == 'snapshot':
                 if len(args) == 2:
+                    reply('updating' + ('...' if context == 'minecraft' else '…'))
                     minecraft.update(args[1], snapshot=True)
+                    reply(('...' if context == 'minecraft' else '…') + 'done')
                 else:
                     warning('Usage: update (snapshot <snapshot_id> | <version>)')
             elif len(args) == 1:
+                reply('updating' + ('...' if context == 'minecraft' else '…'))
                 minecraft.update(args[0], snapshot=False)
+                reply(('...' if context == 'minecraft' else '…') + 'done')
             else:
                 warning('Usage: update (snapshot <snapshot_id> | <version>)')
         else:
@@ -1259,6 +1269,8 @@ def action(sender, headers, message):
             return
         if headers[0] == config('irc')['main_channel']:
             minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
+    except SystemExit:
+        raise
     except:
         _debug_print('Exception in ACTION:')
         if config('debug', False):
@@ -1474,6 +1486,8 @@ def privmsg(sender, headers, message):
             cmd = message.split(' ')
             if len(cmd):
                 command(sender, None, cmd[0], cmd[1:], context='irc')
+    except SystemExit:
+        raise
     except:
         _debug_print('Exception in PRIVMSG:')
         if config('debug', False):
