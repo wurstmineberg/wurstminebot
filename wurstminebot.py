@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.8.1'
+__version__ = '1.8.2'
 
 import sys
 
@@ -338,6 +338,8 @@ class InputLoop(threading.Thread):
                 if not bot.keepGoing:
                     break
         except SystemExit:
+            _debug_print('Exit in log input loop')
+            TimeLoop.stop()
             raise
         except:
             _debug_print('Exception in log input loop:')
@@ -346,13 +348,24 @@ class InputLoop(threading.Thread):
             self.run()
 
 class TimeLoop(threading.Thread):
+    def __init__(self):
+        super().__init__(self)
+        self.stopped = False
+    
     def run(self):
         #FROM http://stackoverflow.com/questions/9918972/running-a-line-in-1-hour-intervals-in-python
         # modified to work with leap seconds
         while True:
             # sleep for the remaining seconds until the next hour
             time.sleep(3601 - time.time() % 3600)
+            if self.stopped:
+                break
             telltime(comment=True, restart=config('daily_restart', True))
+    
+    def stop(self):
+        self.stopped = True
+
+TimeLoop = TimeLoop()
 
 def telltime(func=None, comment=False, restart=False):
     if func is None:
@@ -1270,6 +1283,8 @@ def action(sender, headers, message):
         if headers[0] == config('irc')['main_channel']:
             minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
     except SystemExit:
+        _debug_print('Exit in ACTION')
+        TimeLoop.stop()
         raise
     except:
         _debug_print('Exception in ACTION:')
@@ -1487,6 +1502,8 @@ def privmsg(sender, headers, message):
             if len(cmd):
                 command(sender, None, cmd[0], cmd[1:], context='irc')
     except SystemExit:
+        _debug_print('Exit in PRIVMSG')
+        TimeLoop.stop()
         raise
     except:
         _debug_print('Exception in PRIVMSG:')
@@ -1497,8 +1514,9 @@ bot.bind('PRIVMSG', privmsg)
 
 def run():
     bot.debugging(config('debug'))
-    TimeLoop().start()
+    TimeLoop.start()
     bot.run()
+    TimeLoop.stop()
 
 def newDaemonContext(pidfilename):
     if not os.geteuid() == 0:
