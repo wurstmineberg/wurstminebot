@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '1.6.4'
+__version__ = '1.7.0'
 
 import sys
 
@@ -1067,15 +1067,21 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning('Usage: update (snapshot <snapshot_id> | <version>)')
     
     def _command_whitelist(args=[], botop=False, reply=reply, sender=sender):
-        if len(args) == 2:
+        if len(args) in [2, 3]:
             try:
+                if len(args) == 3 and args[2] is not None and len(args[2]):
+                    screen_name = args[2][1:] if args[2].startswith('@') else args[2]
+                else:
+                    screen_name = None
                 minecraft.whitelist_add(args[0], args[1])
             except ValueError:
                 warning('id ' + str(args[0]) + ' already exists')
             else:
                 reply(str(args[1]) + ' is now whitelisted')
+                if len(args) == 3:
+                    command(sender=sender, chan=chan, cmd='people', args=[args[0], 'twitter', args[2]], context=context, reply=reply, reply_format=reply_format)
         else:
-            warning('Usage: whitelist <unique_id> <minecraft_name>')
+            warning('Usage: whitelist <unique_id> <minecraft_name> [<twitter_username>]')
     
     commands = {
         'achievementtweet': {
@@ -1195,7 +1201,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'botop_only': True,
             'description': 'add person to whitelist',
             'function': _command_whitelist,
-            'usage': '<unique_id> <minecraft_name>'
+            'usage': '<unique_id> <minecraft_name> [<twitter_username>]'
         }
     }
     
