@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.0'
+__version__ = '2.1.1'
 
 import sys
 
@@ -1341,7 +1341,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 help_text = 'No aliases are currently defined. For more information, execute “help alias”.'
         elif args[0] == 'commands':
             num_aliases = len(list(config('aliases').keys()))
-            help_text = 'Available commands: ' + ', '.join(sorted(list(commands.keys()) + ['help'])) + (', and ' + str(num_aliases) + ' aliases.' + if num_aliases > 0 else '.')
+            help_text = 'Available commands: ' + ', '.join(sorted(list(commands.keys()) + ['help'])) + (', and ' + str(num_aliases) + ' aliases.' if num_aliases > 0 else '.')
         elif args[0] == 'help':
             help_text = 'help: get help on a command\nUsage: help [commands | <command>]'
         elif args[0].lower() in commands:
