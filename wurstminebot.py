@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.6'
+__version__ = '2.1.7'
 
 import sys
 
@@ -653,11 +653,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                             'text': player,
                             'hoverEvent': {
                                 'action': 'show_text',
-                                'value': mcplayer + ' in Minecraft'
+                                'value': person.minecraft + ' in Minecraft'
                             },
                             'clickEvent': {
                                 'action': 'suggest_command',
-                                'value': mcplayer + ': '
+                                'value': person.minecraft + ': '
                             },
                             'color': 'gold',
                         },
@@ -670,7 +670,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     reply(player + ' is currently on the server.')
             else:
                 with LOGLOCK:
-                    lastseen = minecraft.last_seen(mcplayer)
+                    lastseen = minecraft.last_seen(person.minecraft)
                     if lastseen is None:
                         reply('I have not seen ' + player + ' on the server yet.')
                     else:
@@ -720,7 +720,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                                     'text': player,
                                     'hoverEvent': {
                                         'action': 'show_text',
-                                        'value': mcplayer + ' in Minecraft'
+                                        'value': person.minecraft + ' in Minecraft'
                                     },
                                     'color': 'gold',
                                 },
@@ -1483,11 +1483,21 @@ def privmsg(sender, headers, message):
             if message.startswith(config('irc').get('nick', 'wurstminebot') + ': ') or message.startswith(config('irc')['nick'] + ', '):
                 cmd = message[len(config('irc').get('nick', 'wurstminebot')) + 2:].split(' ')
                 if len(cmd):
-                    command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+                    try:
+                        command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+                    except SystemExit:
+                        raise
+                    except Exception as e:
+                        bot.say(headers[0], sender + ': Error: ' + str(e))
             elif message.startswith('!'):
                 cmd = message[1:].split(' ')
                 if len(cmd):
-                    command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+                    try:
+                        command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+                    except SystemExit:
+                        raise
+                    except Exception as e:
+                        bot.say(headers[0], sender + ': Error: ' + str(e))
             elif headers[0] == config('irc')['main_channel']:
                 if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
@@ -1515,8 +1525,13 @@ def privmsg(sender, headers, message):
                             }
                         }
                     ])
-                    command(None, None, 'pastemojira', [message, 'nolink'], reply_format='tellraw')
-                    command(sender, headers[0], 'pastemojira', [message, 'nolink'], reply=botsay)
+                    try:
+                        command(None, None, 'pastemojira', [message, 'nolink'], reply_format='tellraw')
+                        command(sender, headers[0], 'pastemojira', [message, 'nolink'], reply=botsay)
+                    except SystemExit:
+                        raise
+                    except Exception as e:
+                        bot.say(headers[0], 'Error pasting mojira ticket: ' + str(e))
                 elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
                     minecraft.tellraw([
                         {
@@ -1543,8 +1558,13 @@ def privmsg(sender, headers, message):
                             }
                         }
                     ])
-                    command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
-                    command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
+                    try:
+                        command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
+                        command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
+                    except SystemExit:
+                        raise
+                    except Exception as e:
+                        bot.say(headers[0], 'Error while pasting tweet: ' + str(e))
                 else:
                     match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
                     if match:
@@ -1606,7 +1626,12 @@ def privmsg(sender, headers, message):
         else:
             cmd = message.split(' ')
             if len(cmd):
-                command(sender, None, cmd[0], cmd[1:], context='irc')
+                try:
+                    command(sender, None, cmd[0], cmd[1:], context='irc')
+                except SystemExit:
+                    raise
+                except Exception as e:
+                    bot.say(sender, 'Error: ' + str(e))
     except SystemExit:
         _debug_print('Exit in PRIVMSG')
         TimeLoop.stop()
