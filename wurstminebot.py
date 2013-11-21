@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.5'
+__version__ = '2.1.6'
 
 import sys
 
@@ -589,7 +589,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             alias_existed = str(args[0]) in aliases
             aliases[str(args[0])] = ' '.join(args[1:])
             update_config(['aliases'], aliases)
-            reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(srgs[0]) in commands else 'Alias added.')
+            reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(args[0]) in commands else 'Alias added.')
     
     def _command_command(args=[], botop=False, reply=reply, sender=sender):
         if args[0]:
