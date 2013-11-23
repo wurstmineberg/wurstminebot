@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.7'
+__version__ = '2.1.8'
 
 import sys
 
@@ -168,6 +168,102 @@ def update_all(*args, **kwargs):
     update_topic(force='reply' in kwargs) # force-update the topic if called from fixstatus command
     threading.Timer(20, minecraft.update_status).start()
 
+class TwitterError(Exception):
+    def __init__(self, code, message=None, status_code=0):
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+    
+    def __str__(self):
+        return str(self.code) if self.message is None else str(self.message)
+
+def tweet(status):
+    r = twitter.request('statuses/update', {'status': status})
+    j = r.json()
+    if r.status_code == 200:
+        return j['id']
+    raise TwitterError(j.get('errors', {}).get('code', 0), message=j.get('errors', {}).get('message'), status_code=r.status_code)
+
+def pastetweet(status, link=False, tellraw=False):
+    r = twitter.request('statuses/show', {'id': status})
+    j = r.json()
+    if r.status_code != 200:
+        raise TwitterError(j.get('errors', {}).get('code', 0), message=j.get('errors', {}).get('message'), status_code=r.status_code)
+    if 'retweeted_status' in j:
+        retweeted_request = twitter.request('statuses/show', {'id': j['retweeted_status']['id']})
+        rj = retweeted_request.json()
+        if retweeted_request.status_code != 200:
+            raise TwitterError(rj.get('errors', {}).get('code', 0), message=rj.get('errors', {}).get('message'), status_code=retweeted_request.status_code)
+        tweet_author = '<@' + j['user']['screen_name'] + ' RT @' + rj['user']['screen_name'] + '> '
+        tweet_author_tellraw = [
+            {
+                'text': '@' + j['user']['screen_name'],
+                'clickEvent': {
+                    'action': 'open_url',
+                    'value': 'https://twitter.com/' + j['user']['screen_name']
+                },
+                'color': 'gold'
+            },
+            {
+                'text': ' RT ',
+                'color': 'gold'
+            },
+            {
+                'text': '@' + rj['user']['screen_name'],
+                'clickEvent': {
+                    'action': 'open_url',
+                    'value': 'https://twitter.com/' + rj['user']['screen_name']
+                },
+                'color': 'gold'
+            }
+        ]
+        text = xml.sax.saxutils.unescape(rj['text'])
+    else:
+        tweet_author = '<@' + j['user']['screen_name'] + '> '
+        tweet_author_tellraw = [
+            {
+                'text': '@' + j['user']['screen_name'],
+                'clickEvent': {
+                    'action': 'open_url',
+                    'value': 'https://twitter.com/' + j['user']['screen_name']
+                },
+                'color': 'gold'
+            }
+        ]
+        text = xml.sax.saxutils.unescape(j['text'])
+    tweet_url = 'https://twitter.com/' + j['user']['screen_name'] + '/status/' + j['id_str']
+    if tellraw:
+        return {
+            'text': '<',
+            'color': 'gold',
+            'extra': tweet_author_tellraw + [
+                {
+                    'text': '> ' + text,
+                    'color': 'gold'
+                }
+            ] + ([
+                {
+                    'text': ' [',
+                    'color': 'gold'
+                },
+                {
+                    'text': tweet_url,
+                    'clickEvent': {
+                        'action': 'open_url',
+                        'value': tweet_url
+                    },
+                    'color': 'gold'
+                },
+                {
+                    'text': ']',
+                    'color': 'gold'
+                }
+            ] if link else [])
+        }
+    else:
+        return tweet_author + text + ((' [' + tweet_url + ']') if link else '')
+    pass #TODO
+
 class InputLoop(threading.Thread):
     def run(self):
         global LASTDEATH
@@ -216,7 +312,7 @@ class InputLoop(threading.Thread):
                                 print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
                             if joined:
                                 if new_player:
-                                    welcome_message = 'Welcome to the server!'
+                                    welcome_message = (0, 2) # The “welcome to the server” message
                                 else:
                                     welcome_messages = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('server_join', []))))
                                     with open(config('paths')['people']) as people_json:
@@ -224,10 +320,10 @@ class InputLoop(threading.Thread):
                                     for person in people:
                                         if person['minecraft'] == player:
                                             if 'description' not in person:
-                                                welcome_messages[0, 1] = 1.0
+                                                welcome_messages[0, 1] = 1.0 # The “you still don't have a description” welcome message
                                             break
                                     else:
-                                        welcome_messages[0, 2] = 16.0
+                                        welcome_messages[0, -1] = 16.0 # The “how did you do that?” welcome message
                                     for index, adv_welcome_msg in enumerate(config('advanced_comment_lines').get('server_join', [])):
                                         if 'text' not in adv_welcome_msg:
                                             continue
@@ -278,8 +374,16 @@ class InputLoop(threading.Thread):
                                             'color': 'gray'
                                         }
                                     ], player)
+                                elif welcome_message == (0, 2):
+                                    minecraft.tellraw({
+                                        'text': 'Hello ' + player + '. Welcome to the server!',
+                                        'color': 'gray'
+                                    }, player)
                                 elif welcome_message[0] == 1:
-                                    minecraft.tellraw({'text': 'Hello ' + player + '. ' + config('comment_lines')['server_join'][welcome_message[1]], 'color': 'gray'}, player)
+                                    minecraft.tellraw({
+                                        'text': 'Hello ' + player + '. ' + config('comment_lines')['server_join'][welcome_message[1]],
+                                        'color': 'gray'
+                                    }, player)
                                 elif welcome_message[0] == 2:
                                     message_dict = config('advanced_comment_lines')['server_join'][welcome_message[1]]
                                     message_list = message_dict['text']
@@ -294,7 +398,10 @@ class InputLoop(threading.Thread):
                                         }
                                     ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
                                 else:
-                                    minecraft.tellraw({'text': 'Hello ' + player + '. How did you do that?', 'color': 'gray'}, player)
+                                    minecraft.tellraw({
+                                        'text': 'Hello ' + player + '. How did you do that?',
+                                        'color': 'gray'
+                                    }, player)
                             if config('irc').get('player_list', 'announce') == 'announce':
                                 bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + ('joined' if joined else 'left') + ' the game')
                             update_all()
@@ -304,15 +411,13 @@ class InputLoop(threading.Thread):
                                 # achievement
                                 player, achievement = match.group(1, 2)
                                 if ACHIEVEMENTTWEET:
-                                    tweet = '[Achievement Get] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' got ' + achievement
-                                    if len(tweet) <= 140:
-                                        tweet_request = twitter.request('statuses/update', {'status': tweet})
-                                        if 'id' in tweet_request.json():
-                                            twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
-                                        else:
-                                            twid = 'error ' + str(tweet_request.status_code)
+                                    status = '[Achievement Get] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' got ' + achievement
+                                    try:
+                                        twid = tweet(status)
+                                    except TwitterError as e:
+                                        twid = 'error ' + str(e.status_code) + ': ' + str(e)
                                     else:
-                                        twid = 'too long for twitter'
+                                        twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
                                 else:
                                     twid = 'achievement tweets are disabled'
                                 bot.say(config('irc')['main_channel'], 'Achievement Get: ' + nicksub.sub(player, 'minecraft', 'irc') + ' got ' + achievement + ' [' + twid + ']')
@@ -338,20 +443,46 @@ class InputLoop(threading.Thread):
                                                 death_comments.append('Zombies gonna zomb.')
                                             comment = ' … ' + random.choice(death_comments)
                                         LASTDEATH = player + ' ' + message
-                                        tweet = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
-                                        if len(tweet + comment) <= 140:
-                                            tweet += comment
-                                        if len(tweet) <= 140:
-                                            tweet_request = twitter.request('statuses/update', {'status': tweet})
-                                            if 'id' in tweet_request.json():
-                                                twid = 'https://twitter.com/wurstmineberg/status/' + str(tweet_request.json()['id'])
-                                                minecraft.tellraw({'text': 'Your fail has been reported. Congratulations.', 'color': 'gold', 'clickEvent': {'action': 'open_url', 'value': twid}})
-                                            else:
-                                                twid = 'error ' + str(tweet_request.status_code)
-                                                minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because of '}, {'text': 'reasons', 'hoverEvent': {'action': 'show_text', 'value': str(tweet_request.status_code)}}, {'text': '.'}]})
+                                        status = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
+                                        if len(status + comment) <= 140:
+                                            status += comment
+                                        try:
+                                            twid = tweet(status)
+                                        except TwitterError as e:
+                                            twid = 'error ' + str(e.status_code) + ': ' + str(e)
+                                            minecraft.tellraw([
+                                                {
+                                                    'text': 'Your fail has ',
+                                                    'color': 'gold'
+                                                },
+                                                {
+                                                    'text': 'not',
+                                                    'color': 'red'
+                                                },
+                                                {
+                                                    'text': ' been reported because of '
+                                                },
+                                                {
+                                                    'text': 'reasons',
+                                                    'hoverEvent': {
+                                                        'action': 'show_text',
+                                                        'value': str(e.status_code) + ': ' + str(e)
+                                                    }
+                                                },
+                                                {
+                                                    'text': '.'
+                                                }
+                                            ])
                                         else:
-                                            twid = 'too long for twitter'
-                                            minecraft.tellraw({'text': 'Your fail has ', 'color': 'gold', 'extra': [{'text': 'not', 'color': 'red'}, {'text': ' been reported because it was too long.'}]})
+                                            twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
+                                            minecraft.tellraw({
+                                                'text': 'Your fail has been reported. Congratulations.',
+                                                'color': 'gold',
+                                                'clickEvent': {
+                                                    'action': 'open_url',
+                                                    'value': twid
+                                                }
+                                            })
                                     else:
                                         twid = 'deathtweets are disabled'
                                     bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
@@ -751,13 +882,27 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
             return
-        tweet = '\n'.join(((('* ' + nicksub.sub(msg_sender, 'irc', 'twitter') + ' ') if msg_type == 'ACTION' else ('<' + nicksub.sub(msg_sender, 'irc', 'twitter') + '> ')) + nicksub.textsub(message, 'irc', 'twitter')) for msg_type, msg_sender, message in messages)
-        if len(tweet + ' #ircleaks') <= 140:
-            if '\n' in tweet:
-                tweet += '\n#ircleaks'
+        status = '\n'.join(((('* ' + nicksub.sub(msg_sender, 'irc', 'twitter') + ' ') if msg_type == 'ACTION' else ('<' + nicksub.sub(msg_sender, 'irc', 'twitter') + '> ')) + nicksub.textsub(message, 'irc', 'twitter')) for msg_type, msg_sender, message in messages)
+        if len(status + ' #ircleaks') <= 140:
+            if '\n' in status:
+                status += '\n#ircleaks'
             else:
-                tweet += ' #ircleaks'
-        command(None, chan, 'tweet', [tweet], context='twitter', reply=reply, reply_format=reply_format)
+                status += ' #ircleaks'
+        try:
+            twid = tweet(status)
+        except TwitterError as e:
+            warning('Error ' + str(e.status_code) + ': ' + str(e))
+        else:
+            tweet_url = 'https://twitter.com/' + config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
+            minecraft.tellraw({
+                'text': 'leaked',
+                'clickEvent': {
+                    'action': 'open_url',
+                    'value': tweet_url
+                },
+                'color': 'gold'
+            })
+            bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'leaked ' + tweet_url)
     
     def _command_opt(args=[], botop=False, reply=reply, sender=sender):
         if len(args) == 0:
@@ -854,80 +999,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         if len(args) == 1:
             match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', str(args[0]))
             twid = match.group(1) if match else args[0]
-            request = twitter.request('statuses/show', {'id': twid})
-            if 'id' in request.json():
-                if 'retweeted_status' in request.json():
-                    retweeted_request = twitter.request('statuses/show', {'id': request.json()['retweeted_status']['id']})
-                    tweet_author = '<@' + request.json()['user']['screen_name'] + ' RT @' + retweeted_request.json()['user']['screen_name'] + '> '
-                    tweet_author_tellraw = [
-                        {
-                            'text': '@' + request.json()['user']['screen_name'],
-                            'clickEvent': {
-                                'action': 'open_url',
-                                'value': 'https://twitter.com/' + request.json()['user']['screen_name']
-                            },
-                            'color': 'gold'
-                        },
-                        {
-                            'text': ' RT ',
-                            'color': 'gold'
-                        },
-                        {
-                            'text': '@' + retweeted_request.json()['user']['screen_name'],
-                            'clickEvent': {
-                                'action': 'open_url',
-                                'value': 'https://twitter.com/' + retweeted_request.json()['user']['screen_name']
-                            },
-                            'color': 'gold'
-                        }
-                    ]
-                    text = xml.sax.saxutils.unescape(retweeted_request.json()['text'])
-                else:
-                    tweet_author = '<@' + request.json()['user']['screen_name'] + '> '
-                    tweet_author_tellraw = [
-                        {
-                            'text': '@' + request.json()['user']['screen_name'],
-                            'clickEvent': {
-                                'action': 'open_url',
-                                'value': 'https://twitter.com/' + request.json()['user']['screen_name']
-                            },
-                            'color': 'gold'
-                        }
-                    ]
-                    text = xml.sax.saxutils.unescape(request.json()['text'])
-                tweet_url = 'https://twitter.com/' + request.json()['user']['screen_name'] + '/status/' + request.json()['id_str']
-                if reply_format == 'tellraw':
-                    reply({
-                        'text': '<',
-                        'color': 'gold',
-                        'extra': tweet_author_tellraw + [
-                            {
-                                'text': '> ' + text,
-                                'color': 'gold'
-                            }
-                        ] + ([
-                            {
-                                'text': ' [',
-                                'color': 'gold'
-                            },
-                            {
-                                'text': tweet_url,
-                                'clickEvent': {
-                                    'action': 'open_url',
-                                    'value': tweet_url
-                                },
-                                'color': 'gold'
-                            },
-                            {
-                                'text': ']',
-                                'color': 'gold'
-                            }
-                        ] if link else [])
-                    })
-                else:
-                    reply(tweet_author + text + ((' [' + tweet_url + ']') if link else ''))
-            else:
-                warning('Error ' + str(request.status_code))
+            try:
+                reply(pastetweet(twid, link=link, tellraw=reply_format == 'tellraw'))
+            except TwitterError as e:
+                warning('Error ' + str(e.status_code) + ': ' + str(e))
         else:
             warning(errors.argc(1, len(args)))
     
@@ -989,7 +1064,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         person['twitter'] = screen_name
                         with open(config('paths')['people'], 'w') as people_json:
                             json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
-                        twitter.request('lists/members/create', {'list_id': 94629160, 'screen_name': screen_name})
+                        members_list_id = config('twitter').get('members_list')
+                        if members_list_id is not None:
+                            twitter.request('lists/members/create', {'list_id': members_list_id, 'screen_name': screen_name})
                         twitter.request('friendships/create', {'screen_name': screen_name})
                         reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
                     else:
@@ -1126,35 +1203,34 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     
     def _command_tweet(args=[], botop=False, reply=reply, sender=sender):
         if len(args):
-            tweet = nicksub.textsub(' '.join(args), context, 'twitter')
-            if len(tweet) > 140:
-                warning('too long')
+            status = nicksub.textsub(' '.join(args), context, 'twitter')
+            try:
+                tweet(status)
+            except TwitterError as e:
+                warning('Error ' + str(e.status_code) + ': ' + str(e))
             else:
-                r = twitter.request('statuses/update', {'status': tweet})
-                if 'id' in r.json():
-                    url = 'https://twitter.com/wurstmineberg/status/' + str(r.json()['id'])
-                    if context == 'minecraft':
-                        minecraft.tellraw({
-                            'text': '',
-                            'extra': [
-                                {
-                                    'text': url,
-                                    'color': 'gold',
-                                    'clickEvent': {
-                                        'action': 'open_url',
-                                        'value': url
-                                    }
+                url = 'https://twitter.com/wurstmineberg/status/' + str(r.json()['id'])
+                if context == 'minecraft':
+                    minecraft.tellraw({
+                        'text': '',
+                        'extra': [
+                            {
+                                'text': url,
+                                'color': 'gold',
+                                'clickEvent': {
+                                    'action': 'open_url',
+                                    'value': url
                                 }
-                            ]
-                        })
-                    else:
-                        command(None, None, 'pastetweet', [r.json()['id']], reply_format='tellraw')
-                    if context == 'irc' and chan == config('irc')['main_channel']:
-                        bot.say(chan, url)
-                    else:
-                        command(None, None, 'pastetweet', [r.json()['id']], reply=lambda msg: bot.say(config('irc')['main_channel'] if chan is None else chan, msg))
+                            }
+                        ]
+                    })
                 else:
-                    warning('Error ' + str(r.status_code))
+                    minecraft.tellraw(pastetweet(r.json()['id'], tellraw=True))
+                if context == 'irc' and chan == config('irc')['main_channel']:
+                    bot.say(chan, url)
+                else:
+                    for line in pastetweet(r.json()['id']).splitlines():
+                        bot.say(config('irc')['main_channel'] if chan is None else chan, line)
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
@@ -1559,8 +1635,9 @@ def privmsg(sender, headers, message):
                         }
                     ])
                     try:
-                        command(None, None, 'pastetweet', [message, 'nolink'], reply_format='tellraw')
-                        command(sender, headers[0], 'pastetweet', [message, 'nolink'], reply=botsay)
+                        twid = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)$', message).group(1)
+                        minecraft.tellraw(pastetweet(twid, link=False, tellraw=True))
+                        botsay(pastetweet(twid, link=False, tellraw=False))
                     except SystemExit:
                         raise
                     except Exception as e:
