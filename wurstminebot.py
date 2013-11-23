@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.1.8'
+__version__ = '2.2.0'
 
 import sys
 
@@ -1238,19 +1238,21 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         if len(args):
             if args[0] == 'snapshot':
                 if len(args) == 2:
-                    reply('updating' + ('...' if context == 'minecraft' else '…'))
-                    minecraft.update(args[1], snapshot=True)
-                    reply(('...' if context == 'minecraft' else '…') + 'done')
+                    version, is_snapshot, version_text = minecraft.update(args[1], snapshot=True, reply=reply)
                 else:
-                    warning('Usage: update (snapshot <snapshot_id> | <version>)')
+                    warning('Usage: update [snapshot <snapshot_id> | <version>]')
             elif len(args) == 1:
-                reply('updating' + ('...' if context == 'minecraft' else '…'))
-                minecraft.update(args[0], snapshot=False)
-                reply(('...' if context == 'minecraft' else '…') + 'done')
+                version, is_snapshot, version_text = minecraft.update(args[0], snapshot=False, reply=reply)
             else:
-                warning('Usage: update (snapshot <snapshot_id> | <version>)')
+                warning('Usage: update [snapshot <snapshot_id> | <version>]')
         else:
-            warning('Usage: update (snapshot <snapshot_id> | <version>)')
+            version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=reply)
+        try:
+            twid = tweet('Server updated to ' + version_text + '! Wheee! See http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if is_snapshot else '#') + version + ' for details.')
+        except TwitterError as e:
+            reply(('...' if context == 'minecraft' else '…') + 'done updating, but the announcement tweet failed.')
+        else:
+            reply(('...' if context == 'minecraft' else '…') + 'done [https://twitter.com/' + config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid) + ']')
     
     def _command_version(args=[], botop=False, reply=reply, sender=sender):
         reply('I am wurstminebot version ' + __version__)
@@ -1389,7 +1391,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'botop_only': True,
             'description': 'update Minecraft',
             'function': _command_update,
-            'usage': '(snapshot <snapshot_id> | <version>)'
+            'usage': '[snapshot <snapshot_id> | <version>]'
         },
         'version': {
             'description': 'reply with the current wurstminebot version',
