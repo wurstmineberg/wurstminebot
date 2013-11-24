@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.2.0'
+__version__ = '2.2.1'
 
 import sys
 
@@ -182,7 +182,8 @@ def tweet(status):
     j = r.json()
     if r.status_code == 200:
         return j['id']
-    raise TwitterError(j.get('errors', {}).get('code', 0), message=j.get('errors', {}).get('message'), status_code=r.status_code)
+    first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
+    raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code)
 
 def pastetweet(status, link=False, tellraw=False):
     r = twitter.request('statuses/show', {'id': status})
@@ -1205,11 +1206,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         if len(args):
             status = nicksub.textsub(' '.join(args), context, 'twitter')
             try:
-                tweet(status)
+                twid = tweet(status)
             except TwitterError as e:
                 warning('Error ' + str(e.status_code) + ': ' + str(e))
             else:
-                url = 'https://twitter.com/wurstmineberg/status/' + str(r.json()['id'])
+                url = 'https://twitter.com/wurstmineberg/status/' + str(twid)
                 if context == 'minecraft':
                     minecraft.tellraw({
                         'text': '',
@@ -1225,11 +1226,11 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                         ]
                     })
                 else:
-                    minecraft.tellraw(pastetweet(r.json()['id'], tellraw=True))
+                    minecraft.tellraw(pastetweet(twid, tellraw=True))
                 if context == 'irc' and chan == config('irc')['main_channel']:
                     bot.say(chan, url)
                 else:
-                    for line in pastetweet(r.json()['id']).splitlines():
+                    for line in pastetweet(twid).splitlines():
                         bot.say(config('irc')['main_channel'] if chan is None else chan, line)
         else:
             warning(errors.argc(1, len(args), atleast=True))
@@ -1431,7 +1432,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             for line in help_text.splitlines():
                 bot.say(sender, line)
         else:
-            reply(sender, help_text)
+            reply(help_text)
     elif cmd in commands:
         isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
         if isbotop or not commands[cmd].get('botop_only', False):
