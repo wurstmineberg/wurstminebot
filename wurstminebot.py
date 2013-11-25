@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.0'
+__version__ = '2.5.1'
 
 import sys
 
@@ -1157,9 +1157,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
             if minecraft.restart(args=args, permission_level=permission_level, reply=reply, sender=sender):
                 reply('Server restarted.')
-                update_topic()
             else:
                 reply('Could not restart the server!')
+            update_topic()
         else:
             warning('Usage: restart [minecraft | bot]')
     
@@ -1253,17 +1253,25 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning(errors.argc(1, len(args), atleast=True))
     
     def _command_update(args=[], permission_level=0, reply=reply, sender=sender):
+        global PREVIOUS_TOPIC
+        
         if len(args):
             if args[0] == 'snapshot':
                 if len(args) == 2:
+                    PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is being updated, wait a sec.'
+                    bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
                     version, is_snapshot, version_text = minecraft.update(args[1], snapshot=True, reply=reply)
                 else:
                     warning('Usage: update [snapshot <snapshot_id> | <version>]')
             elif len(args) == 1:
+                PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is being updated, wait a sec.'
+                bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
                 version, is_snapshot, version_text = minecraft.update(args[0], snapshot=False, reply=reply)
             else:
                 warning('Usage: update [snapshot <snapshot_id> | <version>]')
         else:
+            PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is being updated, wait a sec.'
+            bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
             version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=reply)
         try:
             twid = tweet('Server updated to ' + version_text + '! Wheee! See http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if is_snapshot else '#') + version + ' for details.')
@@ -1271,6 +1279,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply(('...' if context == 'minecraft' else '…') + 'done updating, but the announcement tweet failed.')
         else:
             reply(('...' if context == 'minecraft' else '…') + 'done [https://twitter.com/' + config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid) + ']')
+        update_topic()
     
     def _command_version(args=[], permission_level=0, reply=reply, sender=sender):
         reply('I am wurstminebot version ' + str(__version__) + ', running on init-minecraft version ' + str(minecraft.__version__))
