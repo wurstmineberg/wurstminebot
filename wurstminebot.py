@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.3.5'
+__version__ = '2.4.0'
 
 import sys
 
@@ -1286,8 +1286,6 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             except ValueError:
                 warning('id ' + str(args[0]) + ' already exists')
             else:
-                with open(config('paths')['people'], 'w') as people_json:
-                    json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                 reply(str(args[1]) + ' is now whitelisted')
                 if len(args) == 3:
                     command(sender=sender, chan=chan, cmd='people', args=[args[0], 'twitter', args[2]], context=context, reply=reply, reply_format=reply_format)
@@ -1448,7 +1446,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
     
     if cmd.lower() == 'help':
         if len(args) >= 2:
-            help_text = 'Usage: help [commands | <command>]'
+            help_text = 'Usage: help [aliases | commands | <command>]'
         elif len(args) == 0:
             help_text = 'Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.\nExecute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.\nTo execute a command, send it to me in private chat (here) or address me in ' + config('irc').get('main_channel', '#wurstmineberg') + ' (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
         elif args[0] == 'aliases':
