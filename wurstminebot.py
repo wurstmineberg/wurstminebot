@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.3.2'
+__version__ = '2.3.3'
 
 import sys
 
@@ -723,7 +723,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             alias_existed = str(args[0]) in aliases
             aliases[str(args[0])] = ' '.join(args[1:])
             update_config(['aliases'], aliases)
-            reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(args[0]) in commands else 'Alias added.')
+            reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(args[0]).lower() in commands + ['help'] else 'Alias added.')
     
     def _command_command(args=[], botop=False, reply=reply, sender=sender):
         if args[0]:
@@ -1420,7 +1420,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         }
     }
     
-    if cmd == 'help':
+    if cmd.lower() == 'help':
         if len(args) >= 2:
             help_text = 'Usage: help [commands | <command>]'
         elif len(args) == 0:
@@ -1439,6 +1439,8 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         elif args[0].lower() in commands:
             help_cmd = args[0].lower()
             help_text = help_cmd + ': ' + commands[help_cmd]['description'] + (' (requires bot op)' if commands[help_cmd].get('botop_only', False) else '') + '\nUsage: ' + help_cmd + ('' if commands[help_cmd].get('usage') is None else (' ' + commands[help_cmd]['usage']))
+        elif args[0] in config('aliases'):
+            help_text = args[0] + ' is an alias. For more information, execute “help alias”.'
         else:
             help_text = errors.unknown(args[0])
         if context == 'irc':
@@ -1446,7 +1448,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                 bot.say(sender, line)
         else:
             reply(help_text)
-    elif cmd in commands:
+    elif cmd.lower() in commands:
         isbotop = nicksub.sub(sender, context, 'irc', strict=False) in [None] + config('irc')['op_nicks']
         if isbotop or not commands[cmd].get('botop_only', False):
             return commands[cmd]['function'](args=args, botop=isbotop, reply=reply)
