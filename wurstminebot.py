@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.3.1'
+__version__ = '2.3.2'
 
 import sys
 
@@ -1271,6 +1271,17 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             except ValueError:
                 warning('id ' + str(args[0]) + ' already exists')
             else:
+                with open(config('paths').get('people', '/opt/wurstmineberg/config/people.json')) as people_json:
+                    people = json.load(people_json)
+                for person in people:
+                    if person['id'] == str(args[0]):
+                        break
+                else:
+                    warning('Something went wrong! ' + str(args[1]) + ' is whitelisted, but someone needs to fix the people.json first.')
+                    return
+                person['join_date'] = datetime.utcnow().strftime('%Y-%m-%d')
+                with open(config('paths')['people'], 'w') as people_json:
+                    json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
                 reply(str(args[1]) + ' is now whitelisted')
                 if len(args) == 3:
                     command(sender=sender, chan=chan, cmd='people', args=[args[0], 'twitter', args[2]], context=context, reply=reply, reply_format=reply_format)
