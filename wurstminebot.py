@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.4.0'
+__version__ = '2.5.0'
 
 import sys
 
@@ -1273,7 +1273,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply(('...' if context == 'minecraft' else '…') + 'done [https://twitter.com/' + config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid) + ']')
     
     def _command_version(args=[], permission_level=0, reply=reply, sender=sender):
-        reply('I am wurstminebot version ' + __version__)
+        reply('I am wurstminebot version ' + str(__version__) + ', running on init-minecraft version ' + str(minecraft.__version__))
     
     def _command_whitelist(args=[], permission_level=0, reply=reply, sender=sender):
         if len(args) in [2, 3]:
@@ -1426,7 +1426,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'usage': '[snapshot <snapshot_id> | <version>]'
         },
         'version': {
-            'description': 'reply with the current wurstminebot version',
+            'description': 'reply with the current version of wurstminebot and init-minecraft',
             'function': _command_version,
             'permission_level': 0,
             'usage': None
