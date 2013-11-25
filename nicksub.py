@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.3.0'
+__version__ = '2.3.1'
 
 from docopt import docopt
 import json
@@ -103,7 +103,7 @@ class Person:
                     self.id = id
                     break
             else:
-                raise PersonNotFoundError()
+                raise PersonNotFoundError('person with IRC nick ' + str(id_or_nick) + ' not found')
         elif context == 'minecraft':
             for id, minecraft_nick in minecraftNicks(include_ids=True):
                 if minecraft_nick.lower() == id_or_nick.lower():
@@ -119,7 +119,7 @@ class Person:
                     self.id = id
                     break
             else:
-                raise PersonNotFoundError()
+                raise PersonNotFoundError('person with reddit nick ' + str(id_or_nick) + ' not found')
         elif context == 'twitter':
             for id, twitter_nick in twitterNicks(include_ids=True, twitter_at_prefix=False):
                 if id_or_nick.startswith('@'):
@@ -128,7 +128,7 @@ class Person:
                     self.id = id
                     break
             else:
-                raise PersonNotFoundError()
+                raise PersonNotFoundError('person with twitter nick ' + str(id_or_nick) + ' not found')
         else:
             raise ValueError('unknown context: ' + str(context))
         self.reload()
@@ -163,7 +163,7 @@ class Person:
                 self.website = person.get('website')
                 break
         else:
-            raise PersonNotFoundError()
+            raise PersonNotFoundError('person with id ' + str(self.id) + ' not found')
 
 def sub(nick, source, target, strict=True, exit_on_fail=False, twitter_at_prefix=True):
     if exit_on_fail:
