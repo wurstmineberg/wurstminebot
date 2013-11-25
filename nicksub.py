@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.3.3'
+__version__ = '2.3.4'
 
 from docopt import docopt
 import json
@@ -136,6 +136,9 @@ class Person:
     def __eq__(self, other):
         return self.id == other.id
     
+    def invited(self):
+        return self.whitelisted() or self.status == 'invited'
+    
     def nick(self, context, default=None, twitter_at_prefix=False):
         if context == 'irc':
             return self.irc_nicks[0] if self.irc_nicks is not None and len(self.irc_nicks) else default
@@ -158,12 +161,15 @@ class Person:
                 self.name = person.get('name')
                 self.nicks = person.get('nicks', [])
                 self.reddit = person.get('reddit')
-                self.status = person.get('status', 'regular')
+                self.status = person.get('status', 'later')
                 self.twitter = person.get('twitter')
                 self.website = person.get('website')
                 break
         else:
             raise PersonNotFoundError('person with id ' + str(self.id) + ' not found')
+    
+    def whitelisted(self):
+        return self.status in ['founding', 'later', 'postfreeze']
 
 def sub(nick, source, target, strict=True, exit_on_fail=False, twitter_at_prefix=True):
     if exit_on_fail:
