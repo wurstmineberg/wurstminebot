@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.3.4'
+__version__ = '2.3.5'
 
 import sys
 
@@ -1486,7 +1486,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             sender_permission_level = 0
         if sender_permission_level >= commands[cmd].get('permission_level', 0):
-            return commands[cmd]['function'](args=args, botop=isbotop, reply=reply)
+            return commands[cmd]['function'](args=args, permission_level=sender_permission_level, reply=reply)
         else:
             warning(errors.botop)
     elif cmd in config('aliases'):
