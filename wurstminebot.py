@@ -7,12 +7,12 @@ Usage:
   wurstminebot --version
 
 Options:
-  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/wurstminebot.json].
   -h, --help         Print this message and exit.
+  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/wurstminebot.json].
   --version          Print version info and exit.
 """
 
-__version__ = '2.2.1'
+__version__ = '2.3.0'
 
 import sys
 
@@ -436,11 +436,13 @@ class InputLoop(threading.Thread):
                                     if DEATHTWEET:
                                         if player + ' ' + message == LASTDEATH:
                                             comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
+                                        elif (deathid == 27 and groups[1] == 'Sword of Justice') or (deathid == 31 and groups[1] == 'Bow of Justice'): # Death Games success
+                                            comment = ' … And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
                                         else:
                                             death_comments = config('comment_lines').get('death', ['Well done.'])
                                             if deathid == 7: # was blown up by Creeper
                                                 death_comments.append('Creepers gonna creep.')
-                                            if deathid == 28: # was slain by Zombie
+                                            if deathid == 29: # was slain by Zombie
                                                 death_comments.append('Zombies gonna zomb.')
                                             comment = ' … ' + random.choice(death_comments)
                                         LASTDEATH = player + ' ' + message
