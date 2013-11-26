@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.1'
+__version__ = '2.5.2'
 
 import sys
 
@@ -332,13 +332,13 @@ class InputLoop(threading.Thread):
                                     welcome_messages = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('server_join', []))))
                                     with open(config('paths')['people']) as people_json:
                                         people = json.load(people_json)
-                                    for person in people:
-                                        if person['minecraft'] == player:
-                                            if 'description' not in person:
-                                                welcome_messages[0, 1] = 1.0 # The “you still don't have a description” welcome message
-                                            break
-                                    else:
+                                    try:
+                                        person = nicksub.Person(player, context='minecraft')
+                                    except PersonNotFoundError:
                                         welcome_messages[0, -1] = 16.0 # The “how did you do that?” welcome message
+                                    else:
+                                        if person.description is None:
+                                            welcome_messages[0, 1] = 1.0 # The “you still don't have a description” welcome message
                                     for index, adv_welcome_msg in enumerate(config('advanced_comment_lines').get('server_join', [])):
                                         if 'text' not in adv_welcome_msg:
                                             continue
@@ -380,7 +380,7 @@ class InputLoop(threading.Thread):
                                             'text': 'Write one today',
                                             'clickEvent': {
                                                 'action': 'suggest_command',
-                                                'value': '!people ' + person + ' description '
+                                                'value': '!people ' + person.id + ' description '
                                             },
                                             'color': 'gray'
                                         },
