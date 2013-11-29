@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.6'
+__version__ = '2.5.7'
 
 import sys
 
@@ -919,32 +919,35 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'leaked ' + tweet_url)
     
     def _command_opt(args=[], permission_level=0, reply=reply, sender=sender):
-        if len(args) == 0:
-            warning(errors.argc(1, len(args), atleast=True))
+        if len(args) not in [1, 2]:
+            warning('Usage: opt <option> [true|false]')
             return
         option = str(args[0])
-        with open(config('paths')['people']) as people_json:
-            people = json.load(people_json)
-        for person in people:
-            if context == 'irc':
-                if sender in person.get('irc', {}).get('nicks', []):
-                    break
-            elif person.get('id' if context is None else context) == sender:
-                break
-        else:
-            warning("couldn't find you in people.json")
-            return None
+        try:
+            person = nicksub.Person(sender, context=context)
+        except nicksub.PersonNotFoundError:
+            try:
+                person = nicksub.Person(sender)
+            except PersonNotFoundError:
+                warning(errors.permission(1))
+                return None
         if len(args) == 1:
-            default_true_options = [] # These options are on by default. All other options are off by default.
-            if 'options' in person and str(args[0]) in person['options']:
-                flag = bool(person['options'][str(args[0])])
-                is_default = False
-            else:
-                flag = bool(args[0] in default_true_options)
-                is_default = True
+            flag = person.option(args[0])
+            is_default = person.option_is_default(args[0])
             reply('option ' + str(args[0]) + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
             return flag
         else:
+            with open(config('paths')['people']) as people_json:
+                people = json.load(people_json)
+            for person in people:
+                if context == 'irc':
+                    if sender in person.get('irc', {}).get('nicks', []):
+                        break
+                elif person.get('id' if context is None else context) == sender:
+                    break
+            else:
+                warning(errors.permission(1))
+                return None
             flag = bool(args[1] in [True, 1, '1', 'true', 'True', 'on', 'yes', 'y', 'Y'])
             if 'options' not in person:
                 person['options'] = {}
@@ -1563,10 +1566,8 @@ bot.bind('JOIN', join)
 def nick(sender, headers, message):
     if message is None or len(message) == 0:
         return
-    with open(config('paths')['people']) as people_json:
-        people = json.load(people_json)
-    for person in people:
-        if 'minecraft' in person and command(None, None, 'opt', [person, 'sync_nick_changes'], context=None):
+    for person in nicksub.everyone():
+        if person.minecraft is not None and person.option('sync_nick_changes'):
             minecraft.tellraw([
                 {
                     'text': sender + ' is now known as ',
@@ -1580,7 +1581,7 @@ def nick(sender, headers, message):
                         'value': message + ': '
                     }
                 }
-            ], player=person['minecraft'])
+            ], player=person.minecraft)
 
 def part(sender, headers, message):
     chans = headers[0].split(',')
@@ -1592,14 +1593,12 @@ def part(sender, headers, message):
         chans = chans[0] + ' and ' + chans[1]
     else:
         chans = ', '.join(chans[:-1]) + ', and ' + chans[-1]
-    with open(config('paths')['people']) as people_json:
-        people = json.load(people_json)
-    for person in people:
-        if 'minecraft' in person and command(None, None, 'opt', [person, 'sync_join_part'], context=None):
+    for person in nicksub.everyone():
+        if person.minecraft is not None and person.option('sync_join_part'):
             minecraft.tellraw({
                 'text': sender + ' left ' + chans,
                 'color': 'yellow'
-            }, player=person['minecraft'])
+            }, player=person.minecraft)
 
 bot.bind('PART', part)
 

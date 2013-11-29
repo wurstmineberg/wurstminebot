@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.6'
+__version__ = '2.5.7'
 
 from docopt import docopt
 import json
@@ -154,6 +154,16 @@ class Person:
         else:
             return default
     
+    def option(self, option_name):
+        default_true_options = [] # These options are on by default. All other options are off by default.
+        if str(option_name) in self.options:
+            return self.options[str(option_name)]
+        else:
+            return str(option_name) in default_true_options
+    
+    def option_is_default(self, option_name):
+        return str(option_name) not in self.options
+    
     def reload(self):
         for person in config():
             if person.get('id') == self.id:
@@ -163,6 +173,7 @@ class Person:
                 self.minecraft = person.get('minecraft')
                 self.name = person.get('name')
                 self.nicks = person.get('nicks', [])
+                self.options = person.get('options', {})
                 self.reddit = person.get('reddit')
                 self.status = person.get('status', 'later')
                 self.twitter = person.get('twitter')
@@ -173,6 +184,11 @@ class Person:
     
     def whitelisted(self):
         return self.status in ['founding', 'later', 'postfreeze']
+
+def everyone():
+    for person in config():
+        if id in person:
+            yield Person(person['id'])
 
 def sub(nick, source, target, strict=True, exit_on_fail=False, twitter_at_prefix=True):
     if exit_on_fail:
