@@ -78,6 +78,10 @@ def config(key=None, default_value=None):
             'server_join': []
         },
         'daily_restart': True,
+        'death_games': {
+            'logfile': '/opt/wurstmineberg/config/deathgames.json',
+            'enabled': False
+        },
         'debug': False,
         'irc': {
             'channels': [],
@@ -450,13 +454,31 @@ class InputLoop(threading.Thread):
                                         elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
                                             comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
                                         else:
-                                            death_comments = config('comment_lines').get('death', ['Well done.'])
-                                            if death.id == 'explosion-creeper':
-                                                death_comments.append('Creepers gonna creep.')
-                                            if death.id == 'slain-zombie':
-                                                death_comments.append('Zombies gonna zomb.')
-                                            if death.id == 'slain-silverfish':
-                                                death_comments.append('@ggggilbster would be proud.')
+                                            death_comments = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('death', []))))
+                                            for index, adv_death_comment in enumerate(config('advanced_comment_lines').get('death', [])):
+                                                if 'text' not in adv_death_comment:
+                                                    continue
+                                                try:
+                                                    death_comments[2, index] = adv_death_comment.get('weight', 1.0) * adv_death_comment.get('player_weights', {}).get(death.player.id, adv_death_comment.get('player_weights', {}).get('@default', 1.0)) * adv_death_comment.get('type_weights', {}).get(death.id, adv_death_comment.get('type_weights', {}).get('@default', 1.0))
+                                                except:
+                                                    continue
+                                            random_index = random.uniform(0.0, sum(death_comments.values()))
+                                            index = 0.0
+                                            for comment_index, weight in death_comments.items():
+                                                if random_index - index < weight:
+                                                    break
+                                                else:
+                                                    index += weight
+                                            else:
+                                                comment_index = (0, 0)
+                                            if comment_index == (0, 0):
+                                                comment = 'Well done.'
+                                            elif comment_index[0] == 1:
+                                                comment = config('comment_lines')['death'][comment_index[1]]
+                                            elif comment_index[0] == 2:
+                                                comment = config('advanced_comment_lines')['death'][comment_index[1]]['text']
+                                            else:
+                                                comment = "I don't even."
                                         LASTDEATH = death.message()
                                         status = death.tweet(comment=random.choice(death_comments))
                                         try:

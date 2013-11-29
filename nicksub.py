@@ -25,7 +25,7 @@ import re
 
 CONFIG_FILE = '/opt/wurstmineberg/config/people.json'
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='nicksub (wurstminebot' + __version__ + ')')
+    arguments = docopt(__doc__, version='nicksub (wurstminebot ' + __version__ + ')')
     CONFIG_FILE = arguments['--config']
 
 def config():
