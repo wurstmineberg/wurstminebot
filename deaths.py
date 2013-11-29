@@ -143,7 +143,7 @@ messages = [
         'regex': 'was shot by (' + minecraft.regexes.player + ') using \\[(.+)\\]'
     },
     {
-        'id': 'shot-player'
+        'id': 'shot-player',
         'regex': 'was shot by (' + minecraft.regexes.player + ')'
     },
     {
