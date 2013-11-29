@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.4'
+__version__ = '2.5.5'
 
 import sys
 
@@ -501,7 +501,7 @@ class InputLoop(threading.Thread):
                                             })
                                     else:
                                         twid = 'deathtweets are disabled'
-                                    bot.say(config('irc')['main_channel'], death.irc_message(tweet_info=twid)
+                                    bot.say(config('irc')['main_channel'], death.irc_message(tweet_info=twid))
                 if not bot.keepGoing:
                     break
             except SystemExit:
