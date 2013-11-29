@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.2'
+__version__ = '2.5.3'
 
 import sys
 
@@ -282,8 +282,8 @@ def pastetweet(status, link=False, tellraw=False):
 class InputLoop(threading.Thread):
     def run(self):
         global LASTDEATH
-        try:
-            for logLine in _logtail():
+        for logLine in _logtail():
+            try:
                 # server log output processing
                 _debug_print('[logpipe] ' + logLine)
                 match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)', logLine)
@@ -437,32 +437,28 @@ class InputLoop(threading.Thread):
                                     twid = 'achievement tweets are disabled'
                                 bot.say(config('irc')['main_channel'], 'Achievement Get: ' + nicksub.sub(player, 'minecraft', 'irc') + ' got ' + achievement + ' [' + twid + ']')
                             else:
-                                for deathid, death in enumerate(deaths.regexes):
-                                    match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death + '$', logLine)
-                                    if not match:
-                                        continue
-                                    # death
-                                    timestamp, player = match.group(1, 2)
-                                    groups = match.groups()[2:]
-                                    message = deaths.partial_message(deathid, groups)
+                                try:
+                                    death = deaths.Death(logLine)
+                                except ValueError:
+                                    pass # no death, continue parsing here or ignore this line
+                                else:
                                     with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
-                                        print(timestamp + ' ' + player + ' ' + message, file=deathslog)
+                                        print(death.timestamp.strftime('%Y-%m-%d %H:%M:%S') + ' ' + death.message(), file=deathslog)
                                     if DEATHTWEET:
-                                        if player + ' ' + message == LASTDEATH:
-                                            comment = ' … Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
-                                        elif (deathid == 27 and groups[1] == 'Sword of Justice') or (deathid == 31 and groups[1] == 'Bow of Justice'): # Death Games success
-                                            comment = ' … And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
+                                        if death.message() == LASTDEATH:
+                                            comment = 'Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
+                                        elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
+                                            comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
                                         else:
                                             death_comments = config('comment_lines').get('death', ['Well done.'])
-                                            if deathid == 7: # was blown up by Creeper
+                                            if death.id == 'explosion-creeper':
                                                 death_comments.append('Creepers gonna creep.')
-                                            if deathid == 29: # was slain by Zombie
+                                            if death.id == 'slain-zombie':
                                                 death_comments.append('Zombies gonna zomb.')
-                                            comment = ' … ' + random.choice(death_comments)
-                                        LASTDEATH = player + ' ' + message
-                                        status = '[DEATH] ' + nicksub.sub(player, 'minecraft', 'twitter') + ' ' + nicksub.textsub(message, 'minecraft', 'twitter', strict=True)
-                                        if len(status + comment) <= 140:
-                                            status += comment
+                                            if death.id == 'slain-silverfish':
+                                                death_comments.append('@ggggilbster would be proud.')
+                                        LASTDEATH = death.message()
+                                        status = death.tweet(comment=random.choice(death_comments))
                                         try:
                                             twid = tweet(status)
                                         except TwitterError as e:
@@ -477,17 +473,20 @@ class InputLoop(threading.Thread):
                                                     'color': 'red'
                                                 },
                                                 {
-                                                    'text': ' been reported because of '
+                                                    'text': ' been reported because of ',
+                                                    'color': 'gold'
                                                 },
                                                 {
                                                     'text': 'reasons',
                                                     'hoverEvent': {
                                                         'action': 'show_text',
                                                         'value': str(e.status_code) + ': ' + str(e)
-                                                    }
+                                                    },
+                                                    'color': 'gold'
                                                 },
                                                 {
-                                                    'text': '.'
+                                                    'text': '.',
+                                                    'color': 'gold'
                                                 }
                                             ])
                                         else:
@@ -502,19 +501,18 @@ class InputLoop(threading.Thread):
                                             })
                                     else:
                                         twid = 'deathtweets are disabled'
-                                    bot.say(config('irc')['main_channel'], nicksub.sub(player, 'minecraft', 'irc') + ' ' + nicksub.textsub(message, 'minecraft', 'irc', strict=True) + ' [' + twid + ']')
+                                    bot.say(config('irc')['main_channel'], death.irc_message(tweet_info=twid)
                                     break
                 if not bot.keepGoing:
                     break
-        except SystemExit:
-            _debug_print('Exit in log input loop')
-            TimeLoop.stop()
-            raise
-        except:
-            _debug_print('Exception in log input loop:')
-            if config('debug', False):
-                traceback.print_exc()
-            self.run()
+            except SystemExit:
+                _debug_print('Exit in log input loop')
+                TimeLoop.stop()
+                raise
+            except:
+                _debug_print('Exception in log input loop:')
+                if config('debug', False):
+                    traceback.print_exc()
 
 class TimeLoop(threading.Thread):
     def __init__(self):

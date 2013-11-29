@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.2'
+__version__ = '2.5.3'
 
 from docopt import docopt
 import json
@@ -135,6 +135,9 @@ class Person:
     
     def __eq__(self, other):
         return self.id == other.id
+    
+    def display_name(self):
+        return self.id if self.name is None else self.name
     
     def invited(self):
         return self.whitelisted() or self.status == 'invited'
