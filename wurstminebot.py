@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.2'
+__version__ = '2.6.3'
 
 import sys
 
@@ -316,7 +316,7 @@ class InputLoop(threading.Thread):
                         if message.startswith('!') and len(message) > 1:
                             # command
                             cmd = message[1:].split(' ')
-                            command(sender=(player if sender_person is None else sender_person), chan=None, cmd=cmd[0], args=cmd[1:], context='minecraft')
+                            command(cmd[0], args=cmd[1:], sender=player, sender_person=sender_person, context='minecraft')
                         else:
                             # chat message
                             chan = config('irc').get('main_channel', '#wurstmineberg')
@@ -748,9 +748,9 @@ def death_games_log(attacker, target, success=True):
     ])
     bot.say(config('irc').get('main_channel', '#wurstmineberg'), '[Death Games] ' + attacker.irc_nick() + "'s attemp on " + target.irc_nick() + (' succeeded.' if success else ' failed.'))
 
-def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
+def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None, sender=None, sender_person=None):
     if reply is None:
-        if reply_format == 'tellraw' or context == 'minecraft':
+        if reply_format == 'tellraw' or (reply_format is None and context == 'minecraft'):
             reply_format = 'tellraw'
             def reply(msg):
                 if isinstance(msg, str):
@@ -770,8 +770,8 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
                     else:
                         for line in msg.splitlines():
                             bot.say(sender, line)
-                elif context == 'console':
-                    print(msg)
+                else:
+                    _debug_print('[command reply] ' + msg)
     
     def warning(msg):
         if reply_format == 'tellraw':
@@ -1423,7 +1423,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             else:
                 reply(str(args[1]) + ' is now whitelisted')
                 if len(args) == 3:
-                    command(sender=sender, chan=chan, cmd='people', args=[args[0], 'twitter', args[2]], context=context, reply=reply, reply_format=reply_format)
+                    command('people', args=[args[0], 'twitter', args[2]], sender=sender, sender_person=sender_person, chan=chan, context=context, reply=reply, reply_format=reply_format)
         else:
             warning('Usage: whitelist <unique_id> <minecraft_name> [<twitter_username>]')
     
@@ -1580,10 +1580,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         }
     }
     
-    try:
-        sender_person = nicksub.Person(sender, context=context)
-    except nicksub.PersonNotFoundError:
-        sender_person = None
+    if sender_person is None:
+        try:
+            sender_person = nicksub.Person(sender, context=context)
+        except nicksub.PersonNotFoundError:
+            sender_person = None
+    elif sender is None:
+        sender = sender_person.nick(context, default=sender_person.id)
     
     if cmd.lower() == 'help':
         if len(args) >= 2:
@@ -1748,7 +1751,7 @@ def privmsg(sender, headers, message):
                 cmd = message[len(config('irc').get('nick', 'wurstminebot')) + 2:].split(' ')
                 if len(cmd):
                     try:
-                        command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+                        command(cmd[0], args=cmd[1:], sender=sender, chan=headers[0], context='irc')
                     except SystemExit:
                         raise
                     except Exception as e:
@@ -1757,7 +1760,7 @@ def privmsg(sender, headers, message):
                 cmd = message[1:].split(' ')
                 if len(cmd):
                     try:
-                        command(sender, headers[0], cmd[0], cmd[1:], context='irc')
+                        command(cmd[0], args=cmd[1:], sender=sender, chan=headers[0], context='irc')
                     except SystemExit:
                         raise
                     except Exception as e:
@@ -1790,8 +1793,8 @@ def privmsg(sender, headers, message):
                         }
                     ])
                     try:
-                        command(None, None, 'pastemojira', [message, 'nolink'], reply_format='tellraw')
-                        command(sender, headers[0], 'pastemojira', [message, 'nolink'], reply=botsay)
+                        command('pastemojira', args=[message, 'nolink'], reply_format='tellraw')
+                        command('pastemojira', args=[message, 'nolink'], context='irc', sender=sender, chan=headers[0], reply=botsay)
                     except SystemExit:
                         raise
                     except Exception as e:
@@ -1892,7 +1895,7 @@ def privmsg(sender, headers, message):
             cmd = message.split(' ')
             if len(cmd):
                 try:
-                    command(sender, None, cmd[0], cmd[1:], context='irc')
+                    command(cmd[0], args=cmd[1:], sender=sender, context='irc')
                 except SystemExit:
                     raise
                 except Exception as e:
