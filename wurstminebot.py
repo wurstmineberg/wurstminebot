@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.0'
+__version__ = '2.6.1'
 
 import sys
 
@@ -1676,8 +1676,8 @@ def join(sender, headers, message):
         return
     with open(config('paths')['people']) as people_json:
         people = json.load(people_json)
-    for person in people:
-        if 'minecraft' in person and command(None, None, 'opt', [person, 'sync_join_part'], context=None):
+    for person in nicksub.everyone():
+        if person.minecraft is not None and person.option('sync_join_part'):
             minecraft.tellraw([
                 {
                     'text': sender,
@@ -1691,7 +1691,7 @@ def join(sender, headers, message):
                     'text': ' joined ' + chan,
                     'color': 'yellow'
                 }
-            ], player=person['minecraft'])
+            ], player=person.minecraft)
 
 bot.bind('JOIN', join)
 
