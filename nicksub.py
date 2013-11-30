@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.1'
+__version__ = '2.6.2'
 
 from docopt import docopt
 import json
@@ -152,8 +152,8 @@ class Person:
             else:
                 return self.display_name()
         if respect_highlight_option and not self.option('chatsync_highlight'):
-            return ret[0] + '\u200c' + ret[1:]
-        return ret
+            return nick[0] + '\u200c' + nick[1:]
+        return nick
     
     def nick(self, context, default=None, twitter_at_prefix=False):
         if context == 'irc':
