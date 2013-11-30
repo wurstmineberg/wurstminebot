@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.7'
+__version__ = '2.6.0'
 
 from docopt import docopt
 import json
@@ -142,6 +142,19 @@ class Person:
     def invited(self):
         return self.whitelisted() or self.status == 'invited'
     
+    def irc_nick(self, respect_highlight_option=True, channel_members=[]):
+        for nick in self.irc_nicks:
+            if nick in channel_members:
+                break
+        else:
+            if len(self.irc_nicks) > 0:
+                nick = self.irc_nicks[0]
+            else:
+                return self.display_name()
+        if respect_highlight_option and not self.option('chatsync_highlight'):
+            return ret[0] + '\u200c' + ret[1:]
+        return ret
+    
     def nick(self, context, default=None, twitter_at_prefix=False):
         if context == 'irc':
             return self.irc_nicks[0] if self.irc_nicks is not None and len(self.irc_nicks) else default
@@ -155,7 +168,7 @@ class Person:
             return default
     
     def option(self, option_name):
-        default_true_options = [] # These options are on by default. All other options are off by default.
+        default_true_options = ['chatsync_highlight'] # These options are on by default. All other options are off by default.
         if str(option_name) in self.options:
             return self.options[str(option_name)]
         else:

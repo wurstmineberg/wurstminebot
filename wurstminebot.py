@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.5.7'
+__version__ = '2.6.0'
 
 import sys
 
@@ -36,6 +36,7 @@ import re
 import requests
 import select
 import signal
+import socket
 import subprocess
 import threading
 import time
@@ -95,6 +96,7 @@ def config(key=None, default_value=None):
         },
         'paths': {
             'assets': '/var/www/wurstmineberg.de/assets/serverstatus',
+            'deathgames': '/opt/wurstmineberg/log/deathgames.json',
             'keepalive': '/var/local/wurstmineberg/wurstminebot_keepalive',
             'logs': '/opt/wurstmineberg/log',
             'minecraft_server': '/opt/wurstmineberg/server',
@@ -294,8 +296,12 @@ class InputLoop(threading.Thread):
                 if match:
                     # action
                     player, message = match.group(1, 2)
-                    chan = config('irc')['main_channel']
-                    sender = nicksub.sub(player, 'minecraft', 'irc')
+                    try:
+                        sender_person = nicksub.Person(player, context='minecraft')
+                    except nicksub.PersonNotFoundError:
+                        sender_person = None
+                    chan = config('irc').get('main_channel', '#wurstmineberg')
+                    sender = (player if sender_person is None else sender_person.irc_nick())
                     subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
                     bot.log(chan, 'ACTION', sender, [chan], subbed_message)
                     bot.say(chan, '* ' + sender + ' ' + subbed_message)
@@ -303,14 +309,18 @@ class InputLoop(threading.Thread):
                     match = re.match(minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)', logLine)
                     if match:
                         player, message = match.group(1, 2)
+                        try:
+                            sender_person = nicksub.Person(player, context='minecraft')
+                        except nicksub.PersonNotFoundError:
+                            sender_person = None
                         if message.startswith('!') and len(message) > 1:
                             # command
                             cmd = message[1:].split(' ')
-                            command(sender=player, chan=None, cmd=cmd[0], args=cmd[1:], context='minecraft')
+                            command(sender=(player if sender_person is None else sender_person), chan=None, cmd=cmd[0], args=cmd[1:], context='minecraft')
                         else:
                             # chat message
-                            chan = config('irc')['main_channel']
-                            sender = nicksub.sub(player, 'minecraft', 'irc')
+                            chan = config('irc').get('main_channel', '#wurstmineberg')
+                            sender = (player if sender_person is None else sender_person.irc_nick())
                             subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
                             bot.log(chan, 'PRIVMSG', sender, [chan], subbed_message)
                             bot.say(chan, '<' + sender + '> ' + subbed_message)
@@ -453,6 +463,12 @@ class InputLoop(threading.Thread):
                                             comment = 'Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
                                         elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
                                             comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
+                                            try:
+                                                target = nicksub.Person(death.groups[0], context='minecraft')
+                                            except nicksub.PersonNotFoundError:
+                                                pass # don't automatically log
+                                            else:
+                                                death_games_log(death.person, target, success=True)
                                         else:
                                             death_comments = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('death', []))))
                                             for index, adv_death_comment in enumerate(config('advanced_comment_lines').get('death', [])):
@@ -559,7 +575,11 @@ def telltime(func=None, comment=False, restart=False):
     if func is None:
         def func(msg):
             for line in msg.splitlines():
-                minecraft.tellraw({'text': line, 'color': 'gold'})
+                try:
+                    minecraft.tellraw({'text': line, 'color': 'gold'})
+                except socket.error:
+                    bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'Warning: telltime is disconnected from Minecraft')
+                    break
         
         custom_func = False
     else:
@@ -569,7 +589,11 @@ def telltime(func=None, comment=False, restart=False):
             func(msg)
         else:
             for line in msg.splitlines():
-                minecraft.tellraw({'text': line, 'color': 'red'})
+                try:
+                    minecraft.tellraw({'text': line, 'color': 'red'})
+                except socket.error:
+                    bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'Warning: telltime is disconnected from Minecraft')
+                    break
     
     global DST
     global PREVIOUS_TOPIC
@@ -637,7 +661,7 @@ def update_topic(force=False):
         bot.topic(config('irc')['main_channel'], new_topic)
     PREVIOUS_TOPIC = new_topic
 
-def mwiki_lookup(article=None, args=[], permission_level=0, reply=None, sender=None):
+def mwiki_lookup(article=None, args=[], permission_level=0, reply=None, sender=None, sender_person=None):
     if reply is None:
         def reply(*args, **kwargs):
             pass
@@ -673,6 +697,57 @@ def mwiki_lookup(article=None, args=[], permission_level=0, reply=None, sender=N
         reply('Error ' + str(request.status_code))
         return 'Error ' + str(request.status_code)
 
+def death_games_log(attacker, target, success=True):
+    with open(config('paths').get('deathgames', '/opt/wurstmineberg/log/deathgames.json')) as logfile:
+        log = json.load(logfile)
+    log['log'].append({
+        'attacker': attacker.id,
+        'date': datetime.utcnow().strftime('%Y-%m-%d'),
+        'success': success,
+        'target': target.id
+    })
+    with open(config('paths').get('deathgames', '/opt/wurstmineberg/log/deathgames.json'), 'w') as logfile:
+        json.dump(log, logfile, sort_keys=True, indent=4, separators=(',', ': '))
+    minecraft.tellraw([
+        {
+            'text': '[Death Games]',
+            'clickEvent': {
+                'action': 'open_url',
+                'value': 'http://wiki.wurstmineberg.de/Death_Games'
+            },
+            'color': 'gold'
+        },
+        {
+            'text': ' ',
+            'color': 'gold'
+        },
+        {
+            'text': attacker.minecraft,
+            'clickEvent': {
+                'action': 'suggest_command',
+                'value': attacker.minecraft + ': '
+            },
+            'color': 'gold'
+        },
+        {
+            'text': "'s attemp on ",
+            'color': 'gold'
+        },
+        {
+            'text': target.minecraft,
+            'clickEvent': {
+                'action': 'suggest_command',
+                'value': target.minecraft + ': '
+            },
+            'color': 'gold'
+        },
+        {
+            'text': (' succeeded.' if success else ' failed.'),
+            'color': 'gold'
+        }
+    ])
+    bot.say(config('irc').get('main_channel', '#wurstmineberg'), '[Death Games] ' + attacker.irc_nick() + "'s attemp on " + target.irc_nick() + (' succeeded.' if success else ' failed.'))
+
 def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=None):
     if reply is None:
         if reply_format == 'tellraw' or context == 'minecraft':
@@ -704,7 +779,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply(msg)
     
-    def _command_achievementtweet(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_achievementtweet(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global ACHIEVEMENTTWEET
         if not len(args):
             reply('Achievement tweeting is currently ' + ('enabled' if ACHIEVEMENTTWEET else 'disabled'))
@@ -735,7 +810,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: achievementtweet [on | off [<time>]]')
     
-    def _command_alias(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_alias(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         aliases = config('aliases')
         if len(args) == 0:
             warning('Usage: alias <alias_name> [<text>...]')
@@ -758,13 +833,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             update_config(['aliases'], aliases)
             reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.' if str(args[0]).lower() in commands + ['help'] else 'Alias added.')
     
-    def _command_command(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_command(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if args[0]:
             reply(minecraft.command(args[0], args[1:]))
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_deathtweet(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_deathtweet(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global DEATHTWEET
         if not len(args):
             reply('Deathtweeting is currently ' + ('enabled' if DEATHTWEET else 'disabled'))
@@ -795,7 +870,44 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: deathtweet [on | off [<time>]]')
     
-    def _command_lastseen(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_dg(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
+        if len(args) not in [2, 3] or args[0].lower() not in ['win', 'fail']:
+            warning('Usage: dg (win | fail) [<attacker>] <target>')
+            return
+        success = args[0].lower() == 'win'
+        if len(args) == 3:
+            try:
+                attacker = nicksub.Person(args[1], context=context)
+            except nicksub.PersonNotFoundError:
+                try:
+                    attacker = nicksub.Person(args[1])
+                except nicksub.PersonNotFoundError:
+                    warning('Target not found')
+                    return
+            try:
+                target = nicksub.Person(args[2], context=context)
+            except nicksub.PersonNotFoundError:
+                try:
+                    target = nicksub.Person(args[2])
+                except nicksub.PersonNotFoundError:
+                    warning('Target not found')
+                    return
+        else:
+            if sender_person is None:
+                warning(errors.permission(3))
+                return
+            attacker = sender_person
+            try:
+                target = nicksub.Person(args[1], context=context)
+            except nicksub.PersonNotFoundError:
+                try:
+                    target = nicksub.Person(args[1])
+                except nicksub.PersonNotFoundError:
+                    warning('Target not found')
+                    return
+        death_games_log(attacker, target, success)
+    
+    def _command_lastseen(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global LAST
         if len(args):
             player = args[0]
@@ -901,7 +1013,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args)))
     
-    def _command_leak(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_leak(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         messages = [(msg_type, msg_sender, msg_text) for msg_type, msg_sender, msg_headers, msg_text in bot.channel_data[config('irc')['main_channel']]['log'] if msg_type == 'ACTION' or (msg_type == 'PRIVMSG' and (not msg_text.startswith('!')) and (not msg_text.startswith(config('irc')['nick'] + ': ')) and (not msg_text.startswith(config('irc')['nick'] + ', ')))]
         if len(args) == 0:
             if len(messages):
@@ -940,32 +1052,24 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             })
             bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'leaked ' + tweet_url)
     
-    def _command_opt(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_opt(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args) not in [1, 2]:
             warning('Usage: opt <option> [true|false]')
             return
         option = str(args[0])
-        try:
-            person = nicksub.Person(sender, context=context)
-        except nicksub.PersonNotFoundError:
-            try:
-                person = nicksub.Person(sender)
-            except PersonNotFoundError:
-                warning(errors.permission(1))
-                return None
+        if sender_person is None:
+            warning(errors.permission(1))
+            return None
         if len(args) == 1:
-            flag = person.option(args[0])
-            is_default = person.option_is_default(args[0])
+            flag = sender_person.option(args[0])
+            is_default = sender_person.option_is_default(args[0])
             reply('option ' + str(args[0]) + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
             return flag
         else:
             with open(config('paths')['people']) as people_json:
                 people = json.load(people_json)
             for person in people:
-                if context == 'irc':
-                    if sender in person.get('irc', {}).get('nicks', []):
-                        break
-                elif person.get('id' if context is None else context) == sender:
+                if person.get('id') == sender_person.id:
                     break
             else:
                 warning(errors.permission(1))
@@ -979,7 +1083,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply('option ' + str(args[0]) + ' is now ' + ('on' if flag else 'off') + ' for you')
             return flag
     
-    def _command_pastemojira(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_pastemojira(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         link = True
         if len(args) == 3 and args[2] == 'nolink':
             link = False
@@ -1030,7 +1134,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             warning('Error ' + str(request.status_code))
             return
     
-    def _command_pastetweet(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_pastetweet(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         link = True
         if len(args) == 2 and args[1] == 'nolink':
             link = False
@@ -1043,9 +1147,9 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             except TwitterError as e:
                 warning('Error ' + str(e.status_code) + ': ' + str(e))
         else:
-            warning(errors.argc(1, len(args)))
+            warning('Usage: pastetweet (<url> | <status_id>) [nolink]')
     
-    def _command_people(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_people(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args):
             with open(config('paths')['people']) as people_json:
                 people = json.load(people_json)
@@ -1055,7 +1159,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             else:
                 warning('no person with id ' + str(args[0]) + ' in people.json')
                 return
-            can_edit = permission_level >= 4 or (context == 'minecraft' and 'minecraft' in person and person['minecraft'] == sender) or (context == 'irc' and 'irc' in person and 'nicks' in person['irc'] and sender in person['irc']['nicks'])
+            can_edit = permission_level >= 4 or (sender_person is not None and sender_person.id == str(args[0]))
             can_only_edit_self_error = "You can only edit your own profile. Only bot ops can edit someone else's profile."
             if len(args) >= 2:
                 if args[1] == 'description':
@@ -1135,13 +1239,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply('http://wurstmineberg.de/people')
     
-    def _command_ping(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_ping(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if random.randrange(1024) == 0:
             reply('BWO' + 'R' * random.randint(3, 20) + 'N' * random.randint(1, 5) + 'G') # PINGCEPTION
         else:
             reply('pong')
     
-    def _command_quit(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_quit(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         quitMsg = ' '.join(args) if len(args) else None
         minecraft.tellraw({
             'text': ('Shutting down the bot: ' + quitMsg) if quitMsg else 'Shutting down the bot...',
@@ -1152,13 +1256,13 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         bot.stop()
         sys.exit()
     
-    def _command_raw(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_raw(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args):
             bot.send(' '.join(args))
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_restart(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_restart(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global PREVIOUS_TOPIC
         if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
             # restart the bot
@@ -1185,7 +1289,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: restart [minecraft | bot]')
     
-    def _command_status(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_status(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if minecraft.status():
             if context != 'minecraft':
                 players = minecraft.online_players()
@@ -1214,7 +1318,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             reply('The server is currently offline.')
     
-    def _command_stop(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_stop(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global PREVIOUS_TOPIC
         if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
             # stop the bot
@@ -1230,10 +1334,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning('Usage: stop [minecraft | bot]')
     
-    def _command_time(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_time(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         telltime(func=reply)
     
-    def _command_topic(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_topic(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args):
             update_config(['irc', 'topic'], ' '.join(str(arg) for arg in args))
             update_topic()
@@ -1241,7 +1345,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_tweet(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_tweet(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args):
             status = nicksub.textsub(' '.join(args), context, 'twitter')
             try:
@@ -1274,7 +1378,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
-    def _command_update(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_update(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global PREVIOUS_TOPIC
         
         if len(args):
@@ -1303,10 +1407,10 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             reply(('...' if context == 'minecraft' else '…') + 'done [https://twitter.com/' + config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid) + ']')
         update_topic()
     
-    def _command_version(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_version(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         reply('I am wurstminebot version ' + str(__version__) + ', running on init-minecraft version ' + str(minecraft.__version__))
     
-    def _command_whitelist(args=[], permission_level=0, reply=reply, sender=sender):
+    def _command_whitelist(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args) in [2, 3]:
             try:
                 if len(args) == 3 and args[2] is not None and len(args[2]):
@@ -1347,6 +1451,12 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
             'function': _command_deathtweet,
             'permission_level': 3,
             'usage': '[on | off [<time>]]'
+        },
+        'dg': {
+            'description': 'record an assassination attempt in the Death Games log',
+            'function': _command_dg,
+            'permission_level': 3,
+            'usage': '(win | fail) [<attacker>] <target>'
         },
         'fixstatus': {
             'description': 'update the server status on the website and in the channel topic',
@@ -1515,7 +1625,7 @@ def command(sender, chan, cmd, args, context='irc', reply=None, reply_format=Non
         else:
             sender_permission_level = 0
         if sender_permission_level >= commands[cmd].get('permission_level', 0):
-            return commands[cmd]['function'](args=args, permission_level=sender_permission_level, reply=reply)
+            return commands[cmd]['function'](args=args, permission_level=sender_permission_level, reply=reply, sender=sender, sender_person=sender_person)
         else:
             warning(errors.botop)
     elif cmd in config('aliases'):
