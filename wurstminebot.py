@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.5'
+__version__ = '2.6.6'
 
 import sys
 
@@ -648,7 +648,16 @@ def telltime(func=None, comment=False, restart=False):
 
 def update_topic(force=False):
     global PREVIOUS_TOPIC
-    players = minecraft.online_players() if config('irc').get('player_list', 'announce') == 'topic' else []
+    main_channel = config('irc').get('main_channel')
+    if main_channel is None:
+        return
+    players = []
+    for mcnick in (minecraft.online_players() if config('irc').get('player_list', 'announce') == 'topic' else []):
+        try:
+            person = nicksub.Person(mcnick, context='minecraft').irc_nick()
+        except nicksub.PersonNotFoundError:
+            person = mcnick
+        players.append(mcnick)
     player_list = ('Currently online: ' + ', '.join(players)) if len(players) else ''
     topic = config('irc').get('topic')
     if topic is None:
@@ -658,7 +667,7 @@ def update_topic(force=False):
     else:
         new_topic = topic
     if force or PREVIOUS_TOPIC != new_topic:
-        bot.topic(config('irc')['main_channel'], new_topic)
+        bot.topic(main_channel, new_topic)
     PREVIOUS_TOPIC = new_topic
 
 def mwiki_lookup(article=None, args=[], permission_level=0, reply=None, sender=None, sender_person=None):
@@ -1341,7 +1350,6 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
         if len(args):
             update_config(['irc', 'topic'], ' '.join(str(arg) for arg in args))
             update_topic()
-            reply('Topic changed.')
         else:
             warning(errors.argc(1, len(args), atleast=True))
     
