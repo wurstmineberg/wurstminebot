@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.4'
+__version__ = '2.6.5'
 
 import sys
 
@@ -127,7 +127,7 @@ def update_config(path, value):
         for key in path[:-1]:
             if not isinstance(config_dict, dict):
                 raise KeyError('Trying to update a non-dict config key')
-            if key not in conf:
+            if key not in config_dict:
                 config_dict[key] = {}
             config_dict = config_dict[key]
     if len(path) > 0:
