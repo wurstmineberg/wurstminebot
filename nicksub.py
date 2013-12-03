@@ -21,7 +21,7 @@ def parseVersionString():
         with open('/opt/hub/wurstmineberg/wurstminebot/README.md') as readme:
             for line in readme.read().splitlines():
                 if line.startswith('This is `wurstminebot` version'):
-                    return version_number = line.split(' ')[4]
+                    return line.split(' ')[4]
     except:
         pass
 
