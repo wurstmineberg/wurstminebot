@@ -248,7 +248,7 @@ class Death:
             victim_irc = str(self.person)
         return victim_irc + ' ' + nicksub.textsub(self.partial_message, 'minecraft', 'irc', strict=True) + ('' if tweet_info is None else ' [' + str(tweet_info) + ']')
     
-    def message():
+    def message(self):
         return (mcnick(self.person)) + ' ' + self.partial_message
     
     def tweet(comment=None):
