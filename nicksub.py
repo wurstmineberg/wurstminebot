@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.10'
+__version__ = '2.6.11'
 
 from docopt import docopt
 import json

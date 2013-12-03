@@ -12,8 +12,6 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.10'
-
 import sys
 
 sys.path.append('/opt/py')
@@ -43,6 +41,8 @@ import time
 from datetime import timedelta
 import traceback
 import xml.sax.saxutils
+
+__version__ = nicksub.__version__
 
 CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
@@ -496,7 +496,7 @@ class InputLoop(threading.Thread):
                                         else:
                                             comment = "I don't even."
                                     LASTDEATH = death.message()
-                                    status = death.tweet(comment=random.choice(death_comments))
+                                    status = death.tweet(comment=comment)
                                     try:
                                         twid = tweet(status)
                                     except TwitterError as e:
@@ -563,9 +563,19 @@ class TimeLoop(threading.Thread):
     def run(self):
         #FROM http://stackoverflow.com/questions/9918972/running-a-line-in-1-hour-intervals-in-python
         # modified to work with leap seconds
-        while True:
+        while not self.stopped:
             # sleep for the remaining seconds until the next hour
-            time.sleep(3601 - time.time() % 3600)
+            time_until_hour = 3601 - time.time() % 3600
+            while time_until_hour >= 60:
+                time.sleep(60)
+                if self.stopped:
+                    break
+                time_until_hour -= 60
+            while time_until_hour >= 1:
+                time.sleep(1)
+                if self.stopped:
+                    break
+                time_until_hour -= 1
             if self.stopped:
                 break
             telltime(comment=True, restart=config('daily_restart', True))
