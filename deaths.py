@@ -234,6 +234,7 @@ class Death:
                 self.person = match.group(2)
             self.partial_message = log_line[len('[00:00:00] [Server thread/INFO]: ' + mcnick(self.person) + ' '):]
             self.groups = match.groups()[2:]
+            break
         else:
             raise ValueError('Log line is not a death')
     
