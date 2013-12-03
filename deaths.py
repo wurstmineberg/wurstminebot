@@ -238,7 +238,7 @@ class Death:
         else:
             raise ValueError('Log line is not a death')
     
-    def irc_message(tweet_info=None):
+    def irc_message(self, tweet_info=None):
         if isinstance(self.person, nicksub.Person):
             if len(self.person.irc) > 0:
                 victim_irc = self.person.irc[0]
@@ -251,7 +251,7 @@ class Death:
     def message(self):
         return (mcnick(self.person)) + ' ' + self.partial_message
     
-    def tweet(comment=None):
+    def tweet(self, comment=None):
         if isinstance(self.person, nicksub.Person):
             if self.person.twitter is None:
                 victim_twitter = self.person.display_name()
