@@ -288,6 +288,7 @@ def pastetweet(status, link=False, tellraw=False):
 class InputLoop(threading.Thread):
     def __init__(self):
         super().__init__(name='wurstminebot InputLoop')
+        self.stopped = False
     
     @staticmethod
     def process_log_line(log_line):
@@ -545,6 +546,7 @@ class InputLoop(threading.Thread):
                                 bot.say(config('irc')['main_channel'], death.irc_message(tweet_info=twid))
         except SystemExit:
             _debug_print('Exit in log input loop')
+            InputLoop.stop()
             TimeLoop.stop()
             raise
         except:
@@ -555,8 +557,13 @@ class InputLoop(threading.Thread):
     def run(self):
         for log_line in _logtail():
             InputLoop.process_log_line(log_line)
-            if not bot.keepGoing:
+            if self.stopped or not bot.keepGoing:
                 break
+    
+    def stop(self):
+        self.stopped = True
+
+InputLoop = InputLoop()
 
 class TimeLoop(threading.Thread):
     def __init__(self):
@@ -1674,7 +1681,7 @@ def endMOTD(sender, headers, message):
     _debug_print("aaand I'm back.")
     update_all()
     threading.Timer(20, minecraft.update_status).start()
-    InputLoop().start()
+    InputLoop.start()
 
 bot.bind('376', endMOTD)
 
@@ -1686,6 +1693,7 @@ def action(sender, headers, message):
             minecraft.tellraw({'text': '', 'extra': [{'text': '* ' + nicksub.sub(sender, 'irc', 'minecraft'), 'color': 'aqua', 'hoverEvent': {'action': 'show_text', 'value': sender + ' in ' + headers[0]}, 'clickEvent': {'action': 'suggest_command', 'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '}}, {'text': ' '}, {'text': nicksub.textsub(message, 'irc', 'minecraft'), 'color': 'aqua'}]})
     except SystemExit:
         _debug_print('Exit in ACTION')
+        InputLoop.stop()
         TimeLoop.stop()
         raise
     except:
@@ -1927,6 +1935,7 @@ def privmsg(sender, headers, message):
                     bot.say(sender, 'Error: ' + str(e))
     except SystemExit:
         _debug_print('Exit in PRIVMSG')
+        InputLoop.stop()
         TimeLoop.stop()
         raise
     except:
@@ -1942,11 +1951,13 @@ def run():
     try:
         bot.run()
     except Exception:
+        InputLoop.stop()
         TimeLoop.stop()
         _debug_print('Exception in bot.run:')
         if config('debug', False):
             traceback.print_exc()
         sys.exit(1)
+    InputLoop.stop()
     TimeLoop.stop()
 
 def newDaemonContext(pidfilename):
@@ -1989,6 +2000,8 @@ def status(pidfile):
     return False
 
 def stop(context):
+    InputLoop.stop()
+    TimeLoop.stop()
     if status(context.pidfile):
         print("Stopping the service...")
         if context.is_open:
@@ -2000,7 +2013,6 @@ def stop(context):
             context.pidfile.release()
         except lockfile.NotMyLock:
             context.pidfile.break_lock()
-        
     if context.pidfile.is_locked():
         print("Service did not shutdown correctly. Cleaning up...")
         context.pidfile.break_lock()
