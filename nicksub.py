@@ -16,7 +16,16 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.14'
+def parseVersionString():
+    try:
+        with open('/opt/hub/wurstmineberg/wurstminebot/README.md') as readme:
+            for line in readme.read().splitlines():
+                if line.startswith('This is `wurstminebot` version'):
+                    return version_number = line.split(' ')[4]
+    except:
+        pass
+
+__version__ = str(parseVersionString())
 
 from docopt import docopt
 import json
