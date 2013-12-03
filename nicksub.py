@@ -16,7 +16,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.12'
+__version__ = '2.6.13'
 
 from docopt import docopt
 import json
@@ -142,15 +142,25 @@ class Person:
     def invited(self):
         return self.whitelisted() or self.status == 'invited'
     
-    def irc_nick(self, respect_highlight_option=True, channel_members=[]):
+    def irc_nick(self, respect_highlight_option=True, channel_members=[], fallback=True):
+        """Returns the best IRC nick for the person. “Best” in this case means the first in the list.
+        
+        respect_highlight_option: if this is True and the person has the chatsync_highlight option on, a zero-width non-joiner will be inserted after the first character of the nick.
+        channel_members: if this is not empty, nicks in this list will be preferred.
+        fallback: this defines how an empty list of IRC nicks is handled. If it is True, the display name will be used. If it is False, an AttributeError will be raised. For other values, the fallback will be returned instead.
+        """
         for nick in self.irc_nicks:
             if nick in channel_members:
                 break
         else:
             if len(self.irc_nicks) > 0:
                 nick = self.irc_nicks[0]
-            else:
+            elif fallback is True:
                 return self.display_name()
+            elif fallback is False:
+                raise AttributeError('Person has no IRC nicks')
+            else:
+                return fallback
         if respect_highlight_option and not self.option('chatsync_highlight'):
             return nick[0] + '\u200c' + nick[1:]
         return nick

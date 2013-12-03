@@ -286,6 +286,9 @@ def pastetweet(status, link=False, tellraw=False):
     pass #TODO
 
 class InputLoop(threading.Thread):
+    def __init__(self):
+        super().__init__(name='wurstminebot InputLoop')
+    
     @staticmethod
     def process_log_line(log_line):
         global LASTDEATH
@@ -557,7 +560,7 @@ class InputLoop(threading.Thread):
 
 class TimeLoop(threading.Thread):
     def __init__(self):
-        super().__init__()
+        super().__init__(name='wurstminebot TimeLoop')
         self.stopped = False
     
     def run(self):

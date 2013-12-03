@@ -240,10 +240,7 @@ class Death:
     
     def irc_message(self, tweet_info=None):
         if isinstance(self.person, nicksub.Person):
-            if len(self.person.irc) > 0:
-                victim_irc = self.person.irc[0]
-            else:
-                victim_irc = self.person.display_name()
+            victim_irc = self.person.irc_nick()
         else:
             victim_irc = str(self.person)
         return victim_irc + ' ' + nicksub.textsub(self.partial_message, 'minecraft', 'irc', strict=True) + ('' if tweet_info is None else ' [' + str(tweet_info) + ']')
