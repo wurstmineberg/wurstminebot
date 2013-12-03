@@ -12,7 +12,7 @@ Options:
   --version          Print version info and exit.
 """
 
-__version__ = '2.6.9'
+__version__ = '2.6.10'
 
 import sys
 
@@ -288,6 +288,7 @@ def pastetweet(status, link=False, tellraw=False):
 class InputLoop(threading.Thread):
     @staticmethod
     def process_log_line(log_line):
+        global LASTDEATH
         try:
             # server log output processing
             _debug_print('[logpipe] ' + log_line)
@@ -549,7 +550,6 @@ class InputLoop(threading.Thread):
                 traceback.print_exc()
     
     def run(self):
-        global LASTDEATH
         for log_line in _logtail():
             InputLoop.process_log_line(log_line)
             if not bot.keepGoing:
