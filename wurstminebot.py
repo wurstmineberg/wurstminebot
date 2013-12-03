@@ -560,6 +560,10 @@ class InputLoop(threading.Thread):
             if self.stopped or not bot.keepGoing:
                 break
     
+    def start(self):
+        self.stopped = False
+        super().start()
+    
     def stop(self):
         self.stopped = True
 
@@ -589,6 +593,10 @@ class TimeLoop(threading.Thread):
             if self.stopped:
                 break
             telltime(comment=True, restart=config('daily_restart', True))
+    
+    def start(self):
+        self.stopped = False
+        super().start()
     
     def stop(self):
         self.stopped = True
@@ -681,7 +689,7 @@ def update_topic(force=False):
             person = nicksub.Person(mcnick, context='minecraft').irc_nick()
         except nicksub.PersonNotFoundError:
             person = mcnick
-        players.append(mcnick)
+        players.append(person)
     player_list = ('Currently online: ' + ', '.join(players)) if len(players) else ''
     topic = config('irc').get('topic')
     if topic is None:
