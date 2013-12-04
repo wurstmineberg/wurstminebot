@@ -1189,7 +1189,7 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
                         if person.description:
                             reply(person.description)
                         else:
-                        reply('no description')
+                            reply('no description')
                         return
                     elif can_edit:
                         person.description = ' '.join(args[2:])
