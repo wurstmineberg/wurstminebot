@@ -61,6 +61,7 @@ def update_config(person_id, path, value=None, delete=False):
     for index, person in enumerate(config_dict):
         if person.get('id') == person_id:
             config_dict = config_dict[index]
+            break
     else:
         raise PersonNotFoundError('person with id ' + str(person_id) + ' not found')
     if len(path) > 1:
