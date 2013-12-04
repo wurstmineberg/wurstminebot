@@ -37,13 +37,50 @@ if __name__ == '__main__':
     arguments = docopt(__doc__, version='nicksub (wurstminebot ' + __version__ + ')')
     CONFIG_FILE = arguments['--config']
 
-def config():
+def config(person_id=None):
     try:
         with open(CONFIG_FILE) as config_file:
             j = json.load(config_file)
     except:
         j = []
-    return j
+    if person_id is None:
+        return j
+    for person in j:
+        if person.get('id') == person_id:
+            return person
+    else:
+        raise PersonNotFoundError('person with id ' + str(person_id) + ' not found')
+
+def set_config(config_dict):
+    with open(CONFIG_FILE, 'w') as config_file:
+        json.dump(config_dict, config_file, sort_keys=True, indent=4, separators=(',', ': '))
+
+def update_config(person_id, path, value=None, delete=False):
+    config_dict = config()
+    full_config_dict = config_dict
+    for index, person in enumerate(config_dict):
+        if person.get('id') == person_id:
+            config_dict = config_dict[index]
+    else:
+        raise PersonNotFoundError('person with id ' + str(person_id) + ' not found')
+    if len(path) > 1:
+        for key in path[:-1]:
+            if not isinstance(config_dict, dict):
+                raise KeyError('Trying to update a non-dict config key')
+            if key not in config_dict:
+                config_dict[key] = {}
+            config_dict = config_dict[key]
+    if len(path) > 0:
+        if delete:
+            del config_dict[path[-1]]
+        else:
+            config_dict[path[-1]] = value
+    else:
+        if delete:
+            del full_config_dict[index]
+        else:
+            full_config_dict[index] = value
+    set_config(full_config_dict)
 
 class PersonNotFoundError(Exception):
     pass # raised when a Person object is created or reloaded with data not in the config
@@ -103,9 +140,10 @@ def twitterNicks(include_ids=False, twitter_at_prefix=False):
 class Person:
     def __init__(self, id_or_nick, context=None, strict=True):
         if id_or_nick is None:
-            return
+            raise TypeError('id or nick may not be None')
         if context is None:
             self.id = id_or_nick
+            config(self.id) # raises PersonNotFoundError if the id is invalid
         elif context == 'irc':
             for id, irc_nick in ircNicks(mode='all', include_ids=True):
                 if irc_nick.lower() == id_or_nick.lower():
@@ -140,10 +178,21 @@ class Person:
                 raise PersonNotFoundError('person with twitter nick ' + str(id_or_nick) + ' not found')
         else:
             raise ValueError('unknown context: ' + str(context))
-        self.reload()
     
     def __eq__(self, other):
         return self.id == other.id
+    
+    @property
+    def description(self):
+        return config(self.id).get('description')
+    
+    @description.setter
+    def description(self, value):
+        update_config(self.id, ['description'], value=value)
+    
+    @description.deleter
+    def description(self):
+        update_config(self.id, ['description'], delete=True)
     
     def display_name(self):
         return self.id if self.name is None else self.name
@@ -174,6 +223,42 @@ class Person:
             return nick[0] + '\u200c' + nick[1:]
         return nick
     
+    @property
+    def irc_nicks(self):
+        return config(self.id).get('irc', {}).get('nicks', [])
+    
+    @irc_nicks.setter
+    def irc_nicks(self, value):
+        update_config(self.id, ['irc', 'nicks'], value=value)
+    
+    @irc_nicks.deleter
+    def irc_nicks(self):
+        update_config(self.id, ['irc', 'nicks'], delete=True)
+    
+    @property
+    def minecraft(self):
+        return config(self.id).get('minecraft')
+    
+    @minecraft.setter
+    def minecraft(self, value):
+        update_config(self.id, ['minecraft'], value=value)
+    
+    @minecraft.deleter
+    def minecraft(self):
+        update_config(self.id, ['minecraft'], delete=True)
+    
+    @property
+    def name(self):
+        return config(self.id).get('name')
+    
+    @name.setter
+    def name(self, value):
+        update_config(self.id, ['name'], value=value)
+    
+    @name.deleter
+    def name(self):
+        update_config(self.id, ['name'], delete=True)
+    
     def nick(self, context, default=None, twitter_at_prefix=False):
         if context == 'irc':
             return self.irc_nicks[0] if self.irc_nicks is not None and len(self.irc_nicks) else default
@@ -186,6 +271,30 @@ class Person:
         else:
             return default
     
+    @property
+    def nicks(self):
+        return config(self.id).get('nicks', [])
+    
+    @nicks.setter
+    def nicks(self, value):
+        update_config(self.id, ['nicks'], value=value)
+    
+    @nicks.deleter
+    def nicks(self):
+        update_config(self.id, ['nicks'], delete=True)
+    
+    @property
+    def nickserv(self):
+        return config(self.id).get('irc', {}).get('nickserv')
+    
+    @nickserv.setter
+    def nickserv(self, value):
+        update_config(self.id, ['irc', 'nickserv'], value=value)
+    
+    @nickserv.deleter
+    def nickserv(self):
+        update_config(self.id, ['irc', 'nickserv'], delete=True)
+    
     def option(self, option_name):
         default_true_options = ['chatsync_highlight'] # These options are on by default. All other options are off by default.
         if str(option_name) in self.options:
@@ -193,29 +302,99 @@ class Person:
         else:
             return str(option_name) in default_true_options
     
+    @property
+    def options(self):
+        return config(self.id).get('options', {})
+    
+    @options.setter
+    def options(self, value):
+        update_config(self.id, ['options'], value=value)
+    
+    @options.deleter
+    def options(self):
+        update_config(self.id, ['options'], delete=True)
+    
     def option_is_default(self, option_name):
         return str(option_name) not in self.options
     
+    @property
+    def reddit(self):
+        return config(self.id).get('reddit')
+    
+    @reddit.setter
+    def reddit(self, value):
+        update_config(self.id, ['reddit'], value=value)
+    
+    @reddit.deleter
+    def reddit(self):
+        update_config(self.id, ['reddit'], delete=True)
+    
     def reload(self):
+        """Deprecated, properties are now loaded dynamically"""
         for person in config():
             if person.get('id') == self.id:
-                self.description = person.get('description')
-                self.irc_nicks = person.get('irc', {}).get('nicks', [])
-                self.nickserv = person.get('irc', {}).get('nickserv')
-                self.minecraft = person.get('minecraft')
-                self.name = person.get('name')
-                self.nicks = person.get('nicks', [])
-                self.options = person.get('options', {})
-                self.reddit = person.get('reddit')
-                self.status = person.get('status', 'later')
-                self.twitter = person.get('twitter')
-                self.website = person.get('website')
                 break
         else:
             raise PersonNotFoundError('person with id ' + str(self.id) + ' not found')
     
+    def set_option(self, option_name, value):
+        opts = self.options
+        opts[option_name] = value
+        self.options = opts
+    
+    @property
+    def status(self):
+        return config(self.id).get('status', 'later')
+    
+    @status.setter
+    def status(self, value):
+        if value == 'later':
+            del self.status
+        else:
+            update_config(self.id, ['status'], value=value)
+    
+    @status.deleter
+    def status(self):
+        update_config(self.id, ['status'], delete=True)
+    
+    @property
+    def twitter(self):
+        return config(self.id).get('twitter')
+    
+    @twitter.setter
+    def twitter(self, value):
+        update_config(self.id, ['twitter'], value=value)
+    
+    @twitter.deleter
+    def twitter(self):
+        update_config(self.id, ['twitter'], delete=True)
+    
+    @property
+    def website(self):
+        return config(self.id).get('website')
+    
+    @website.setter
+    def website(self, value):
+        update_config(self.id, ['website'], value=value)
+    
+    @website.deleter
+    def website(self):
+        update_config(self.id, ['website'], delete=True)
+    
     def whitelisted(self):
         return self.status in ['founding', 'later', 'postfreeze']
+    
+    @property
+    def wiki(self):
+        return config(self.id).get('wiki')
+    
+    @wiki.setter
+    def wiki(self, value):
+        update_config(self.id, ['wiki'], value=value)
+    
+    @wiki.deleter
+    def wiki(self):
+        update_config(self.id, ['wiki'], delete=True)
 
 def everyone():
     for person in config():

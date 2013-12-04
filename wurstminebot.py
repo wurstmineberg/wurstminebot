@@ -148,11 +148,6 @@ bot.log_own_messages = False
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
-def _timed_input(timeout=1): #FROM http://stackoverflow.com/a/2904057
-    i, o, e = select.select([sys.stdin], [], [], timeout)
-    if i:
-        return sys.stdin.readline().strip()
-
 class errors:
     log = "I can't find that in my chatlog"
     
@@ -285,6 +280,13 @@ def pastetweet(status, link=False, tellraw=False):
         return tweet_author + text + ((' [' + tweet_url + ']') if link else '')
     pass #TODO
 
+def set_twitter(person, screen_name):
+    person.twitter = screen_name
+    members_list_id = config('twitter').get('members_list')
+    if members_list_id is not None:
+        twitter.request('lists/members/create', {'list_id': members_list_id, 'screen_name': screen_name})
+    twitter.request('friendships/create', {'screen_name': screen_name})
+
 class InputLoop(threading.Thread):
     def __init__(self):
         super().__init__(name='wurstminebot InputLoop')
@@ -348,8 +350,6 @@ class InputLoop(threading.Thread):
                                 welcome_message = (0, 2) # The “welcome to the server” message
                             else:
                                 welcome_messages = dict(((1, index), 1.0) for index in range(len(config('comment_lines').get('server_join', []))))
-                                with open(config('paths')['people']) as people_json:
-                                    people = json.load(people_json)
                                 try:
                                     person = nicksub.Person(player, context='minecraft')
                                 except PersonNotFoundError:
@@ -686,7 +686,7 @@ def update_topic(force=False):
     players = []
     for mcnick in (minecraft.online_players() if config('irc').get('player_list', 'announce') == 'topic' else []):
         try:
-            person = nicksub.Person(mcnick, context='minecraft').irc_nick()
+            person = nicksub.Person(mcnick, context='minecraft').irc_nick(respect_highlight_option=False)
         except nicksub.PersonNotFoundError:
             person = mcnick
         players.append(person)
@@ -771,7 +771,7 @@ def death_games_log(attacker, target, success=True):
             'color': 'gold'
         },
         {
-            'text': "'s attemp on ",
+            'text': "'s attempt on ",
             'color': 'gold'
         },
         {
@@ -787,9 +787,9 @@ def death_games_log(attacker, target, success=True):
             'color': 'gold'
         }
     ])
-    bot.say(config('irc').get('main_channel', '#wurstmineberg'), '[Death Games] ' + attacker.irc_nick() + "'s attemp on " + target.irc_nick() + (' succeeded.' if success else ' failed.'))
+    bot.say(config('irc').get('main_channel', '#wurstmineberg'), '[Death Games] ' + attacker.irc_nick() + "'s attempt on " + target.irc_nick() + (' succeeded.' if success else ' failed.'))
 
-def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None, sender=None, sender_person=None):
+def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None, sender=None, sender_person=None, addressing=None):
     if reply is None:
         if reply_format == 'tellraw' or (reply_format is None and context == 'minecraft'):
             reply_format = 'tellraw'
@@ -1107,20 +1107,8 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             reply('option ' + str(args[0]) + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
             return flag
         else:
-            with open(config('paths')['people']) as people_json:
-                people = json.load(people_json)
-            for person in people:
-                if person.get('id') == sender_person.id:
-                    break
-            else:
-                warning(errors.permission(1))
-                return None
             flag = bool(args[1] in [True, 1, '1', 'true', 'True', 'on', 'yes', 'y', 'Y'])
-            if 'options' not in person:
-                person['options'] = {}
-            person['options'][str(args[0])] = flag
-            with open(config('paths')['people'], 'w') as people_json:
-                json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
+            sender_person.set_option(str(args[0]), flag)
             reply('option ' + str(args[0]) + ' is now ' + ('on' if flag else 'off') + ' for you')
             return flag
     
@@ -1192,83 +1180,87 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
     
     def _command_people(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args):
-            with open(config('paths')['people']) as people_json:
-                people = json.load(people_json)
-            for person in people:
-                if person['id'] == args[0]:
-                    break
-            else:
-                warning('no person with id ' + str(args[0]) + ' in people.json')
-                return
-            can_edit = permission_level >= 4 or (sender_person is not None and sender_person.id == str(args[0]))
+            person = nicksub.Person(str(args[0]))
+            can_edit = permission_level >= 4 or sender_person == person
             can_only_edit_self_error = "You can only edit your own profile. Only bot ops can edit someone else's profile."
             if len(args) >= 2:
                 if args[1] == 'description':
                     if len(args) == 2:
-                        reply(person.get('description', 'no description'))
+                        if person.description:
+                            reply(person.description)
+                        else:
+                        reply('no description')
                         return
                     elif can_edit:
-                        person['description'] = ' '.join(args[2:])
-                        with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
+                        person.description = ' '.join(args[2:])
                         reply('description updated')
                     else:
                         warning(can_only_edit_self_error)
                         return
                 elif args[1] == 'name':
                     if len(args) == 2:
-                        reply(person.get('name', 'no name, using id: ' + person['id']))
+                        if person.name:
+                            reply(person.name)
+                        else:
+                            reply('no name, using id: ' + person.id)
                     elif can_edit:
-                        had_name = 'name' in person
-                        person['name'] = ' '.join(args[2:])
-                        with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
+                        had_name = person.name is not None
+                        person.name = ' '.join(args[2:])
                         reply('name ' + ('changed' if had_name else 'added'))
                     else:
                         warning(can_only_edit_self_error)
                         return
                 elif args[1] == 'reddit':
                     if len(args) == 2:
-                        reply(('/u/' + person['reddit']) if 'reddit' in person else 'no reddit nick')
+                        if person.reddit:
+                            reply('/u/' + person.reddit)
+                        else:
+                            reply('no reddit nick')
                     elif can_edit:
-                        had_reddit_nick = 'reddit' in person
+                        had_reddit_nick = person.reddit is not None
                         reddit_nick = args[2][3:] if args[2].startswith('/u/') else args[2]
-                        person['reddit'] = reddit_nick
-                        with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
+                        person.reddit = reddit_nick
                         reply('reddit nick ' + ('changed' if had_reddit_nick else 'added'))
                     else:
                         warning(can_only_edit_self_error)
                         return
                 elif args[1] == 'twitter':
                     if len(args) == 2:
-                        reply(('@' + person['twitter']) if 'twitter' in person else 'no twitter nick')
+                        if person.twitter:
+                            reply('@' + person.twitter)
+                        else:
+                            reply('no twitter nick')
                         return
                     elif can_edit:
                         screen_name = args[2][1:] if args[2].startswith('@') else args[2]
-                        person['twitter'] = screen_name
-                        with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
-                        members_list_id = config('twitter').get('members_list')
-                        if members_list_id is not None:
-                            twitter.request('lists/members/create', {'list_id': members_list_id, 'screen_name': screen_name})
-                        twitter.request('friendships/create', {'screen_name': screen_name})
+                        set_twitter(person, screen_name)
                         reply('@' + config('twitter')['screen_name'] + ' is now following @' + screen_name)
                     else:
                         warning(can_only_edit_self_error)
                         return
                 elif args[1] == 'website':
                     if len(args) == 2:
-                        reply(person['website'] if 'website' in person else 'no website')
+                        if person.website:
+                            reply(person.website)
+                        else:
+                            reply('no website')
                     elif can_edit:
-                        had_website = 'website' in person
-                        person['website'] = str(args[2])
-                        with open(config('paths')['people'], 'w') as people_json:
-                            json.dump(people, people_json, indent=4, separators=(',', ': '), sort_keys=True)
+                        had_website = person.website is not None
+                        person.website = str(args[2])
                         reply('website ' + ('changed' if had_website else 'added'))
                     else:
                         warning(can_only_edit_self_error)
                         return
+                elif args[1] == 'wiki':
+                    if len(args) == 2:
+                        if person.wiki:
+                            reply(person.wiki)
+                        else:
+                            reply('no wiki account')
+                    elif can_edit:
+                        had_wiki = person.wiki is not None
+                        person.wiki = str(args[2])
+                        reply('wiki account ' + ('changed' if had_wiki else 'added'))
                 else:
                     warning('no such people attribute: ' + str(args[1]))
                     return
@@ -1463,7 +1455,8 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             else:
                 reply(str(args[1]) + ' is now whitelisted')
                 if len(args) == 3:
-                    command('people', args=[args[0], 'twitter', args[2]], sender=sender, sender_person=sender_person, chan=chan, context=context, reply=reply, reply_format=reply_format)
+                    set_twitter(nicksub.Person(str(args[0])), str(args[2]))
+                    reply('@' + config('twitter')['screen_name'] + ' is now following @' + str(args[2]))
         else:
             warning('Usage: whitelist <unique_id> <minecraft_name> [<twitter_username>]')
     
