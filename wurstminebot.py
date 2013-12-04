@@ -1962,20 +1962,18 @@ def run():
     TimeLoop.stop()
 
 def newDaemonContext(pidfilename):
-    if not os.geteuid() == 0:
-        sys.exit("\nOnly root can start/stop the daemon!\n")
+    def _stop():
+        ImputLoop.stop()
+        TimeLoop.stop()
+        bot.stop()
     
     pidfile = daemon.pidlockfile.PIDLockFile(pidfilename)
-    logfile = open("/opt/wurstmineberg/log/wurstminebot.log", "a")
-    daemoncontext = daemon.DaemonContext(working_directory = '/opt/wurstmineberg/',
-                                         pidfile = pidfile,
-                                         uid = 1000, gid = 1000,
-                                         stdout = logfile, stderr = logfile)
-    
+    logfile = open('/opt/wurstmineberg/log/wurstminebot.log', 'a')
+    daemoncontext = daemon.DaemonContext(working_directory='/opt/wurstmineberg/', pidfile=pidfile, uid=1000, gid=1000, stdout=logfile, stderr=logfile)
     daemoncontext.files_preserve = [logfile]
     daemoncontext.signal_map = {
-        signal.SIGTERM: bot.stop,
-        signal.SIGHUP: bot.stop,
+        signal.SIGTERM: _stop,
+        signal.SIGHUP: _stop,
     }
     return daemoncontext
 
@@ -2003,6 +2001,7 @@ def status(pidfile):
 def stop(context):
     InputLoop.stop()
     TimeLoop.stop()
+    bot.stop()
     if status(context.pidfile):
         print("Stopping the service...")
         if context.is_open:
