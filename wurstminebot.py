@@ -287,6 +287,26 @@ def set_twitter(person, screen_name):
         twitter.request('lists/members/create', {'list_id': members_list_id, 'screen_name': screen_name})
     twitter.request('friendships/create', {'screen_name': screen_name})
 
+def parse_timedelta(time_string):
+    ret = 0
+    time_string = time_string[:]
+    while len(time_string) > 0:
+        match = re.match('([0-9]+)([dhms])', time_string)
+        if not match:
+            if re.match('[0-9]+$', time_string):
+                return ret + int(time_string)
+            else:
+                raise ValueError(str(time_string) + ' is not a valid time interval')
+        number, unit = match.group(1, 2)
+        ret += int(number) * {
+            'd': 86400,
+            'h': 3600,
+            'm': 60,
+            's': 1
+        }[unit]
+        time_string = time_string[len(number) + 1:]
+    return ret
+
 class InputLoop(threading.Thread):
     def __init__(self):
         super().__init__(name='wurstminebot InputLoop')
@@ -832,17 +852,15 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
                 global ACHIEVEMENTTWEET
                 ACHIEVEMENTTWEET = True
             
-            if len(args) >= 2:
-                match = re.match('([0-9]+)([dhms])', args[1])
-                if match:
-                    number, unit = match.group(1, 2)
-                    number *= {'d': 86400, 'h': 3600, 'm': 60, 's': 1}[unit]
-                elif re.match('[0-9]+', args[1]):
-                    number = int(args[1])
-                else:
-                    warning(args[1] + ' is not a time value')
+            if len(args) > 2:
+                warning('Usage: achievementtweet [on | off [<time>]]')
+                return
+            elif len(args) == 2:
+                number = parse_timedelta(str(args[1]))
+                if number > 86400 and permission_level < 4:
+                    warning(errors.permission(4))
                     return
-                threading.Timer(number, _reenable_death_tweets).start()
+                threading.Timer(number, _reenable_achievement_tweets).start()
             elif permission_level < 4:
                 warning(errors.permission(4))
                 return
@@ -892,15 +910,13 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
                 global DEATHTWEET
                 DEATHTWEET = True
             
-            if len(args) >= 2:
-                match = re.match('([0-9]+)([dhms])', args[1])
-                if match:
-                    number, unit = match.group(1, 2)
-                    number *= {'d': 86400, 'h': 3600, 'm': 60, 's': 1}[unit]
-                elif re.match('[0-9]+', args[1]):
-                    number = int(args[1])
-                else:
-                    warning(args[1] + ' is not a time value')
+            if len(args) > 2:
+                warning('Usage: achievementtweet [on | off [<time>]]')
+                return
+            elif len(args) == 2:
+                number = parse_timedelta(str(args[1]))
+                if number > 86400 and permission_level < 4:
+                    warning(errors.permission(4))
                     return
                 threading.Timer(number, _reenable_death_tweets).start()
             elif permission_level < 4:
