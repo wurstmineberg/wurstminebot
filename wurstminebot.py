@@ -1692,12 +1692,49 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
         else:
             warning(errors.botop)
     elif cmd in config('aliases'):
-        if context != 'irc' or chan is not None:
-            minecraft.tellraw({
-                'text': config('aliases')[cmd],
-                'color': 'gold'
-            })
-        bot.say((config('irc').get('main_channel', '#wurstmineberg') if sender is None else sender) if context == 'irc' and chan is None else chan, config('aliases')[cmd])
+        if context == 'irc' and chan == config('irc').get('main_channel', '#wurstmineberg'):
+            minecraft.tellraw([
+                {
+                    'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                    'color': 'aqua',
+                    'hoverEvent': {
+                        'action': 'show_text',
+                        'value': sender + ' in ' + chan
+                    },
+                    'clickEvent': {
+                        'action': 'suggest_command',
+                        'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                    }
+                },
+                {
+                    'text': ' '
+                },
+                {
+                    'text': config('aliases')[cmd],
+                    'color': 'aqua'
+                }
+            ])
+        elif context == 'minecraft':
+            minecraft.tellraw([
+                {
+                    'text': sender,
+                    'color': 'gold'
+                },
+                {
+                    'text': ': ',
+                    'color': 'gold'
+                },
+                {
+                    'text': config('aliases')[cmd],
+                    'color': 'gold'
+                }
+            ])
+        if context == 'irc' and chan is not None:
+            bot.say(chan, sender + ': ' + config('aliases')[cmd])
+        elif context == 'irc' and sender is not None:
+            bot.say(sender, config('aliases')[cmd])
+        elif context == 'minecraft':
+            bot.say(config('irc').get('main_channel'), '<' + (sender if sender_person is None else sender_person.irc_nick()) + '> ' + config('aliases')[cmd])
     else:
         warning(errors.unknown(cmd))
 
