@@ -342,7 +342,18 @@ class InputLoop(threading.Thread):
                     if message.startswith('!') and len(message) > 1:
                         # command
                         cmd = message[1:].split(' ')
-                        command(cmd[0], args=cmd[1:], sender=player, sender_person=sender_person, context='minecraft')
+                        try:
+                            command(cmd[0], args=cmd[1:], sender=player, sender_person=sender_person, context='minecraft')
+                        except SystemExit:
+                            _debug_print('Exit in log input loop')
+                            InputLoop.stop()
+                            TimeLoop.stop()
+                            raise
+                        except Exception as e:
+                            minecraft.tellraw('Error: ' + str(e), str(player))
+                            _debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat:')
+                            if config('debug', False):
+                                traceback.print_exc()
                     else:
                         # chat message
                         chan = config('irc').get('main_channel', '#wurstmineberg')
@@ -1806,6 +1817,9 @@ def privmsg(sender, headers, message):
                         raise
                     except Exception as e:
                         bot.say(headers[0], sender + ': Error: ' + str(e))
+                        _debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
+                        if config('debug', False):
+                            traceback.print_exc()
             elif message.startswith('!'):
                 cmd = message[1:].split(' ')
                 if len(cmd):
@@ -1815,6 +1829,9 @@ def privmsg(sender, headers, message):
                         raise
                     except Exception as e:
                         bot.say(headers[0], sender + ': Error: ' + str(e))
+                        _debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
+                        if config('debug', False):
+                            traceback.print_exc()
             elif headers[0] == config('irc')['main_channel']:
                 if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
@@ -1849,6 +1866,9 @@ def privmsg(sender, headers, message):
                         raise
                     except Exception as e:
                         bot.say(headers[0], 'Error pasting mojira ticket: ' + str(e))
+                        _debug_print('Exception while pasting mojira ticket:')
+                        if config('debug', False):
+                            traceback.print_exc()
                 elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
                     minecraft.tellraw([
                         {
@@ -1883,6 +1903,9 @@ def privmsg(sender, headers, message):
                         raise
                     except Exception as e:
                         bot.say(headers[0], 'Error while pasting tweet: ' + str(e))
+                        _debug_print('Exception while pasting tweet:')
+                        if config('debug', False):
+                            traceback.print_exc()
                 else:
                     match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
                     if match:
@@ -1950,6 +1973,9 @@ def privmsg(sender, headers, message):
                     raise
                 except Exception as e:
                     bot.say(sender, 'Error: ' + str(e))
+                    _debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to query:')
+                    if config('debug', False):
+                        traceback.print_exc()
     except SystemExit:
         _debug_print('Exit in PRIVMSG')
         InputLoop.stop()
