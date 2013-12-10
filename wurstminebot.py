@@ -339,7 +339,7 @@ class InputLoop(threading.Thread):
                         sender_person = nicksub.Person(player, context='minecraft')
                     except nicksub.PersonNotFoundError:
                         sender_person = None
-                    if message.startswith('!') and len(message) > 1:
+                    if message.startswith('!') and not re.match('!+$', message):
                         # command
                         cmd = message[1:].split(' ')
                         try:
@@ -1857,7 +1857,7 @@ def privmsg(sender, headers, message):
                         _debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
                         if config('debug', False):
                             traceback.print_exc()
-            elif message.startswith('!'):
+            elif message.startswith('!') and not re.match('!+$', message):
                 cmd = message[1:].split(' ')
                 if len(cmd):
                     try:
