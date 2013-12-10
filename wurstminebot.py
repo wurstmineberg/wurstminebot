@@ -700,11 +700,15 @@ def telltime(func=None, comment=False, restart=False):
                 time.sleep(50)
             PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is restarting…'
             bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
-            minecraft.stop(reply=func)
-            time.sleep(30)
-            if minecraft.start(reply=func):
+            if minecraft.restart(reply=func):
                 if len(players):
-                    bot.say(', '.join(players) + ': The server has restarted.')
+                    irc_players = []
+                    for player in players:
+                        try:
+                            irc_players.append(nicksub.Person(player, context='minecraft').irc_nick(respect_highlight_option=False))
+                        except:
+                            irc_players.append(player)
+                    bot.say(config('irc').get('main_channel', '#wurstmineberg'), ', '.join(irc_players) + ': The server has restarted.')
             else:
                 bot.say('Please help! Something went wrong with the server restart!')
             update_topic()
