@@ -94,6 +94,7 @@ def config(key=None, default_value=None):
             'ssl': False,
             'topic': None
         },
+        'ops': [],
         'paths': {
             'assets': '/var/www/wurstmineberg.de/assets/serverstatus',
             'deathgames': '/opt/wurstmineberg/log/deathgames.json',
@@ -975,6 +976,20 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
                     return
         death_games_log(attacker, target, success)
     
+    def _command_join(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
+        if len(args) != 1:
+            warning('Usage: join <channel>')
+            return
+        chans = sorted(config('irc').get('channels', []))
+        if str(args[0]) in chans:
+            bot.joinchan(str(args[0]))
+            warning('I am already in ' + str(args[0]))
+            return
+        chans.append(str(args[0]))
+        chans = sorted(chans)
+        update_config(['irc', 'channels'], chans)
+        bot.joinchan(str(args[0]))
+    
     def _command_lastseen(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         global LAST
         if len(args):
@@ -1524,6 +1539,12 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             'permission_level': 0,
             'usage': None
         },
+        'join': {
+            'description': 'make the bot join a channel',
+            'function': _comamnd_join,
+            'permission_level': 4,
+            'usage': '<channel>'
+        },
         'lastseen': {
             'description': 'when was the player last seen logging in or out on Minecraft',
             'function': _command_lastseen,
@@ -1681,7 +1702,9 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             sender_permission_level = 4
         elif sender_person is not None:
             sender_permission_level = 1
-            if sender_person.whitelisted():
+            if sender_person.id in config('ops'):
+                sender_permission_level = 4
+            elif sender_person.whitelisted():
                 sender_permission_level = 3
             elif sender_person.invited():
                 sender_permission_level = 2
@@ -1690,7 +1713,7 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
         if sender_permission_level >= commands[cmd].get('permission_level', 0):
             return commands[cmd]['function'](args=args, permission_level=sender_permission_level, reply=reply, sender=sender, sender_person=sender_person)
         else:
-            warning(errors.botop)
+            warning(errors.permission(commands[cmd].get('permission_level', 0)))
     elif cmd in config('aliases'):
         if context == 'irc' and chan == config('irc').get('main_channel', '#wurstmineberg'):
             minecraft.tellraw([
