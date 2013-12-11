@@ -1545,7 +1545,7 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
         },
         'join': {
             'description': 'make the bot join a channel',
-            'function': _comamnd_join,
+            'function': _command_join,
             'permission_level': 4,
             'usage': '<channel>'
         },
