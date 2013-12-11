@@ -710,7 +710,7 @@ def telltime(func=None, comment=False, restart=False):
                             irc_players.append(player)
                     bot.say(config('irc').get('main_channel', '#wurstmineberg'), ', '.join(irc_players) + ': The server has restarted.')
             else:
-                bot.say('Please help! Something went wrong with the server restart!')
+                bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'Please help! Something went wrong with the server restart!')
             update_topic()
     DST = dst
 
