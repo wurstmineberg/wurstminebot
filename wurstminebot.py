@@ -38,7 +38,6 @@ import socket
 import subprocess
 import threading
 import time
-from cobe.brain import Brain
 from datetime import timedelta
 import traceback
 import xml.sax.saxutils
@@ -98,7 +97,6 @@ def config(key=None, default_value=None):
         'ops': [],
         'paths': {
             'assets': '/var/www/wurstmineberg.de/assets/serverstatus',
-            'cobebrain': '/opt/wurstmineberg/brain',
             'deathgames': '/opt/wurstmineberg/log/deathgames.json',
             'keepalive': '/var/local/wurstmineberg/wurstminebot_keepalive',
             'logs': '/opt/wurstmineberg/log',
@@ -148,7 +146,6 @@ PREVIOUS_TOPIC = None
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 bot.log_own_messages = False
-brain=Brain(config('paths').get('cobebrain'))
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
@@ -1142,11 +1139,6 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             })
             bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'leaked ' + tweet_url)
     
-    def _command_markov(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
-        line=' '.join(args)
-        brain.learn(line)
-        reply(brain.reply(line))
-    
     def _command_opt(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         if len(args) not in [1, 2]:
             warning('Usage: opt <option> [true|false]')
@@ -1568,12 +1560,6 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             'function': _command_leak,
             'permission_level': 2,
             'usage': '[<line_count>]'
-        },
-        'markov':{
-            'description': 'respond to input with text generated from a Markov chain',
-            'function': _command_markov,
-            'permission_level': 0,
-            'usage': '<input>'
         },
         'mwiki': {
             'description': 'look something up in the Minecraft Wiki',
