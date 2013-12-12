@@ -9,6 +9,7 @@ Usage:
 Options:
   -h, --help         Print this message and exit.
   --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/wurstminebot.json].
+  --learn=<file>     Path to Logfile to train Markov Chains
   --version          Print version info and exit.
 """
 
@@ -38,7 +39,6 @@ import socket
 import subprocess
 import threading
 import time
-import markov
 from cobe.brain import Brain
 from datetime import timedelta
 import traceback
@@ -50,6 +50,7 @@ CONFIG_FILE = '/opt/wurstmineberg/config/wurstminebot.json'
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='wurstminebot ' + __version__)
     CONFIG_FILE = arguments['--config']
+
 
 def _debug_print(msg):
     if config('debug', False):
@@ -149,7 +150,7 @@ PREVIOUS_TOPIC = None
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 bot.log_own_messages = False
-brain=Brain(config('paths').get('cobebrain'))
+
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
@@ -1161,6 +1162,12 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             sender_person.set_option(str(args[0]), flag)
             reply('option ' + str(args[0]) + ' is now ' + ('on' if flag else 'off') + ' for you')
             return flag
+
+    def _command_markov(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
+        line=" ".join(args)
+        brain.learn(line)
+        reply(brain.reply(line))
+        return
     
     def _command_pastemojira(args=[], permission_level=0, reply=reply, sender=sender, sender_person=None):
         link = True
