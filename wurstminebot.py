@@ -9,7 +9,6 @@ Usage:
 Options:
   -h, --help         Print this message and exit.
   --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/wurstminebot.json].
-  --learn=<file>     Path to Logfile to train Markov Chains
   --version          Print version info and exit.
 """
 
