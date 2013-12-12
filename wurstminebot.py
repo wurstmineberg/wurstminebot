@@ -149,7 +149,7 @@ PREVIOUS_TOPIC = None
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 bot.log_own_messages = False
-
+brain=Brain(config('paths').get('cobebrain'))
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
