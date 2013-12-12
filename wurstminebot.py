@@ -38,6 +38,8 @@ import socket
 import subprocess
 import threading
 import time
+import markov
+from cobe.brain import Brain
 from datetime import timedelta
 import traceback
 import xml.sax.saxutils
@@ -102,7 +104,8 @@ def config(key=None, default_value=None):
             'logs': '/opt/wurstmineberg/log',
             'minecraft_server': '/opt/wurstmineberg/server',
             'people': '/opt/wurstmineberg/config/people.json',
-            'scripts': '/opt/wurstmineberg/bin'
+            'scripts': '/opt/wurstmineberg/bin',
+            'cobebrain': '/opt/wurstmineberg/brain'
         },
         'twitter': {
             'screen_name': 'wurstmineberg'
@@ -146,6 +149,7 @@ PREVIOUS_TOPIC = None
 
 bot = ircBot(config('irc')['server'], config('irc')['port'], config('irc')['nick'], config('irc')['nick'], password=config('irc')['password'], ssl=config('irc')['ssl'])
 bot.log_own_messages = False
+brain=Brain(config('paths').get('cobebrain'))
 
 twitter = TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 
@@ -1560,6 +1564,12 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             'function': _command_leak,
             'permission_level': 2,
             'usage': '[<line_count>]'
+        },
+        'markov':{
+            'description': 'Responds to input',
+            'function': _command_markov,
+            'permission_level':0,
+            'usage': '<input>'
         },
         'mwiki': {
             'description': 'look something up in the Minecraft Wiki',
