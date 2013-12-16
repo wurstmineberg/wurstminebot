@@ -7,10 +7,10 @@ Requirements
 
 *   [Python](http://python.org/) 3.2
 *   [Python-IRC-Bot-Framework](https://github.com/fenhl/Python-IRC-Bot-Framework)
-*   [TwitterAPI](https://github.com/geduldig/TwitterAPI)
+*   [TwitterAPI](https://github.com/geduldig/TwitterAPI) 2.1
 *   [docopt](http://docopt.org/)
-*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.12
-*   [requests](http://www.python-requests.org/) 1.2
+*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.13
+*   [requests](http://www.python-requests.org/) 2.1
 
 Configuration
 =============
