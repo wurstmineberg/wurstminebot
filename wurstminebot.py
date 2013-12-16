@@ -1688,7 +1688,7 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
             num_aliases = len(list(config('aliases').keys()))
             help_text = 'Available commands: ' + ', '.join(sorted(list(commands.keys()) + ['help'])) + (', and ' + str(num_aliases) + ' aliases.' if num_aliases > 0 else '.')
         elif args[0] == 'help':
-            help_text = 'help: get help on a command\nUsage: help [commands | <command>]'
+            help_text = 'help: get help on a command\nUsage: help [aliases | commands | <command>]'
         elif args[0].lower() in commands:
             help_cmd = args[0].lower()
             help_text = help_cmd + ': ' + commands[help_cmd]['description'] + (' (' + permission_levels[commands[help_cmd]['permission_level']] + ')' if commands[help_cmd].get('permission_level', 0) > 0 else '') + '\nUsage: ' + help_cmd + ('' if commands[help_cmd].get('usage') is None else (' ' + commands[help_cmd]['usage']))
