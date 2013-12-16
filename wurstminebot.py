@@ -195,7 +195,10 @@ class TwitterError(Exception):
 
 def tweet(status):
     r = twitter.request('statuses/update', {'status': status})
-    j = r.json()
+    if isinstance(r, TwitterAPI.TwitterResponse):
+        j = r.response.json()
+    else:
+        j = r.json()
     if r.status_code == 200:
         return j['id']
     first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
@@ -203,12 +206,18 @@ def tweet(status):
 
 def pastetweet(status, link=False, tellraw=False):
     r = twitter.request('statuses/show', {'id': status})
-    j = r.json()
+    if isinstance(r, TwitterAPI.TwitterResponse):
+        j = r.response.json()
+    else:
+        j = r.json()
     if r.status_code != 200:
         raise TwitterError(j.get('errors', {}).get('code', 0), message=j.get('errors', {}).get('message'), status_code=r.status_code)
     if 'retweeted_status' in j:
         retweeted_request = twitter.request('statuses/show', {'id': j['retweeted_status']['id']})
-        rj = retweeted_request.json()
+        if isinstance(retweeted_request, TwitterAPI.TwitterResponse):
+            rj = retweeted_request.response.json()
+        else:
+            rj = retweeted_request.json()
         if retweeted_request.status_code != 200:
             raise TwitterError(rj.get('errors', {}).get('code', 0), message=rj.get('errors', {}).get('message'), status_code=retweeted_request.status_code)
         tweet_author = '<@' + j['user']['screen_name'] + ' RT @' + rj['user']['screen_name'] + '> '
