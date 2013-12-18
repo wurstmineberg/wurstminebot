@@ -86,6 +86,10 @@ def config(key=None, default_value=None):
         'debug': False,
         'irc': {
             'channels': [],
+            'dev_channel': None,
+            'live_channel': None,
+            'live_topic': None,
+            'main_channel': '#wurstmineberg',
             'op_nicks': [],
             'password': '',
             'player_list': 'announce',
@@ -1775,9 +1779,17 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
         warning(errors.unknown(cmd))
 
 def endMOTD(sender, headers, message):
-    for chan in config('irc')['channels']:
+    irc_config = config('irc')
+    chans = set(irc_config.get('channels', []))
+    if 'main_channel' in irc:
+        chans.add(irc_config['main_channel'])
+    if 'dev_channel' in irc:
+        chans.add(irc_config['dev_channel'])
+    if 'live_channel' in irc:
+        chans.add(irc_config['live_channel'])
+    for chan in chans:
         bot.joinchan(chan)
-    bot.say(config('irc')['main_channel'], "aaand I'm back.")
+    bot.say(irc_config['main_channel'], "aaand I'm back.")
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
     _debug_print("aaand I'm back.")
     update_all()
@@ -1872,17 +1884,21 @@ def part(sender, headers, message):
 bot.bind('PART', part)
 
 def privmsg(sender, headers, message):
+    irc_config = config('irc')
     def botsay(msg):
         for line in msg.splitlines():
-            bot.say(config('irc')['main_channel'], line)
+            bot.say(irc_config['main_channel'], line)
     
     try:
         _debug_print('[irc] <' + sender + '> ' + message)
-        if sender == config('irc').get('nick', 'wurstminebot'):
+        if sender == irc_config.get('nick', 'wurstminebot'):
+            if headers[0] == irc_config.get('dev_channel') and irc_config.get('dev_channel') != irc_config.get('main_channel'):
+                # sync commit messages from dev to main
+                bot.say(irc_config.get('main_channel', '#wurstmineberg'), message)
             return
         if headers[0].startswith('#'):
-            if message.startswith(config('irc').get('nick', 'wurstminebot') + ': ') or message.startswith(config('irc')['nick'] + ', '):
-                cmd = message[len(config('irc').get('nick', 'wurstminebot')) + 2:].split(' ')
+            if message.startswith(irc_config.get('nick', 'wurstminebot') + ': ') or message.startswith(irc_config['nick'] + ', '):
+                cmd = message[len(irc_config.get('nick', 'wurstminebot')) + 2:].split(' ')
                 if len(cmd):
                     try:
                         command(cmd[0], args=cmd[1:], sender=sender, chan=headers[0], context='irc')
@@ -1905,7 +1921,7 @@ def privmsg(sender, headers, message):
                         _debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
                         if config('debug', False):
                             traceback.print_exc()
-            elif headers[0] == config('irc')['main_channel']:
+            elif headers[0] == irc_config.get('main_channel'):
                 if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
                         {
