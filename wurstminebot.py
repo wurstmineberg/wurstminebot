@@ -1781,11 +1781,11 @@ def command(cmd, args=[], context=None, chan=None, reply=None, reply_format=None
 def endMOTD(sender, headers, message):
     irc_config = config('irc')
     chans = set(irc_config.get('channels', []))
-    if 'main_channel' in irc:
+    if 'main_channel' in irc_config:
         chans.add(irc_config['main_channel'])
-    if 'dev_channel' in irc:
+    if 'dev_channel' in irc_config:
         chans.add(irc_config['dev_channel'])
-    if 'live_channel' in irc:
+    if 'live_channel' in irc_config:
         chans.add(irc_config['live_channel'])
     for chan in chans:
         bot.joinchan(chan)
