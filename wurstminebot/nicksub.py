@@ -1,41 +1,8 @@
-#!/usr/bin/env python3
-"""Nickname substitution between Minecraft, Twitter, and other contexts.
-
-Usage: 
-  nicksub [options] [NICK]
-  nicksub -h | --help
-  nicksub --version
-
-Options:
-  -f, --from=SOURCE  Source environment [default: minecraft].
-  -h, --help         Print this screen and exit.
-  -t, --to=TARGET    Target environment [default: twitter].
-  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/people.json].
-  --exit-on-fail     Exit with status code 1 if the NICK cannot be found in the source environment, and exit with status code 2 if there is no equivalent nick in the target environment. Has no effect when NICK is omitted.
-  --strict           Only match the first nick per environment.
-  --version          Print version info and exit.
-"""
-
-def parseVersionString():
-    try:
-        with open('/opt/hub/wurstmineberg/wurstminebot/README.md') as readme:
-            for line in readme.read().splitlines():
-                if line.startswith('This is `wurstminebot` version'):
-                    return line.split(' ')[4]
-    except:
-        pass
-
-__version__ = str(parseVersionString())
-
-from docopt import docopt
 import json
 import sys
 import re
 
 CONFIG_FILE = '/opt/wurstmineberg/config/people.json'
-if __name__ == '__main__':
-    arguments = docopt(__doc__, version='nicksub (wurstminebot ' + __version__ + ')')
-    CONFIG_FILE = arguments['--config']
 
 def config(person_id=None):
     try:
@@ -138,7 +105,75 @@ def twitterNicks(include_ids=False, twitter_at_prefix=False):
             formatted_nick = ('@' + person['twitter']) if twitter_at_prefix else person['twitter']
             yield (person['id'], formatted_nick) if include_ids else formatted_nick
 
-class Person:
+class BasePerson:
+    def __eq__(self, other):
+        try:
+            return self.id == other.id
+        except AttributeError:
+            return False
+    
+    def display_name(self):
+        return self.id if self.name is None else self.name
+    
+    def invited(self):
+        return self.whitelisted() or self.status == 'invited'
+    
+    def irc_nick(self, respect_highlight_option=True, channel_members=[], fallback=True):
+        """Returns the best IRC nick for the person. “Best” in this case means the first in the list.
+        
+        respect_highlight_option: if this is True and the person has the chatsync_highlight option on, a zero-width non-joiner will be inserted after the first character of the nick.
+        channel_members: if this is not empty, nicks in this list will be preferred.
+        fallback: this defines how an empty list of IRC nicks is handled. If it is True, the display name will be used. If it is False, an AttributeError will be raised. For other values, the fallback will be returned instead.
+        """
+        for nick in self.irc_nicks:
+            if nick in channel_members:
+                break
+        else:
+            if len(self.irc_nicks) > 0:
+                nick = self.irc_nicks[0]
+            elif fallback is True:
+                return self.display_name()
+            elif fallback is False:
+                raise AttributeError('Person has no IRC nicks')
+            else:
+                return fallback
+        if respect_highlight_option and not self.option('chatsync_highlight'):
+            return nick[0] + '\u200c' + nick[1:]
+        return nick
+    
+    def nick(self, context, default=True, twitter_at_prefix=False):
+        if default is True:
+            default = self.display_name()
+        if context == 'irc':
+            return self.irc_nicks[0] if self.irc_nicks is not None and len(self.irc_nicks) else default
+        elif context == 'minecraft':
+            return default if self.minecraft is None else self.minecraft
+        elif context == 'reddit':
+            return default if self.reddit is None else self.reddit
+        elif context == 'twitter':
+            return default if self.twitter is None else (('@' + self.twitter) if twitter_at_prefix else self.twitter)
+        else:
+            return default
+    
+    def option(self, option_name):
+        default_true_options = ['chatsync_highlight'] # These options are on by default. All other options are off by default.
+        if str(option_name) in self.options:
+            return self.options[str(option_name)]
+        else:
+            return str(option_name) in default_true_options
+    
+    def option_is_default(self, option_name):
+        return str(option_name) not in self.options
+    
+    def set_option(self, option_name, value):
+        opts = self.options
+        opts[option_name] = value
+        self.options = opts
+    
+    def whitelisted(self):
+        return self.status in ['founding', 'later', 'postfreeze']
+
+class Person(BasePerson):
     def __init__(self, id_or_nick, context=None, strict=True):
         if id_or_nick is None:
             raise TypeError('id or nick may not be None')
@@ -180,9 +215,6 @@ class Person:
         else:
             raise ValueError('unknown context: ' + str(context))
     
-    def __eq__(self, other):
-        return self.id == other.id
-    
     @property
     def description(self):
         return config(self.id).get('description')
@@ -194,35 +226,6 @@ class Person:
     @description.deleter
     def description(self):
         update_config(self.id, ['description'], delete=True)
-    
-    def display_name(self):
-        return self.id if self.name is None else self.name
-    
-    def invited(self):
-        return self.whitelisted() or self.status == 'invited'
-    
-    def irc_nick(self, respect_highlight_option=True, channel_members=[], fallback=True):
-        """Returns the best IRC nick for the person. “Best” in this case means the first in the list.
-        
-        respect_highlight_option: if this is True and the person has the chatsync_highlight option on, a zero-width non-joiner will be inserted after the first character of the nick.
-        channel_members: if this is not empty, nicks in this list will be preferred.
-        fallback: this defines how an empty list of IRC nicks is handled. If it is True, the display name will be used. If it is False, an AttributeError will be raised. For other values, the fallback will be returned instead.
-        """
-        for nick in self.irc_nicks:
-            if nick in channel_members:
-                break
-        else:
-            if len(self.irc_nicks) > 0:
-                nick = self.irc_nicks[0]
-            elif fallback is True:
-                return self.display_name()
-            elif fallback is False:
-                raise AttributeError('Person has no IRC nicks')
-            else:
-                return fallback
-        if respect_highlight_option and not self.option('chatsync_highlight'):
-            return nick[0] + '\u200c' + nick[1:]
-        return nick
     
     @property
     def irc_nicks(self):
@@ -260,18 +263,6 @@ class Person:
     def name(self):
         update_config(self.id, ['name'], delete=True)
     
-    def nick(self, context, default=None, twitter_at_prefix=False):
-        if context == 'irc':
-            return self.irc_nicks[0] if self.irc_nicks is not None and len(self.irc_nicks) else default
-        elif context == 'minecraft':
-            return default if self.minecraft is None else self.minecraft
-        elif context == 'reddit':
-            return default if self.reddit is None else self.reddit
-        elif context == 'twitter':
-            return default if self.twitter is None else (('@' + self.twitter) if twitter_at_prefix else self.twitter)
-        else:
-            return default
-    
     @property
     def nicks(self):
         return config(self.id).get('nicks', [])
@@ -296,13 +287,6 @@ class Person:
     def nickserv(self):
         update_config(self.id, ['irc', 'nickserv'], delete=True)
     
-    def option(self, option_name):
-        default_true_options = ['chatsync_highlight'] # These options are on by default. All other options are off by default.
-        if str(option_name) in self.options:
-            return self.options[str(option_name)]
-        else:
-            return str(option_name) in default_true_options
-    
     @property
     def options(self):
         return config(self.id).get('options', {})
@@ -315,9 +299,6 @@ class Person:
     def options(self):
         update_config(self.id, ['options'], delete=True)
     
-    def option_is_default(self, option_name):
-        return str(option_name) not in self.options
-    
     @property
     def reddit(self):
         return config(self.id).get('reddit')
@@ -329,19 +310,6 @@ class Person:
     @reddit.deleter
     def reddit(self):
         update_config(self.id, ['reddit'], delete=True)
-    
-    def reload(self):
-        """Deprecated, properties are now loaded dynamically"""
-        for person in config():
-            if person.get('id') == self.id:
-                break
-        else:
-            raise PersonNotFoundError('person with id ' + str(self.id) + ' not found')
-    
-    def set_option(self, option_name, value):
-        opts = self.options
-        opts[option_name] = value
-        self.options = opts
     
     @property
     def status(self):
@@ -382,9 +350,6 @@ class Person:
     def website(self):
         update_config(self.id, ['website'], delete=True)
     
-    def whitelisted(self):
-        return self.status in ['founding', 'later', 'postfreeze']
-    
     @property
     def wiki(self):
         return config(self.id).get('wiki')
@@ -401,6 +366,41 @@ def everyone():
     for person in config():
         if id in person:
             yield Person(person['id'])
+
+class Dummy(BasePerson):
+    def __init__(self, id_or_nick, context=None):
+        if id_or_nick is None:
+            raise TypeError('id or nick may not be None')
+        self.id_or_nick = id_or_nick
+        self.context = context
+        self.description = None
+        self.id_or_nick = id_or_nick
+        self.irc_nicks = []
+        self.minecraft = None
+        self.name = None
+        self.nicks = None
+        self.nickserv = None
+        self.options = {}
+        self.reddit = None
+        self.status = 'unknown'
+        self.twitter = None
+        self.website = None
+        self.wiki = None
+        if context == 'irc':
+            self.irc_nicks = [id_or_nick]
+        elif context == 'minecraft':
+            self.minecraft = id_or_nick
+        elif context == 'reddit':
+            if id_or_nick.startswith('/u/'):
+                id_or_nick = id_or_nick[len('/u/'):]
+            self.reddit = id_or_nick
+        elif context == 'twitter':
+            if id_or_nick.startswith('@'):
+                id_or_nick = id_or_nick[len('@'):]
+            self.twitter = id_or_nick
+    
+    def display_name(self):
+        return self.id_or_nick
 
 def sub(nick, source, target, strict=True, exit_on_fail=False, twitter_at_prefix=True):
     if exit_on_fail:
@@ -445,10 +445,3 @@ def textsub(text, source, target, strict=False):
             if Person(id).nick(target):
                 text = re.sub('(?<![0-9A-Za-z@])(' + re.sub('\\|', '\\|', nick) + ')(?![0-9A-Za-z])', Person(id).nick(target, twitter_at_prefix=True), text, flags=re.IGNORECASE)
     return text
-
-if __name__ == '__main__':
-    if arguments['NICK']:
-        print(sub(arguments['NICK'], arguments['--from'], arguments['--to'], strict=arguments['--strict'], exit_on_fail=arguments['--exit-on-fail']))
-    else:
-        for line in sys.stdin:
-            print(textsub(line, arguments['--from'], arguments['--to'], strict=arguments['--strict']), end='')

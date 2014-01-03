@@ -2,7 +2,7 @@
 
 import datetime
 import minecraft
-import nicksub
+from wurstminebot import nicksub
 import re
 
 messages = [
