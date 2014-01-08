@@ -58,6 +58,8 @@ def cleanup():
     if state.get('time_loop') is not None:
         state['time_loop'].stop()
     state['time_loop'] = None
+    if state.get('bot') is not None:
+        state['bot'].stop()
     state['bot'] = None
 
 def config(key=None, default_value=None):

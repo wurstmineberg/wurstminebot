@@ -17,6 +17,7 @@ sys.path.append('/opt/py')
 
 from wurstminebot import core
 import daemon
+import daemon.pidlockfile
 from docopt import docopt
 from wurstminebot import loops
 import os
@@ -32,14 +33,14 @@ def newDaemonContext(pidfilename):
     daemoncontext = daemon.DaemonContext(working_directory='/opt/wurstmineberg/', pidfile=pidfile, uid=1000, gid=1000, stdout=logfile, stderr=logfile)
     daemoncontext.files_preserve = [logfile]
     daemoncontext.signal_map = {
-        signal.SIGTERM: bot.stop,
-        signal.SIGHUP: bot.stop,
+        signal.SIGTERM: core.cleanup,
+        signal.SIGHUP: core.cleanup
     }
     return daemoncontext
 
 def start(context):
     print('[....] Starting wurstminebot version', __version__, end='\r', flush=True)
-    if status(context.pidfile):
+    if core.status(context.pidfile):
         print('[FAIL]')
         print('[ !! ] Wurstminebot is already running!')
         return
@@ -54,8 +55,7 @@ def start(context):
         print('[ ** ] Terminating')
 
 def stop(context):
-    loops.input_loop.stop()
-    loops.time_loop.stop()
+    core.cleanup()
     if core.status(context.pidfile):
         print('[....] Stopping the service', end='\r', flush=True)
         if context.is_open:
