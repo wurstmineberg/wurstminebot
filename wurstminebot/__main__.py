@@ -48,7 +48,7 @@ def start(context):
         print('[ ok ]')
         # Removes the PID file
         stop(context)
-    print('[....] Daemonizing', end='\r', flush=True)
+    print('[....] Daemonizing', end='\r')
     with context:
         print('[ ok ]')
         core.run()
