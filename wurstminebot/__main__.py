@@ -39,7 +39,7 @@ def newDaemonContext(pidfilename):
     return daemoncontext
 
 def start(context):
-    print('[....] Starting wurstminebot version', __version__, end='\r', flush=True)
+    print('[....] Starting wurstminebot version', __version__, end='\r')
     if core.status(context.pidfile):
         print('[FAIL]')
         print('[ !! ] Wurstminebot is already running!')
@@ -57,7 +57,7 @@ def start(context):
 def stop(context):
     core.cleanup()
     if core.status(context.pidfile):
-        print('[....] Stopping the service', end='\r', flush=True)
+        print('[....] Stopping the service', end='\r')
         if context.is_open:
             context.close()
         else:
@@ -69,7 +69,7 @@ def stop(context):
             context.pidfile.break_lock()
     if context.pidfile.is_locked():
         print('[FAIL]')
-        print('[....] Service did not shutdown correctly. Cleaning up', end='\r', flush=True)
+        print('[....] Service did not shutdown correctly. Cleaning up', end='\r')
         context.pidfile.break_lock()
         print('[ ok ]')
     else:
