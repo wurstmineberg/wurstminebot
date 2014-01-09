@@ -362,7 +362,7 @@ def log_tail(timeout=0.5):
     try:
         with open(logpath) as log:
             lines_read = len(list(log.read().split('\n'))) - 1 # don't yield lines that already existed
-    except FileNotFoundError:
+    except (IOError, OSError):
         lines_read = 0
     while True:
         time.sleep(timeout)
@@ -374,7 +374,7 @@ def log_tail(timeout=0.5):
                 for line in lines[lines_read:-1]:
                     lines_read += 1
                     yield line
-        except FileNotFoundError:
+        except (IOError, OSError):
             core.debug_print('Log does not exist, retrying in 10 seconds')
             time.sleep(10)
 

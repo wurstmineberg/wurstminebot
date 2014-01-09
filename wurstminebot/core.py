@@ -432,13 +432,13 @@ def update_all(force=False):
     def _try_update_status():
         try:
             minecraft.update_status()
-        except FileNotFoundError:
+        except (IOError, OSError):
             debug_print('Did not update status due to a FileNotFoundError')
     
     _try_update_status()
     try:
         minecraft.update_whitelist()
-    except FileNotFoundError:
+    except (IOError, OSError):
         debug_print('Did not update whitelist due to a FileNotFoundError')
     update_topic(force=force)
     threading.Timer(20, _try_update_status).start()
