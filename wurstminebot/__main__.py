@@ -21,6 +21,7 @@ import daemon.pidlockfile
 from docopt import docopt
 from wurstminebot import loops
 import os
+import pwd
 import signal
 
 __version__ = core.__version__
@@ -30,7 +31,8 @@ def newDaemonContext(pidfilename):
         sys.exit('[!!!!] Only root can start/stop the daemon!')
     pidfile = daemon.pidlockfile.PIDLockFile(pidfilename)
     logfile = open('/opt/wurstmineberg/log/wurstminebot.log', 'a')
-    daemoncontext = daemon.DaemonContext(working_directory='/opt/wurstmineberg/', pidfile=pidfile, uid=1000, gid=1000, stdout=logfile, stderr=logfile)
+    wurstmineberg_user = pwd.getpwnam('wurstmineberg')
+    daemoncontext = daemon.DaemonContext(working_directory='/opt/wurstmineberg/', pidfile=pidfile, uid=wurstmineberg_user.pw_uid, gid=wurstmineberg_user.pw_gid, stdout=logfile, stderr=logfile)
     daemoncontext.files_preserve = [logfile]
     daemoncontext.signal_map = {
         signal.SIGTERM: core.cleanup,
