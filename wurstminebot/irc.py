@@ -23,8 +23,12 @@ def endMOTD(sender, headers, message):
             core.debug_print('Exception while joining channel ' + str(chan) + ':')
             if core.config('debug', False):
                 traceback.print_exc()
-    core.state['bot'].say(irc_config['main_channel'], "aaand I'm back.")
-    minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
+    if irc.config.get('main_channel') is not None:
+        core.state['bot'].say(irc_config['main_channel'], "aaand I'm back.")
+    minecraft.tellraw({
+        'text': "aaand I'm back.",
+        'color': 'gold'
+    })
     core.debug_print("aaand I'm back.")
     core.update_all()
     core.state['input_loop'] = loops.InputLoop()
