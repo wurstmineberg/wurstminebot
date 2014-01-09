@@ -19,6 +19,7 @@ from wurstminebot import core
 import daemon
 import daemon.pidlockfile
 from docopt import docopt
+import lockfile
 from wurstminebot import loops
 import os
 import pwd
