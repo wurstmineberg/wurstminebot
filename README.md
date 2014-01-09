@@ -1,6 +1,6 @@
 **wurstminebot** is an IRC bot for Minecraft. It was written for [wurstmineberg](http://wurstmineberg.de/) and may require some tweaking to run on your server. It also has some dependencies which we haven't added to this repository yet.
 
-This is `wurstminebot` version 2.7.7 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`wurstminebot.py`](wurstminebot.py) and [`nicksub.py`](nicksub.py), as found in the respective docstrings, as well as the commands, as explained in the `help` command.
+This is `wurstminebot` version 3.0.0 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`__main__.py`](wurstminebot/__main__.py) and [`nicksub.py`](wurstminebot/nicksub.py), as found in the respective docstrings, as well as the commands, as explained in the `help` command.
 
 Requirements
 ============
@@ -15,4 +15,4 @@ Requirements
 Configuration
 =============
 
-If your system has `service`, you can move [`wurstminebot.py`](wurstminebot.py) to `/etc/init.d/wurstminebot`. You can then start, stop, or restart the bot with `service wurstminebot start` etc.
+If your system has `service`, you can symlink [`__main__.py`](wurstminebot/__main__.py) to `/etc/init.d/wurstminebot`. You can then start, stop, or restart the bot with `service wurstminebot start` etc.
