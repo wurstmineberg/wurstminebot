@@ -17,7 +17,12 @@ def endMOTD(sender, headers, message):
     if 'live_channel' in irc_config:
         chans.add(irc_config['live_channel'])
     for chan in chans:
-        core.state['bot'].joinchan(chan)
+        try:
+            core.state['bot'].joinchan(chan)
+        except:
+            core.debug_print('Exception while joining channel ' + str(chan) + ':')
+            if core.config('debug', False):
+                traceback.print_exc()
     core.state['bot'].say(irc_config['main_channel'], "aaand I'm back.")
     minecraft.tellraw({'text': "aaand I'm back.", 'color': 'gold'})
     core.debug_print("aaand I'm back.")
