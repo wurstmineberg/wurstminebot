@@ -659,7 +659,7 @@ class Option(BaseCommand):
     def run(self):
         if len(args) == 1:
             flag = self.sender.option(self.arguments[0])
-            is_default = sender_person.option_is_default(self.arguments[0])
+            is_default = self.sender.option_is_default(self.arguments[0])
             self.reply('option ' + self.arguments[0] + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
         else:
             flag = self.arguments[1].lower() in ('true', 'yes', 'on')
@@ -1155,11 +1155,11 @@ def run(command_name, sender, context, channel=None):
     sender_permission_level = 0
     if isinstance(sender, nicksub.Person):
         sender_permission_level = 1
-        if sender_person.id in core.config('ops'):
+        if sender.id in core.config('ops'):
             sender_permission_level = 4
-        elif sender_person.whitelisted():
+        elif sender.whitelisted():
             sender_permission_level = 3
-        elif sender_person.invited():
+        elif sender.invited():
             sender_permission_level = 2
     command_permission_level = command.permission_level()
     if sender_permission_level < command_permission_level:
