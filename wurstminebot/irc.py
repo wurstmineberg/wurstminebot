@@ -151,7 +151,11 @@ def privmsg(sender, headers, message):
 
     try:
         core.debug_print('[irc] <' + sender + '> ' + message)
-        if sender == irc_config.get('nick', 'wurstminebot'):
+        try:
+            sender_person = nicksub.Person(sender, context='irc')
+        except nicksub.PersonNotFoundError:
+            sender_person = nicksub.Dummy(sender, context='irc')
+        if sender == irc_config.get('nick'):
             if headers[0] == irc_config.get('dev_channel') and irc_config.get('dev_channel') != irc_config.get('main_channel'):
                 # sync commit messages from dev to main
                 core.state['bot'].say(irc_config.get('main_channel', '#wurstmineberg'), message)
@@ -161,7 +165,7 @@ def privmsg(sender, headers, message):
                 cmd = message[len(irc_config.get('nick', 'wurstminebot')) + 2:].split(' ')
                 if len(cmd):
                     try:
-                        commands.run(cmd, sender=sender, context='irc', channel=headers[0])
+                        commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
                         raise
                     except Exception as e:
@@ -173,7 +177,7 @@ def privmsg(sender, headers, message):
                 cmd = message[1:].split(' ')
                 if len(cmd):
                     try:
-                        commands.run(cmd, sender=sender, context='irc', channel=headers[0])
+                        commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
                         raise
                     except Exception as e:
@@ -185,7 +189,7 @@ def privmsg(sender, headers, message):
                 if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
                         {
-                            'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                            'text': '<' + sender_person.nick('minecraft') + '>',
                             'color': 'aqua',
                             'hoverEvent': {
                                 'action': 'show_text',
@@ -193,7 +197,7 @@ def privmsg(sender, headers, message):
                             },
                             'clickEvent': {
                                 'action': 'suggest_command',
-                                'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                                'value': sender_person.nick('minecraft') + ': '
                             }
                         },
                         {
@@ -224,7 +228,7 @@ def privmsg(sender, headers, message):
                 elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
                     minecraft.tellraw([
                         {
-                            'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                            'text': '<' + sender_person.nick('minecraft') + '>',
                             'color': 'aqua',
                             'hoverEvent': {
                                 'action': 'show_text',
@@ -232,7 +236,7 @@ def privmsg(sender, headers, message):
                             },
                             'clickEvent': {
                                 'action': 'suggest_command',
-                                'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                                'value': sender_person.nick('minecraft') + ': '
                             }
                         },
                         {
@@ -249,8 +253,8 @@ def privmsg(sender, headers, message):
                     ])
                     try:
                         twid = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)$', message).group(1)
-                        minecraft.tellraw(pastetweet(twid, link=False, tellraw=True))
-                        botsay(pastetweet(twid, link=False, tellraw=False))
+                        minecraft.tellraw(core.pastetweet(twid, link=False, tellraw=True))
+                        botsay(core.pastetweet(twid, link=False, tellraw=False))
                     except SystemExit:
                         raise
                     except Exception as e:
@@ -264,7 +268,7 @@ def privmsg(sender, headers, message):
                         url, remaining_message = match.group(1, 2)
                         minecraft.tellraw([
                             {
-                                'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                                'text': '<' + sender_person.nick('minecraft') + '>',
                                 'color': 'aqua',
                                 'hoverEvent': {
                                     'action': 'show_text',
@@ -272,7 +276,7 @@ def privmsg(sender, headers, message):
                                 },
                                 'clickEvent': {
                                     'action': 'suggest_command',
-                                    'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                                    'value': sender_person.nick('minecraft') + ': '
                                 }
                             },
                             {
@@ -296,7 +300,7 @@ def privmsg(sender, headers, message):
                             'text': '',
                             'extra': [
                                 {
-                                    'text': '<' + nicksub.sub(sender, 'irc', 'minecraft') + '>',
+                                    'text': '<' + sender_person.nick('minecraft') + '>',
                                     'color': 'aqua',
                                     'hoverEvent': {
                                         'action': 'show_text',
@@ -304,7 +308,7 @@ def privmsg(sender, headers, message):
                                     },
                                     'clickEvent': {
                                         'action': 'suggest_command',
-                                        'value': nicksub.sub(sender, 'irc', 'minecraft') + ': '
+                                        'value': sender_person.nick('minecraft') + ': '
                                     }
                                 },
                                 {
@@ -320,7 +324,7 @@ def privmsg(sender, headers, message):
             cmd = message.split(' ')
             if len(cmd):
                 try:
-                    commands.run(cmd, sender=sender, context='irc')
+                    commands.run(cmd, sender=sender_person, context='irc')
                 except SystemExit:
                     raise
                 except Exception as e:
@@ -338,6 +342,8 @@ def privmsg(sender, headers, message):
             traceback.print_exc()
 
 def set_topic(channel, new_topic, force=False):
+    if new_topic is None:
+        new_topic = ''
     if force or channel not in core.state['irc_topics'] or core.state['irc_topics'][channel] != new_topic:
         core.state['bot'].topic(channel, new_topic)
         core.state['irc_topics'][channel] = new_topic

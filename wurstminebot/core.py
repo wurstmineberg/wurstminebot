@@ -444,7 +444,7 @@ def update_all(force=False):
     threading.Timer(20, _try_update_status).start()
 
 def update_topic(force=False, special_status=None):
-    import irc
+    from wurstminebot import irc
     main_channel = config('irc').get('main_channel')
     if main_channel is None:
         return
@@ -456,13 +456,13 @@ def update_topic(force=False, special_status=None):
             except nicksub.PersonNotFoundError:
                 person = mcnick
             players.append(person)
-        server_status = ('Currently online: ' + ', '.join(players)) if len(players) else ''
+        server_status = ('Currently online: ' + ', '.join(players)) if len(players) else None
     else:
         server_status = special_status
     topic = config('irc').get('topic')
     if topic is None or topic == '':
         new_topic = server_status
-    elif server_status is None:
+    elif server_status is None or server_status == '':
         new_topic = topic
     else:
         new_topic = topic + ' | ' + server_status
