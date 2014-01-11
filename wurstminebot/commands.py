@@ -1036,12 +1036,12 @@ class Tweet(BaseCommand):
                     ]
                 })
             else:
-                minecraft.tellraw(core.pastetweet(twid, tellraw=True))
+                minecraft.tellraw(core.paste_tweet(twid, tellraw=True))
             irc_config = core.config('irc')
             if self.context == 'irc' and 'main_channel' in irc_config and self.channel == irc_config['main_channel']:
                 core.state['bot'].say(chan, url)
             else:
-                for line in core.pastetweet(twid).splitlines():
+                for line in core.paste_tweet(twid).splitlines():
                     if self.channel is not None:
                         core.state['bot'].say(self.channel, line)
                     elif 'main_channel' in irc_config:
