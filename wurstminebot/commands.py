@@ -857,14 +857,16 @@ class Quit(BaseCommand):
         return 4
     
     def run(self):
-        quitMsg = ' '.join(args) if len(args) else None
+        quitMsg = ' '.join(self.arguments) if len(self.arguments) else None
         minecraft.tellraw({
             'text': ('Shutting down the bot: ' + quitMsg) if quitMsg else 'Shutting down the bot...',
             'color': 'red'
         })
-        bot.say(config('irc')['main_channel'], ('bye, ' + quitMsg) if quitMsg else random.choice(config('irc').get('quit_messages', ['bye'])))
-        bot.disconnect(quitMsg if quitMsg else 'bye')
-        bot.stop()
+        irc_config = core.config('irc')
+        if 'main_channel' in irc_config:
+            core.state['bot'].say(irc_config['main_channel'], ('bye, ' + quitMsg) if quitMsg else random.choice(irc_config.get('quit_messages', ['bye'])))
+        core.state['bot'].disconnect(quitMsg if quitMsg else 'bye')
+        core.state['bot'].stop()
         sys.exit()
 
 class Raw(BaseCommand):
