@@ -891,7 +891,7 @@ class Restart(BaseCommand):
     def parse_args(self):
         if len(self.arguments) == 0:
             return True
-        if len(self.arguments) == 1 and self.agruments[0] in ['bot', 'minecraft']:
+        if len(self.arguments) == 1 and self.arguments[0] in ['bot', 'minecraft']:
             return True
         return False
     
