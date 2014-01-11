@@ -888,6 +888,13 @@ class Restart(BaseCommand):
     
     usage = '[minecraft | bot]'
     
+    def parse_args(self):
+        if len(self.arguments) == 0:
+            return True
+        if len(self.arguments) == 1 and self.agruments[0] in ['bot', 'minecraft']:
+            return True
+        return False
+    
     def permission_level(self):
         return 4
     
@@ -908,7 +915,7 @@ class Restart(BaseCommand):
             __main__.stop(context)
             __main__.start(context)
             sys.exit()
-        elif len(self.arguments) == 1 and args[0] == 'minecraft':
+        else:
             # restart the Minecraft server
             core.update_topic(special_status='The server is restarting…')
             if minecraft.restart(reply=self.reply):
@@ -916,8 +923,6 @@ class Restart(BaseCommand):
             else:
                 self.reply('Could not restart the server!')
             core.update_topic()
-        else:
-            self.warning('Usage: restart [minecraft | bot]')
 
 class Status(BaseCommand):
     """print some server status"""
