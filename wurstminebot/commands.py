@@ -908,7 +908,7 @@ class Restart(BaseCommand):
             __main__.stop(context)
             __main__.start(context)
             sys.exit()
-        elif len(args) == 1 and args[0] == 'minecraft':
+        elif len(self.arguments) == 1 and args[0] == 'minecraft':
             # restart the Minecraft server
             core.update_topic(special_status='The server is restarting…')
             if minecraft.restart(reply=self.reply):
