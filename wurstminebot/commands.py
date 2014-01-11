@@ -890,31 +890,32 @@ class Restart(BaseCommand):
         return 4
     
     def run(self):
-        global PREVIOUS_TOPIC
-        if len(args) == 0 or (len(args) == 1 and args[0] == 'bot'):
+        if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0] == 'bot'):
             # restart the bot
+            from wurstminebot import __main__
             minecraft.tellraw({
                 'text': 'Restarting the bot...',
                 'color': 'red'
             })
-            bot.say(config('irc')['main_channel'], random.choice(config('irc').get('quit_messages', ['brb'])))
-            bot.disconnect('brb')
-            bot.stop()
-            context = newDaemonContext('/var/run/wurstmineberg/wurstminebot.pid')
-            stop(context)
-            start(context)
+            irc_config = core.config('irc')
+            if 'main_channel' in irc_config:
+                core.state['bot'].say(irc_config['main_channel'], random.choice(irc_config.get('quit_messages', ['brb'])))
+            core.state['bot'].disconnect('brb')
+            core.state['bot'].stop()
+            context = __main__.newDaemonContext('/var/run/wurstmineberg/wurstminebot.pid')
+            __main__.stop(context)
+            __main__.start(context)
             sys.exit()
         elif len(args) == 1 and args[0] == 'minecraft':
             # restart the Minecraft server
-            PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is restarting…'
-            bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
-            if minecraft.restart(args=args, permission_level=permission_level, reply=reply, sender=sender):
-                reply('Server restarted.')
+            core.update_topic(special_status='The server is restarting…')
+            if minecraft.restart(reply=self.reply):
+                self.reply('Server restarted.')
             else:
-                reply('Could not restart the server!')
-            update_topic()
+                self.reply('Could not restart the server!')
+            core.update_topic()
         else:
-            warning('Usage: restart [minecraft | bot]')
+            self.warning('Usage: restart [minecraft | bot]')
 
 class Status(BaseCommand):
     """print some server status"""
