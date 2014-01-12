@@ -253,8 +253,8 @@ def privmsg(sender, headers, message):
                     ])
                     try:
                         twid = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)$', message).group(1)
-                        minecraft.tellraw(core.pastetweet(twid, link=False, tellraw=True))
-                        botsay(core.pastetweet(twid, link=False, tellraw=False))
+                        minecraft.tellraw(core.paste_tweet(twid, link=False, tellraw=True))
+                        botsay(core.paste_tweet(twid, link=False, tellraw=False))
                     except SystemExit:
                         raise
                     except Exception as e:

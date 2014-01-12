@@ -738,7 +738,7 @@ class PasteTweet(BaseCommand):
         match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', self.arguments[0])
         twid = int(match.group(1) if match else self.arguments[0])
         try:
-            self.reply(core.paste_tweet(twid, link=link), core.pastetweet(twid, link=link, tellraw=True))
+            self.reply(core.paste_tweet(twid, link=link), core.paste_tweet(twid, link=link, tellraw=True))
         except TwitterError as e:
             self.warning('Error ' + str(e.status_code) + ': ' + str(e))
 
