@@ -102,7 +102,7 @@ class AliasCommand(BaseCommand):
         if alias_type == 'command':
             for command_class in classes:
                 if command_class.__name__.lower() == self.alias_dict['command_name'].lower():
-                    return command_class(args=self.args, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
+                    return command_class(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
             else:
                 raise ValueError('No such command') 
         elif alias_type == 'reply':
@@ -193,6 +193,8 @@ class AchievementTweet(BaseCommand):
     def permission_level(self):
         if len(self.arguments) == 2 and parse_timedelta(self.arguments[1]) > timedelta(days=1):
             return 4
+        if len(self.arguments) == 1 and self.arguments[0] == 'off':
+            return 4
         return 3
     
     def reenable_achievement_tweets(self):
@@ -202,16 +204,13 @@ class AchievementTweet(BaseCommand):
     def run(self):
         if len(self.arguments) == 0:
             self.reply('Achievement tweeting is currently ' + ('enabled' if core.state['achievement_tweets'] else 'disabled'))
-        elif args[0] == 'on':
+        elif self.arguments[0] == 'on':
             core.state['achievement_tweets'] = True
             self.reply('Achievement tweeting is now enabled')
         else:
             if len(self.arguments) == 2:
                 number = parse_timedelta(self.arguments[1])
                 threading.Timer(number, self.reenable_achievement_tweets).start()
-            elif permission_level < 4:
-                warning(errors.permission(4))
-                return
             core.state['achievement_tweets'] = False
             self.reply('Achievement tweeting is now disabled')
 
@@ -603,7 +602,7 @@ class Leak(BaseCommand):
                 return
         else:
             if re.match('[0-9]+$', self.arguments[0]) and len(messages) >= int(self.arguments[0]):
-                messages = messages[-int(args[0]):]
+                messages = messages[-int(self.arguments[0]):]
             else:
                 self.warning(core.ErrorMessage.log)
                 return
@@ -658,7 +657,7 @@ class Option(BaseCommand):
         return 1
     
     def run(self):
-        if len(args) == 1:
+        if len(self.arguments) == 1:
             flag = self.sender.option(self.arguments[0])
             is_default = self.sender.option_is_default(self.arguments[0])
             self.reply('option ' + self.arguments[0] + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
@@ -702,7 +701,7 @@ class PasteMojira(BaseCommand):
         if len(arguments) == 2:
             project_key = arguments[0]
             issue_id = int(arguments[1])
-        elif len(args) == 1:
+        elif len(arguments) == 1:
             match = re.match('(https?://mojang.atlassian.net/browse/)?([A-Z]+)-([0-9]+)', arguments[0])
             if match:
                 project_key = str(match.group(2))
@@ -791,7 +790,7 @@ class People(BaseCommand):
                             self.reply('no name, using id: ' + person.id)
                     else:
                         had_name = person.name is not None
-                        person.name = ' '.join(args[2:])
+                        person.name = ' '.join(self.arguments[2:])
                         self.reply('name ' + ('changed' if had_name else 'added'))
                 elif self.arguments[1].lower() == 'reddit':
                     if len(self.arguments) == 2:
@@ -875,14 +874,14 @@ class Raw(BaseCommand):
     
     usage = '<raw_message>...'
     
+    def parse_args(self):
+        return len(self.arguments) > 0
+    
     def permission_level(self):
         return 4
     
     def run(self):
-        if len(args):
-            bot.send(' '.join(args))
-        else:
-            warning(errors.argc(1, len(args), atleast=True))
+        core.state['bot'].send(' '.join(args))
 
 class Restart(BaseCommand):
     """restart the Minecraft server or the bot"""
