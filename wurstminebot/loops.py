@@ -8,6 +8,7 @@ import re
 import socket
 import threading
 import time
+import traceback
 
 class InputLoop(threading.Thread):
     def __init__(self):
@@ -18,7 +19,7 @@ class InputLoop(threading.Thread):
     def process_log_line(log_line):
         try:
             # server log output processing
-            _debug_print('[logpipe] ' + log_line)
+            core.debug_print('[logpipe] ' + log_line)
             matches = {
                 'achievement': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$',
                 'action': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)',

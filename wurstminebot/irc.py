@@ -150,7 +150,7 @@ def privmsg(sender, headers, message):
             core.state['bot'].say(irc_config['main_channel'], line)
 
     try:
-        core.debug_print('[irc] <' + sender + '> ' + message)
+        core.debug_print('[irc] <' + sender + '>' + (headers[0] if headers[0].startswith('#') else '') + ' ' + message)
         try:
             sender_person = nicksub.Person(sender, context='irc')
         except nicksub.PersonNotFoundError:
