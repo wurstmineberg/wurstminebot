@@ -349,7 +349,7 @@ class TimeLoop(threading.Thread):
                 time_until_hour -= 1
             if self.stopped:
                 break
-            tell_time(comment=True, restart=config('daily_restart', True))
+            tell_time(comment=True, restart=core.config('daily_restart', True))
     
     def start(self):
         self.stopped = False
@@ -389,9 +389,10 @@ def tell_time(func=None, comment=False, restart=False):
                         'color': 'gold'
                     })
                 except socket.error:
+                    core.debug_print('telltime is disconnected from Minecraft')
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
-                        core.state['bot'].say(irc_config['main_channel'], 'Warning: telltime is disconnected from Minecraft')
+                        core.state['bot'].say(irc_config['main_channel'], 'Warning! Telltime is disconnected from Minecraft.')
                     break
     
         custom_func = False
@@ -403,24 +404,28 @@ def tell_time(func=None, comment=False, restart=False):
         else:
             for line in msg.splitlines():
                 try:
-                    minecraft.tellraw({'text': line, 'color': 'red'})
+                    minecraft.tellraw({
+                        'text': line,
+                        'color': 'red'
+                    })
                 except socket.error:
-                    bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'Warning: telltime is disconnected from Minecraft')
+                    core.debug_print('telltime is disconnected from Minecraft')
+                    irc_config = core.config('irc')
+                    if 'main_channel' in irc_config:
+                        core.state['bot'].say(irc_config['main_channel'], 'Warning! Telltime is disconnected from Minecraft.')
                     break
     
-    global DST
-    global PREVIOUS_TOPIC
     localnow = datetime.now()
     utcnow = datetime.utcnow()
     dst = bool(time.localtime().tm_isdst)
-    if dst != DST:
+    if dst != core.config['dst']:
         if dst:
             func('Daylight saving time is now in effect.')
         else:
             func('Daylight saving time is no longer in effect.')
     func('The time is ' + localnow.strftime('%H:%M') + ' (' + utcnow.strftime('%H:%M') + ' UTC)')
     if comment:
-        if dst != DST:
+        if dst != core.config['dst']:
             pass
         elif localnow.hour == 0:
             func('Dark outside, better play some Minecraft.')
@@ -447,8 +452,8 @@ def tell_time(func=None, comment=False, restart=False):
                 time.sleep(240)
                 warning('The server is going to restart in 60 seconds.')
                 time.sleep(50)
-            PREVIOUS_TOPIC = (config('irc')['topic'] + ' | ' if 'topic' in config('irc') and config('irc')['topic'] is not None else '') + 'The server is restarting…'
-            bot.topic(config('irc')['main_channel'], PREVIOUS_TOPIC)
+            core.update_topic(special_status='The server is restarting…')
+            irc_config = core.config('irc')
             if minecraft.restart(reply=func):
                 if len(players):
                     irc_players = []
@@ -457,8 +462,11 @@ def tell_time(func=None, comment=False, restart=False):
                             irc_players.append(nicksub.Person(player, context='minecraft').irc_nick(respect_highlight_option=False))
                         except:
                             irc_players.append(player)
-                    bot.say(config('irc').get('main_channel', '#wurstmineberg'), ', '.join(irc_players) + ': The server has restarted.')
+                    if 'main_channel' in irc_config:
+                        core.state['bot'].say(irc_config['main_channel'], ', '.join(irc_players) + ': The server has restarted.')
             else:
-                bot.say(config('irc').get('main_channel', '#wurstmineberg'), 'Please help! Something went wrong with the server restart!')
-            update_topic()
-    DST = dst
+                core.debug_print('daily server restart failed')
+                if 'main_channel' in irc_config:
+                    core.state['bot'].say(irc_config['main_channel'], 'Please help! Something went wrong with the server restart!')
+            core.update_topic()
+    core.state['dst'] = dst
