@@ -28,11 +28,11 @@ import signal
 __version__ = core.__version__
 
 def newDaemonContext(pidfilename):
-    if not os.geteuid() == 0:
-        sys.exit('[!!!!] Only root can start/stop the daemon!')
+    wurstmineberg_user = pwd.getpwnam('wurstmineberg')
+    if os.geteuid() not in [0, wurstmineberg_user.pw_uid]:
+        sys.exit('[!!!!] Only root and wurstmineberg can start/stop the daemon!')
     pidfile = daemon.pidlockfile.PIDLockFile(pidfilename)
     logfile = open('/opt/wurstmineberg/log/wurstminebot.log', 'a')
-    wurstmineberg_user = pwd.getpwnam('wurstmineberg')
     daemoncontext = daemon.DaemonContext(working_directory='/opt/wurstmineberg/', pidfile=pidfile, uid=wurstmineberg_user.pw_uid, gid=wurstmineberg_user.pw_gid, stdout=logfile, stderr=logfile)
     daemoncontext.files_preserve = [logfile]
     daemoncontext.signal_map = {

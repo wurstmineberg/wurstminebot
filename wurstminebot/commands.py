@@ -7,6 +7,7 @@ from datetime import timedelta
 import random
 import re
 import requests
+import subprocess
 
 class BaseCommand:
     """base class for other commands, not a real command"""
@@ -910,10 +911,10 @@ class Restart(BaseCommand):
             if 'main_channel' in irc_config:
                 core.state['bot'].say(irc_config['main_channel'], random.choice(irc_config.get('quit_messages', ['brb'])))
             core.state['bot'].disconnect('brb')
-            core.state['bot'].stop()
+            core.cleanup()
             context = __main__.newDaemonContext('/var/run/wurstmineberg/wurstminebot.pid')
+            subprocess.Popen(['service', 'wurstminebot', 'start'])
             __main__.stop(context)
-            __main__.start(context)
             sys.exit()
         else:
             # restart the Minecraft server
