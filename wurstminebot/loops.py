@@ -1,3 +1,4 @@
+from wurstminebot import commands
 from wurstminebot import core
 from wurstminebot import deaths
 import minecraft
