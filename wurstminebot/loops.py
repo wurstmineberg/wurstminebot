@@ -260,7 +260,7 @@ class InputLoop(threading.Thread):
                         status = death.tweet(comment=comment)
                         try:
                             twid = core.tweet(status)
-                        except TwitterError as e:
+                        except core.TwitterError as e:
                             twid = 'error ' + str(e.status_code) + ': ' + str(e)
                             minecraft.tellraw([
                                 {
@@ -300,6 +300,7 @@ class InputLoop(threading.Thread):
                             })
                     else:
                         twid = 'deathtweets are disabled'
+                    core.debug_print('[death] ' + death.irc_message(tweet_info=twid))
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
                         core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
