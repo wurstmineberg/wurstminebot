@@ -401,15 +401,9 @@ class Help(BaseCommand):
         if len(self.arguments) == 0:
             self.reply('Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.')
             self.reply('Execute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.', 'Execute "help commands" for a list of commands, or "help <command>" (replace <command> with a command name) for help on a specific command.')
-            help_text = 'To execute a command, send it to me in private chat (here)'
-            irc_config = core.config('irc')
-            if 'main_channel' in irc_config:
-                help_text += ' or address me in ' + irc_config['main_channel']
-                help_text_tellraw = help_text + ' (like this: "wurstminebot: <command>...")'
-                help_text += ' (like this: “wurstminebot: <command>...”)'
-            else:
-                help_text_tellraw = help_text
-            self.reply(help_text + '. You can also execute commands in a channel or in Minecraft like this: “!<command>...”.', help_text_tellraw + '. You can also execute commands in a channel or in Minecraft like this: "!<command>...".')
+            help_text = 'To execute a command, send it to me in private chat (here) or address me in a channel (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
+            help_text_tellraw = 'You can execute a command by typing "!<command>..." in the in-game chat or an IRC channel. You can also send the command to me in a private IRC query (without the "!") or address me in a channel (like this: "wurstminebot: <command>...").'
+            self.reply(help_text, help_text_tellraw)
         elif self.arguments[0].lower() == 'aliases':
             num_aliases = len(list(core.config('aliases').keys()))
             if num_aliases > 0:
