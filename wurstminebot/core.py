@@ -453,7 +453,7 @@ def update_topic(force=False, special_status=None):
     except:
         threading.Timer(60, update_topic).start()
     if config('irc').get('player_list', 'announce') and special_status is None:
-        server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in players)) if len(players) else None
+        server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])) if len(state['online_players']) else None
     else:
         server_status = special_status
     topic = config('irc').get('topic')
