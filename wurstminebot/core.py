@@ -488,6 +488,7 @@ state = {
     'irc_topics': {},
     'last_death': '',
     'log_lock': threading.Lock(),
+    'online_players': set(),
     'time_loop': None
 }
 

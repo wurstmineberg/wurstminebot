@@ -86,6 +86,8 @@ class AliasCommand(BaseCommand):
                     return aliased_command.parse_args()
             else:
                 raise ValueError('No such command')
+        elif alias_type == 'disable':
+            return True
         elif alias_type == 'reply':
             if len(self.arguments) > 0:
                 return False
@@ -105,6 +107,8 @@ class AliasCommand(BaseCommand):
                     return command_class(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
             else:
                 raise ValueError('No such command') 
+        elif alias_type == 'disable':
+            self.reply('This command is disabled.')
         elif alias_type == 'reply':
             self.reply(self.alias_dict['text'], self.alias_dict.get('tellraw_text'))
         elif alias_type == 'say':
@@ -228,6 +232,8 @@ class Alias(BaseCommand):
         if len(self.arguments) == 1:
             return 4
         if self.arguments[0] in core.config('aliases'):
+            return 4
+        if not re.match('[a-z]+', self.arguments[0]):
             return 4
         return 0
     
@@ -418,6 +424,8 @@ class Help(BaseCommand):
             alias_dict = core.config('aliases')[self.arguments[0].lower()]
             if alias_dict.get('type') == 'command':
                 self.reply(self.arguments[0].lower() + ' is ' + ('an alias of ' + alias_dict['command_name'] if 'command_name' in alias_dict else 'a broken alias') + '.')
+            elif alias_dict.get('type') == 'disable':
+                self.reply(self.arguments[0].lower() + ' is disabled.')
             elif alias_dict.get('type') == 'reply':
                 self.reply(self.arguments[0].lower() + ' is an echo alias.')
             elif alias_dict.get('type') == 'say':

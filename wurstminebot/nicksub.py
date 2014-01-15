@@ -10,6 +10,8 @@ def config(person_id=None):
             j = json.load(config_file)
     except:
         j = []
+    if isinstance(j, dict):
+        j = j['people']
     if person_id is None:
         return j
     for person in j:
@@ -25,12 +27,9 @@ def set_config(config_dict):
 def update_config(person_id, path, value=None, delete=False):
     config_dict = config()
     full_config_dict = config_dict
-    for index, person in enumerate(config_dict):
-        if person.get('id') == person_id:
-            config_dict = config_dict[index]
-            break
-    else:
-        raise PersonNotFoundError('person with id ' + str(person_id) + ' not found')
+    if isinstance(config_dict, dict):
+        config_dict = config_dict['people']
+    person_index = index(person_id)
     if len(path) > 1:
         for key in path[:-1]:
             if not isinstance(config_dict, dict):
@@ -45,9 +44,15 @@ def update_config(person_id, path, value=None, delete=False):
             config_dict[path[-1]] = value
     else:
         if delete:
-            del full_config_dict[index]
+            if isinstance(full_config_dict, dict):
+                del full_config_dict['people'][person_index]
+            else:
+                del full_config_dict[person_index]
         else:
-            full_config_dict[index] = value
+            if isinstance(full_config_dict, dict):
+                full_config_dict['people'][person_index] = value
+            else:
+                full_config_dict[person_index] = value
     set_config(full_config_dict)
 
 class PersonNotFoundError(Exception):
@@ -362,11 +367,6 @@ class Person(BasePerson):
     def wiki(self):
         update_config(self.id, ['wiki'], delete=True)
 
-def everyone():
-    for person in config():
-        if id in person:
-            yield Person(person['id'])
-
 class Dummy(BasePerson):
     def __init__(self, id_or_nick, context=None):
         if id_or_nick is None:
@@ -401,6 +401,45 @@ class Dummy(BasePerson):
     
     def display_name(self):
         return self.id_or_nick
+
+def everyone():
+    for person in config():
+        if id in person:
+            yield Person(person['id'])
+
+def index(person, default=False):
+    if isinstance(person, Person):
+        person_id = person.id
+    elif isinstance(person, str):
+        person_id = person
+    elif default is False:
+        raise TypeError('cannot get index of non-person object')
+    else:
+        return default
+    for i, person_dict in enumerate(config()):
+        if person_dict.get('id') == person_id:
+            return i
+    raise PersonNotFoundError('person with id ' + str(person_id) + ' not found')
+
+def person_or_dummy(id_or_nick, context=None):
+    try:
+        return Person(id_or_nick, context=context)
+    except PersonNotFoundError:
+        return Dummy(id_or_nick, context=context)
+
+def sorted_people(*args, context=None):
+    """Returns a list of Person and Dummy objects based on the Person/Dummy objects and ids or (if context is specified) nicknames provided.
+    """
+    people = []
+    dummies = []
+    for person_or_id in args:
+        if not isinstance(person_or_id, BasePerson):
+            person_or_id = person_or_dummy(person_or_id, context=context)
+        if isinstance(person_or_id, Person):
+            people.append(person_or_id)
+        else:
+            dummies.append(person_or_id)
+    return sorted(people, key=index) + sorted(dummies, key=(lambda d: d.id_or_nick))
 
 def sub(nick, source, target, strict=True, exit_on_fail=False, twitter_at_prefix=True):
     if exit_on_fail:
