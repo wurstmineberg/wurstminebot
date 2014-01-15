@@ -151,14 +151,13 @@ def privmsg(sender, headers, message):
 
     try:
         core.debug_print('[irc] <' + sender + '>' + (headers[0] if headers[0].startswith('#') else '') + ' ' + message)
-        try:
-            sender_person = nicksub.Person(sender, context='irc')
-        except nicksub.PersonNotFoundError:
-            sender_person = nicksub.Dummy(sender, context='irc')
+        sender_person = nicksub.person_or_dummy(sender, context='irc')
         if sender == irc_config.get('nick'):
             if headers[0] == irc_config.get('dev_channel') and irc_config.get('dev_channel') != irc_config.get('main_channel'):
                 # sync commit messages from dev to main
                 core.state['bot'].say(irc_config.get('main_channel', '#wurstmineberg'), message)
+            return # ignore self otherwise
+        if sender in irc_config.get('ignore', []):
             return
         if headers[0].startswith('#'):
             if message.startswith(irc_config.get('nick', 'wurstminebot') + ': ') or message.startswith(irc_config['nick'] + ', '):

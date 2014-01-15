@@ -99,11 +99,11 @@ def config(key=None, default_value=None):
         'irc': {
             'channels': [],
             'dev_channel': None,
+            'ignore': [],
             'live_channel': None,
             'live_topic': None,
             'main_channel': '#wurstmineberg',
             'nick': 'wurstminebot',
-            'op_nicks': [],
             'password': '',
             'player_list': 'announce',
             'port': 6667,
