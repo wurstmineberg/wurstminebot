@@ -447,7 +447,7 @@ def tell_time(func=None, comment=False, restart=False):
         elif localnow.hour == 6:
             func('Are you still going, just starting or asking yourself the same thing?')
         elif localnow.hour == 11 and localnow.minute < 5 and restart:
-            players = minecraft.online_players()
+            players = nicksub.sorted_people(minecraft.online_players(), context='minecraft')
             if len(players):
                 warning('The server is going to restart in 5 minutes.')
                 time.sleep(240)
@@ -456,18 +456,11 @@ def tell_time(func=None, comment=False, restart=False):
             core.update_topic(special_status='The server is restarting…')
             irc_config = core.config('irc')
             if minecraft.restart(reply=func):
-                if len(players):
-                    irc_players = []
-                    for player in players:
-                        try:
-                            irc_players.append(nicksub.Person(player, context='minecraft').irc_nick(respect_highlight_option=False))
-                        except:
-                            irc_players.append(player)
-                    if 'main_channel' in irc_config:
-                        core.state['bot'].say(irc_config['main_channel'], ', '.join(irc_players) + ': The server has restarted.')
+                if len(players) and 'main_channel' in irc_config:
+                    core.state['bot'].say(irc_config['main_channel'], ', '.join(player.irc_nick(respect_highlight_option=False) for player in irc_players) + ': The server has restarted.')
             else:
                 core.debug_print('daily server restart failed')
                 if 'main_channel' in irc_config:
                     core.state['bot'].say(irc_config['main_channel'], 'Please help! Something went wrong with the server restart!')
-            core.update_topic()
+    core.update_topic()
     core.state['dst'] = dst

@@ -448,15 +448,12 @@ def update_topic(force=False, special_status=None):
     main_channel = config('irc').get('main_channel')
     if main_channel is None:
         return
-    players = []
-    if special_status is None:
-        for mcnick in (minecraft.online_players() if config('irc').get('player_list', 'announce') == 'topic' else []):
-            try:
-                person = nicksub.Person(mcnick, context='minecraft').irc_nick(respect_highlight_option=False)
-            except nicksub.PersonNotFoundError:
-                person = mcnick
-            players.append(person)
-        server_status = ('Currently online: ' + ', '.join(players)) if len(players) else None
+    try:
+        state['online_players'] = nicksub.sorted_people(minecraft.online_players(allow_exceptions=True), context='minecraft')
+    except:
+        threading.Timer(60, update_topic).start()
+    if config('irc').get('player_list', 'announce') and special_status is None:
+        server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in players)) if len(players) else None
     else:
         server_status = special_status
     topic = config('irc').get('topic')
@@ -489,7 +486,7 @@ state = {
     'is_daemon': False,
     'last_death': '',
     'log_lock': threading.Lock(),
-    'online_players': set(),
+    'online_players': [],
     'time_loop': None
 }
 

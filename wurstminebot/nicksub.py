@@ -432,6 +432,13 @@ def sorted_people(*args, context=None):
     """
     people = []
     dummies = []
+    if len(args) == 1 and not isinstance(args[0], str):
+        try:
+            (_ for _ in args[0])
+        except:
+            pass # argument is not iterable
+        else:
+            args = args[0]
     for person_or_id in args:
         if not isinstance(person_or_id, BasePerson):
             person_or_id = person_or_dummy(person_or_id, context=context)
