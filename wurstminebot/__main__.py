@@ -54,6 +54,7 @@ def start(context):
     print('[....] Daemonizing', end='\r')
     with context:
         print('[ ok ]')
+        core.state['is_daemon'] = True
         core.run()
         print('[ ** ] Terminating')
 

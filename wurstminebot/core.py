@@ -188,7 +188,7 @@ def death_games_log(attacker, target, success=True):
         state['bot'].say(irc_config['main_channel'], '[Death Games] ' + attacker.irc_nick() + "'s attempt on " + target.irc_nick() + (' succeeded.' if success else ' failed.'))
 
 def debug_print(msg):
-    if config('debug', False):
+    if state.get('is_daemon', False) or config('debug', False):
         print('DEBUG] ' + msg)
 
 def minecraft_wiki_lookup(article, reply=None):
@@ -486,6 +486,7 @@ state = {
     'dst': bool(time.localtime().tm_isdst),
     'input_loop': None,
     'irc_topics': {},
+    'is_daemon': False,
     'last_death': '',
     'log_lock': threading.Lock(),
     'online_players': set(),

@@ -216,95 +216,94 @@ class InputLoop(threading.Thread):
                 try:
                     death = deaths.Death(log_line)
                 except ValueError:
-                    pass # no death, continue parsing here or ignore this line
-                else:
-                    with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
-                        print(death.timestamp.strftime('%Y-%m-%d %H:%M:%S') + ' ' + death.message(), file=deathslog)
-                    if core.state['death_tweets']:
-                        if death.message() == core.state['last_death']:
-                            comment = 'Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
-                        elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
-                            comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
-                            try:
-                                target = nicksub.Person(death.groups[0], context='minecraft')
-                            except nicksub.PersonNotFoundError:
-                                pass # don't automatically log
-                            else:
-                                death_games_log(death.person, target, success=True)
-                        else:
-                            death_comments = dict(((1, index), 1.0) for index in range(len(core.config('comment_lines').get('death', []))))
-                            for index, adv_death_comment in enumerate(core.config('advanced_comment_lines').get('death', [])):
-                                if 'text' not in adv_death_comment:
-                                    continue
-                                try:
-                                    death_comments[2, index] = adv_death_comment.get('weight', 1.0) * adv_death_comment.get('player_weights', {}).get(death.player.id, adv_death_comment.get('player_weights', {}).get('@default', 1.0)) * adv_death_comment.get('type_weights', {}).get(death.id, adv_death_comment.get('type_weights', {}).get('@default', 1.0))
-                                except:
-                                    continue
-                            random_index = random.uniform(0.0, sum(death_comments.values()))
-                            index = 0.0
-                            for comment_index, weight in death_comments.items():
-                                if random_index - index < weight:
-                                    break
-                                else:
-                                    index += weight
-                            else:
-                                comment_index = (0, 0)
-                            if comment_index == (0, 0):
-                                comment = 'Well done.'
-                            elif comment_index[0] == 1:
-                                comment = core.config('comment_lines')['death'][comment_index[1]]
-                            elif comment_index[0] == 2:
-                                comment = core.config('advanced_comment_lines')['death'][comment_index[1]]['text']
-                            else:
-                                comment = "I don't even."
-                        core.state['last_death'] = death.message()
-                        status = death.tweet(comment=comment)
+                    return # no death, continue parsing here or ignore this line
+                with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
+                    print(death.timestamp.strftime('%Y-%m-%d %H:%M:%S') + ' ' + death.message(), file=deathslog)
+                if core.state['death_tweets']:
+                    if death.message() == core.state['last_death']:
+                        comment = 'Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
+                    elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
+                        comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
                         try:
-                            twid = core.tweet(status)
-                        except core.TwitterError as e:
-                            twid = 'error ' + str(e.status_code) + ': ' + str(e)
-                            minecraft.tellraw([
-                                {
-                                    'text': 'Your fail has ',
-                                    'color': 'gold'
-                                },
-                                {
-                                    'text': 'not',
-                                    'color': 'red'
-                                },
-                                {
-                                    'text': ' been reported because of ',
-                                    'color': 'gold'
-                                },
-                                {
-                                    'text': 'reasons',
-                                    'hoverEvent': {
-                                        'action': 'show_text',
-                                        'value': str(e.status_code) + ': ' + str(e)
-                                    },
-                                    'color': 'gold'
-                                },
-                                {
-                                    'text': '.',
-                                    'color': 'gold'
-                                }
-                            ])
+                            target = nicksub.Person(death.groups[0], context='minecraft')
+                        except nicksub.PersonNotFoundError:
+                            pass # don't automatically log
                         else:
-                            twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
-                            minecraft.tellraw({
-                                'text': 'Your fail has been reported. Congratulations.',
-                                'color': 'gold',
-                                'clickEvent': {
-                                    'action': 'open_url',
-                                    'value': twid
-                                }
-                            })
+                            death_games_log(death.person, target, success=True)
                     else:
-                        twid = 'deathtweets are disabled'
-                    core.debug_print('[death] ' + death.irc_message(tweet_info=twid))
-                    irc_config = core.config('irc')
-                    if 'main_channel' in irc_config:
-                        core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
+                        death_comments = dict(((1, index), 1.0) for index in range(len(core.config('comment_lines').get('death', []))))
+                        for index, adv_death_comment in enumerate(core.config('advanced_comment_lines').get('death', [])):
+                            if 'text' not in adv_death_comment:
+                                continue
+                            try:
+                                death_comments[2, index] = adv_death_comment.get('weight', 1.0) * adv_death_comment.get('player_weights', {}).get(death.player.id, adv_death_comment.get('player_weights', {}).get('@default', 1.0)) * adv_death_comment.get('type_weights', {}).get(death.id, adv_death_comment.get('type_weights', {}).get('@default', 1.0))
+                            except:
+                                continue
+                        random_index = random.uniform(0.0, sum(death_comments.values()))
+                        index = 0.0
+                        for comment_index, weight in death_comments.items():
+                            if random_index - index < weight:
+                                break
+                            else:
+                                index += weight
+                        else:
+                            comment_index = (0, 0)
+                        if comment_index == (0, 0):
+                            comment = 'Well done.'
+                        elif comment_index[0] == 1:
+                            comment = core.config('comment_lines')['death'][comment_index[1]]
+                        elif comment_index[0] == 2:
+                            comment = core.config('advanced_comment_lines')['death'][comment_index[1]]['text']
+                        else:
+                            comment = "I don't even."
+                    core.state['last_death'] = death.message()
+                    status = death.tweet(comment=comment)
+                    try:
+                        twid = core.tweet(status)
+                    except core.TwitterError as e:
+                        twid = 'error ' + str(e.status_code) + ': ' + str(e)
+                        minecraft.tellraw([
+                            {
+                                'text': 'Your fail has ',
+                                'color': 'gold'
+                            },
+                            {
+                                'text': 'not',
+                                'color': 'red'
+                            },
+                            {
+                                'text': ' been reported because of ',
+                                'color': 'gold'
+                            },
+                            {
+                                'text': 'reasons',
+                                'hoverEvent': {
+                                    'action': 'show_text',
+                                    'value': str(e.status_code) + ': ' + str(e)
+                                },
+                                'color': 'gold'
+                            },
+                            {
+                                'text': '.',
+                                'color': 'gold'
+                            }
+                        ])
+                    else:
+                        twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
+                        minecraft.tellraw({
+                            'text': 'Your fail has been reported. Congratulations.',
+                            'color': 'gold',
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': twid
+                            }
+                        })
+                else:
+                    twid = 'deathtweets are disabled'
+                core.debug_print('[death] ' + death.irc_message(tweet_info=twid))
+                irc_config = core.config('irc')
+                if 'main_channel' in irc_config:
+                    core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
         except SystemExit:
             core.debug_print('Exit in log input loop')
             core.input_loop.stop()
@@ -312,7 +311,7 @@ class InputLoop(threading.Thread):
             raise
         except:
             core.debug_print('Exception in log input loop:')
-            if core.config('debug', False):
+            if core.state.get('is_daemon', False) or core.config('debug', False):
                 traceback.print_exc()
     
     def run(self):
