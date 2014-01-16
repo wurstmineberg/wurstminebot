@@ -205,13 +205,27 @@ def minecraft_wiki_lookup(article, reply=None):
             match = re.match('#[Rr][Ee][Dd][Ii][Rr][Ee][Cc][Tt] \\[\\[(.+)(\\|.*)?\\]\\]', request.text)
             if match:
                 redirect_target = 'http://minecraft.gamepedia.com/' + re.sub(' ', '_', match.group(1))
-                reply('Redirect ' + redirect_target)
+                reply('Redirect ' + redirect_target, {
+                    'clickEvent': {
+                        'action': 'open_url',
+                        'value': redirect_target
+                    },
+                    'color': 'gold',
+                    'text': 'Redirect'
+                })
                 return 'Redirect ' + redirect_target
             else:
                 reply('Broken redirect')
                 return 'Broken redirect'
         else:
-            reply('Article http://minecraft.gamepedia.com/' + article)
+            reply('Article http://minecraft.gamepedia.com/' + article, {
+                'clickEvent': {
+                    'action': 'open_url',
+                    'value': article
+                },
+                'color': 'gold',
+                'text': 'Article'
+            })
             return 'Article http://minecraft.gamepedia.com/' + article
     else:
         reply('Error ' + str(request.status_code))
