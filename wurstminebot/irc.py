@@ -3,6 +3,7 @@ from wurstminebot import core
 from wurstminebot import loops
 import minecraft
 from wurstminebot import nicksub
+import random
 import re
 import threading
 import traceback
@@ -33,6 +34,15 @@ def endMOTD(sender, headers, message):
     core.update_all()
     core.state['input_loop'] = loops.InputLoop()
     core.state['input_loop'].start()
+
+def error_not_chan_op(sender, headers, message):
+    irc_config = core.config('irc')
+    if 'main_channel' in irc_config:
+        core.state['bot'].say(irc_config['main_channel'], random.choice({
+            'To change the topic, I need to be a channel operator.',
+            'op me pls',
+            'i can has op?'
+        }))
 
 def action(sender, headers, message):
     try:
@@ -76,6 +86,7 @@ def bot():
     ret = ircbotframe.ircBot(core.config('irc')['server'], core.config('irc')['port'], core.config('irc')['nick'], core.config('irc')['nick'], password=core.config('irc').get('password'), ssl=core.config('irc').get('ssl', False))
     ret.log_own_messages = False
     ret.bind('376', endMOTD)
+    ret.bind('482', error_not_chan_op)
     ret.bind('ACTION', action)
     ret.bind('JOIN', join)
     ret.bind('PART', part)
