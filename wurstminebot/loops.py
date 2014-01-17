@@ -420,14 +420,14 @@ def tell_time(func=None, comment=False, restart=False):
     localnow = datetime.now()
     utcnow = datetime.utcnow()
     dst = bool(time.localtime().tm_isdst)
-    if dst != core.config['dst']:
+    if dst != core.state['dst']:
         if dst:
             func('Daylight saving time is now in effect.')
         else:
             func('Daylight saving time is no longer in effect.')
     func('The time is ' + localnow.strftime('%H:%M') + ' (' + utcnow.strftime('%H:%M') + ' UTC)')
     if comment:
-        if dst != core.config['dst']:
+        if dst != core.state['dst']:
             pass
         elif localnow.hour == 0:
             func('Dark outside, better play some Minecraft.')
