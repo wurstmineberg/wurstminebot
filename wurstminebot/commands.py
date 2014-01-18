@@ -916,7 +916,7 @@ class Restart(BaseCommand):
             core.state['bot'].disconnect('brb')
             core.cleanup()
             context = __main__.newDaemonContext('/var/run/wurstmineberg/wurstminebot.pid')
-            subprocess.Popen(['service', 'wurstminebot', 'start'])
+            subprocess.Popen('sleep 5 && service wurstminebot start', shell=True) # to make sure this bot is stopped before the next one starts
             __main__.stop(context)
             sys.exit()
         else:

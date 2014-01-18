@@ -82,8 +82,7 @@ class InputLoop(threading.Thread):
                             commands.run(cmd, sender=(player if sender_person is None else sender_person), context='minecraft')
                         except SystemExit:
                             core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat')
-                            core.input_loop.stop()
-                            core.time_loop.stop()
+                            core.cleanup()
                             raise
                         except Exception as e:
                             minecraft.tellraw({
