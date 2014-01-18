@@ -1,3 +1,5 @@
+import sys
+
 from wurstminebot import core
 from datetime import datetime
 import minecraft
