@@ -159,7 +159,7 @@ class AliasCommand(BaseCommand):
                     tellraw_text = [tellraw_text]
                 minecraft.tellraw([
                     {
-                        'text': (sender.display_name() if sender.minecraft is None else sender.minecraft),
+                        'text': self.sender.nick('minecraft'),
                         'color': 'gold'
                     },
                     {
