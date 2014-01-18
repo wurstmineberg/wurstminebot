@@ -275,15 +275,15 @@ def paste_mojira(project, issue_id, link=False, tellraw=False):
         title = match.group(3)
         if tellraw:
             return {
-                'text': '[' + project + '-' + issue_id + '] ' + title,
+                'text': '[' + project + '-' + str(issue_id) + '] ' + title,
                 'color': 'gold',
                 'clickEvent': {
                     'action': 'open_url',
-                    'value': 'http://mojang.atlassian.net/browse/' + project + '-' + issue_id
+                    'value': 'http://mojang.atlassian.net/browse/' + project + '-' + str(issue_id)
                 }
             }
         else:
-            return '[' + project + '-' + issue_id + '] ' + title + (' [http://mojang.atlassian.net/browse/' + project + '-' + issue_id + ']' if link else '')
+            return '[' + project + '-' + issue_id + '] ' + title + (' [http://mojang.atlassian.net/browse/' + project + '-' + str(issue_id) + ']' if link else '')
     elif tellraw:
         return {
             'text': 'Error ' + str(request.status_code),
