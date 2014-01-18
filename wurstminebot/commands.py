@@ -979,7 +979,7 @@ class Stop(BaseCommand):
             # stop the bot
             return Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
         # stop the Minecraft server
-        core.update_topic(special_status='The server is down for now. Blame ' + str(sender) + '.')
+        core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
         if minecraft.stop(reply=self.reply):
             self.reply('Server stopped.')
         else:
