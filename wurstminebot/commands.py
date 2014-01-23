@@ -228,6 +228,8 @@ class Alias(BaseCommand):
     def parse_args(self):
         if len(self.arguments) == 0:
             return False
+        if not re.match('[A-Za-z]+', self.arguments[0]):
+            return False
         return True
     
     def permission_level(self):
@@ -235,42 +237,36 @@ class Alias(BaseCommand):
             return 4
         if self.arguments[0] in core.config('aliases'):
             return 4
-        if not re.match('[a-z]+', self.arguments[0]):
-            return 4
         return 0
     
     def run(self):
         aliases = core.config('aliases')
+        alias = self.arguments[0].lower()
         if len(self.arguments) == 1:
-            if self.arguments[0] in aliases:
-                deleted_alias = aliases[self.arguments[0]]
+            if alias in aliases:
+                deleted_alias = aliases[alias]
                 if deleted_alias['type'] in ['reply', 'say']:
                     deleted_alias = '“' + deleted_alias['text'] + '”'
                 elif deleted_alias['type'] == 'command':
                     deleted_alias = 'an alias for ' + deleted_alias['command_name']
                 else:
                     deleted_alias = str(deleted_alias)
-                del aliases[self.arguments[0]]
+                del aliases[alias]
                 core.update_config(['aliases'], aliases)
                 self.reply('Alias deleted. (Was ' + deleted_alias + ')', 'Alias deleted. (Was ' + deleted_alias + ')')
             else:
                 self.warning('The alias you' + (' just ' if random.randrange(0, 1) else ' ') + 'tried to delete ' + ("didn't" if random.randrange(0, 1) else 'did not') + (' even ' if random.randrange(0, 1) else ' ') + 'exist' + (' in the first place!' if random.randrange(0, 1) else '!') + (" So I guess everything's fine then?" if random.randrange(0, 1) else '')) # fun with randomized replies
         else:
-            alias_existed = self.arguments[0] in aliases
-            aliases[self.arguments[0]] = {
+            alias_existed = alias in aliases
+            aliases[alias] = {
                 'text': ' '.join(self.arguments[1:]),
                 'type': 'say'
             }
             core.update_config(['aliases'], aliases)
-            for command_class in classes:
-                if command_class.__name__.lower() == self.arguments[0].lower():
-                    self.reply('Alias ' + ('edited' if alias_existed else 'added') + ', but hidden because there is a command with the same name.')
-                    break
+            if alias_existed:
+                self.reply('Alias edited.')
             else:
-                if alias_existed:
-                    self.reply('Alias edited.')
-                else:
-                    self.reply('Alias added.')
+                self.reply('Alias added.')
 
 class Command(BaseCommand):
     """perform a Minecraft server command"""
@@ -1144,13 +1140,14 @@ def parse(command, sender, context, channel=None):
     match = re.match('([A-Za-z]+)@([^ ]+)$', command)
     if match:
         command, addressing = match.group(1, 2)
+    command = command.lower()
     # check the aliases first
     aliases = core.config('aliases')
     if command in aliases:
         return AliasCommand(name=command, alias_dict=aliases[command], args=args, sender=sender, context=context, channel=channel, addressing=addressing)
     # no alias found, check commands
     for command_class in classes:
-        if command_class.__name__.lower() == command.lower():
+        if command_class.__name__.lower() == command:
             return command_class(args=args, sender=sender, context=context, channel=channel, addressing=addressing)
     else:
         raise ValueError('No such command')
