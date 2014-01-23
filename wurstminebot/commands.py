@@ -1054,12 +1054,12 @@ class Tweet(BaseCommand):
 class Update(BaseCommand):
     """update Minecraft"""
     
-    usage = '[snapshot <snapshot_id> | <version>]'
+    usage = '[release | snapshot [<snapshot_id>] | <version>]'
     
     def parse_args(self):
         if len(self.arguments) > 0:
             if self.arguments[0].lower() == 'snapshot':
-                if len(self.arguments) != 2:
+                if len(self.arguments) > 2:
                     return False
             elif len(self.arguments) != 1:
                 return False
@@ -1069,19 +1069,22 @@ class Update(BaseCommand):
         return 4
     
     def run(self):
-        if len(self.arguments):
-            if self.arguments[0].lower() == 'snapshot':
+        if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
+            if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
                 core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=self.arguments[1], snapshot=True, reply=self.reply)
-            else:
+                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1] if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
+            elif self.arguments[0] == 'release': # !update release
+                core.update_topic(special_status='The server is being updated, wait a sec.')
+                version, is_snapshot, version_text = minecraft.update(snapshot=False, reply=self.reply)
+            else: # !update <version>
                 core.update_topic(special_status='The server is being updated, wait a sec.')
                 version, is_snapshot, version_text = minecraft.update(version=self.arguments[0], snapshot=False, reply=self.reply)
-        else:
+        else: # !update [snapshot]
             core.update_topic(special_status='The server is being updated, wait a sec.')
             version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=self.reply)
         try:
             twid = core.tweet('Server updated to ' + version_text + '! Wheee! See http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if is_snapshot else '#') + version + ' for details.')
-        except TwitterError as e:
+        except TwitterError:
             self.reply('…done updating, but the announcement tweet failed.', '...done updating, but the announcement tweet failed.')
         else:
             status_url = core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
