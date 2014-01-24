@@ -739,7 +739,7 @@ class PasteTweet(BaseCommand):
         twid = int(match.group(1) if match else self.arguments[0])
         try:
             self.reply(core.paste_tweet(twid, link=link), core.paste_tweet(twid, link=link, tellraw=True))
-        except TwitterError as e:
+        except core.TwitterError as e:
             self.warning('Error ' + str(e.status_code) + ': ' + str(e))
 
 class People(BaseCommand):
@@ -1079,8 +1079,8 @@ class Update(BaseCommand):
             core.update_topic(special_status='The server is being updated, wait a sec.')
             version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=self.reply)
         try:
-            twid = core.tweet('Server updated to ' + version_text + '! Wheee! See http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if is_snapshot else '#') + version + ' for details.')
-        except TwitterError:
+            twid = core.tweet('Server updated to ' + version_text + '! Wheee! See ' + minecraft.wiki_version_link(version) + ' for details.')
+        except core.TwitterError:
             self.reply('…done updating, but the announcement tweet failed.', '...done updating, but the announcement tweet failed.')
         else:
             status_url = core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
