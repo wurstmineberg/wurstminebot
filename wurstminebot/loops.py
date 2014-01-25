@@ -217,7 +217,7 @@ class InputLoop(threading.Thread):
                     death = deaths.Death(log_line)
                 except ValueError:
                     return # no death, continue parsing here or ignore this line
-                with open(os.path.join(config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
+                with open(os.path.join(core.config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
                     print(death.timestamp.strftime('%Y-%m-%d %H:%M:%S') + ' ' + death.message(), file=deathslog)
                 if core.state['death_tweets']:
                     if death.message() == core.state['last_death']:
