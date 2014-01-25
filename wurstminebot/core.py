@@ -293,7 +293,7 @@ def paste_mojira(project, issue_id, link=False, tellraw=False):
         return 'Error ' + str(request.status_code)
 
 def paste_tweet(status, link=False, tellraw=False):
-    r = twitter.request('statuses/show', {'id': status})
+    r = twitter.request('statuses/show/:id', {'id': status})
     if isinstance(r, TwitterAPI.TwitterResponse):
         j = r.response.json()
     else:
@@ -301,7 +301,7 @@ def paste_tweet(status, link=False, tellraw=False):
     if r.status_code != 200:
         raise TwitterError(j.get('errors', {}).get('code', 0), message=j.get('errors', {}).get('message'), status_code=r.status_code)
     if 'retweeted_status' in j:
-        retweeted_request = twitter.request('statuses/show', {'id': j['retweeted_status']['id']})
+        retweeted_request = twitter.request('statuses/show/:id', {'id': j['retweeted_status']['id']})
         if isinstance(retweeted_request, TwitterAPI.TwitterResponse):
             rj = retweeted_request.response.json()
         else:
