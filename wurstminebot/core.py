@@ -17,18 +17,18 @@ import xml.sax.saxutils
 
 class ErrorMessage:
     log = "I can't find that in my chatlog"
-
+    
     @staticmethod
     def argc(expected, given, atleast=False):
         return ('not enough' if given < expected else 'too many') + ' arguments, expected ' + ('at least ' if atleast else '') + str(expected)
-
+    
     @staticmethod
     def unknown(command=None):
         if command is None or command == '':
             return 'Unknown command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
         else:
             return '“' + str(command) + '” is not a command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
-
+    
     @staticmethod
     def permission(level=0):
         if level == 1:
@@ -43,11 +43,12 @@ class ErrorMessage:
             return "you don't have permission to do this"
 
 class TwitterError(Exception):
-    def __init__(self, code, message=None, status_code=0):
+    def __init__(self, code, message=None, status_code=0, errors=None):
         self.code = code
         self.message = message
         self.status_code = status_code
-
+        self.errors = [] if errors is None else errors
+    
     def __str__(self):
         return str(self.code) if self.message is None else str(self.message)
 
@@ -261,7 +262,7 @@ def parse_timedelta(time_string):
     return ret
 
 def paste_mojira(project, issue_id, link=False, tellraw=False):
-    request = requests.get('http://mojang.atlassian.net/browse/' + project + '-' + str(issue_id))
+    request = requests.get('http://bugs.mojang.com/browse/' + project + '-' + str(issue_id))
     if request.status_code == 200:
         match = re.match('<title>\\[([A-Z]+)-([0-9]+)\\] (.+) - Mojira</title>', request.text.splitlines()[18])
         if not match:
@@ -279,11 +280,11 @@ def paste_mojira(project, issue_id, link=False, tellraw=False):
                 'color': 'gold',
                 'clickEvent': {
                     'action': 'open_url',
-                    'value': 'http://mojang.atlassian.net/browse/' + project + '-' + str(issue_id)
+                    'value': 'http://bugs.mojang.com/browse/' + project + '-' + str(issue_id)
                 }
             }
         else:
-            return '[' + project + '-' + issue_id + '] ' + title + (' [http://mojang.atlassian.net/browse/' + project + '-' + str(issue_id) + ']' if link else '')
+            return '[' + project + '-' + issue_id + '] ' + title + (' [http://bugs.mojang.com/browse/' + project + '-' + str(issue_id) + ']' if link else '')
     elif tellraw:
         return {
             'text': 'Error ' + str(request.status_code),
@@ -300,7 +301,7 @@ def paste_tweet(status, link=False, tellraw=False):
         j = r.json()
     if r.status_code != 200:
         first_error = j['errors'][0] if len(j.get('errors', [])) else {}
-        raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code)
+        raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code, errors = j.get('errors', []))
     if 'retweeted_status' in j:
         retweeted_request = twitter.request('statuses/show/:id', {'id': j['retweeted_status']['id']})
         if isinstance(retweeted_request, TwitterAPI.TwitterResponse):
@@ -308,7 +309,8 @@ def paste_tweet(status, link=False, tellraw=False):
         else:
             rj = retweeted_request.json()
         if retweeted_request.status_code != 200:
-            raise TwitterError(rj.get('errors', {}).get('code', 0), message=rj.get('errors', {}).get('message'), status_code=retweeted_request.status_code)
+            first_error = rj['errors'][0] if len(rj.get('errors', [])) else {}
+            raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=retweeted_request.status_code, errors = rj.get('errors', []))
         tweet_author = '<@' + j['user']['screen_name'] + ' RT @' + rj['user']['screen_name'] + '> '
         tweet_author_tellraw = [
             {
@@ -425,7 +427,7 @@ def tweet(status):
     if r.status_code == 200:
         return j['id']
     first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
-    raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code)
+    raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code, errors=j.get('errors', []))
 
 def update_config(path, value):
     config_dict = config()

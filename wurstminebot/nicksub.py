@@ -401,6 +401,9 @@ class Dummy(BasePerson):
     
     def display_name(self):
         return self.id_or_nick
+    
+    def nick(self, context, default=True, twitter_at_prefix=False):
+        return super().nick(context, default=default, twitter_at_prefix=False)
 
 def everyone():
     for person in config():

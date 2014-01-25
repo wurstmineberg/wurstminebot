@@ -679,7 +679,7 @@ class PasteMojira(BaseCommand):
         if len(arguments) > 2:
             return False
         if len(arguments) == 1:
-            if not re.match('(https?://mojang.atlassian.net/browse/)?[A-Z]+-[0-9]+', arguments[0]):
+            if not re.match('(https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/)?[A-Z]+-[0-9]+', arguments[0]):
                 try:
                     int(arguments[0])
                 except ValueError:
@@ -702,10 +702,10 @@ class PasteMojira(BaseCommand):
             project_key = arguments[0]
             issue_id = int(arguments[1])
         elif len(arguments) == 1:
-            match = re.match('(https?://mojang.atlassian.net/browse/)?([A-Z]+)-([0-9]+)', arguments[0])
+            match = re.match('(https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/)?([A-Z]+)-([0-9]+)', arguments[0])
             if match:
-                project_key = str(match.group(2))
-                issue_id = int(match.group(3))
+                project_key = str(match.group(3))
+                issue_id = int(match.group(4))
             else:
                 project_key = 'MC'
                 issue_id = int(arguments[0])

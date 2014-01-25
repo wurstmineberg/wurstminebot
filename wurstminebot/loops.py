@@ -2,6 +2,7 @@ from wurstminebot import commands
 from wurstminebot import core
 from datetime import datetime
 from wurstminebot import deaths
+import json
 import minecraft
 from wurstminebot import nicksub
 import os.path
@@ -34,17 +35,9 @@ class InputLoop(threading.Thread):
                     continue
                 if match_type == 'achievement':
                     player, achievement = match.group(1, 2)
-                    try:
-                        person = nicksub.Person(player, context='minecraft')
-                    except nicksub.PersonNotFoundError:
-                        person = None
+                    person = nicksub.person_or_dummy(player, context='minecraft')
                     if core.state['achievement_tweets']:
-                        if person is None:
-                            twitter_nick = player
-                        elif person.twitter is None:
-                            twitter_nick = person.display_name()
-                        else:
-                            twitter_nick = '@' + person.twitter
+                        twitter_nick = person.nick('twitter', twitter_at_prefix=True)
                         status = '[Achievement Get] ' + twitter_nick + ' got ' + achievement
                         try:
                             twid = core.tweet(status)
@@ -56,7 +49,7 @@ class InputLoop(threading.Thread):
                         twid = 'achievement tweets are disabled'
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
-                        core.state['bot'].say(irc_config['main_channel'], 'Achievement Get: ' + (player if person is None else person.irc_nick()) + ' got ' + achievement + ' [' + twid + ']')
+                        core.state['bot'].say(irc_config['main_channel'], 'Achievement Get: ' + person.irc_nick() + ' got ' + achievement + ' [' + twid + ']')
                 elif match_type == 'action':
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
@@ -84,6 +77,13 @@ class InputLoop(threading.Thread):
                             core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat')
                             core.cleanup()
                             raise
+                        except core.TwitterError as e:
+                            minecraft.tellraw({
+                                'text': 'Error ' + str(e.status_code) + ': ' + str(e),
+                                'color': 'red'
+                            }, str(player))
+                            core.debug_print('TwitterError ' + str(e.status_code) + ' in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat:')
+                            core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
                         except Exception as e:
                             minecraft.tellraw({
                                 'text': 'Error: ' + str(e),

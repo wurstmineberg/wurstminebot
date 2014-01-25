@@ -178,6 +178,10 @@ def privmsg(sender, headers, message):
                         commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
                         raise
+                    except core.TwitterError as e:
+                        core.state['bot'].say(headers[0], sender + ': Error ' + str(e.status_code) + ': ' + str(e))
+                        core.debug_print('TwitterError ' + str(e.status_code) + ' in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
+                        core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
                     except Exception as e:
                         core.state['bot'].say(headers[0], sender + ': Error: ' + str(e))
                         core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
@@ -190,13 +194,17 @@ def privmsg(sender, headers, message):
                         commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
                         raise
+                    except core.TwitterError as e:
+                        core.state['bot'].say(headers[0], sender + ': Error ' + str(e.status_code) + ': ' + str(e))
+                        core.debug_print('TwitterError ' + str(e.status_code) + ' in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
+                        core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
                     except Exception as e:
                         core.state['bot'].say(headers[0], sender + ': Error: ' + str(e))
                         core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
                         if core.config('debug', False):
                             traceback.print_exc()
             elif headers[0] == irc_config.get('main_channel'):
-                if re.match('https?://mojang\\.atlassian\\.net/browse/[A-Z]+-[0-9]+', message):
+                if re.match('https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
                         {
                             'text': '<' + sender_person.nick('minecraft') + '>',
@@ -223,9 +231,9 @@ def privmsg(sender, headers, message):
                         }
                     ])
                     try:
-                        match = re.match('https?://mojang\\.atlassian\\.net/browse/([A-Z]+)-([0-9]+)', message)
-                        project = match.group(1)
-                        issue_id = int(match.group(2))
+                        match = re.match('https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/([A-Z]+)-([0-9]+)', message)
+                        project = match.group(2)
+                        issue_id = int(match.group(3))
                         core.state['bot'].say(headers[0], core.paste_mojira(project, issue_id))
                         minecraft.tellraw(core.paste_mojira(project, issue_id, tellraw=True))
                     except SystemExit:
@@ -267,6 +275,10 @@ def privmsg(sender, headers, message):
                         botsay(core.paste_tweet(twid, link=False, tellraw=False))
                     except SystemExit:
                         raise
+                    except core.TwitterError as e:
+                        core.state['bot'].say(headers[0], 'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e))
+                        core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
+                        core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
                     except Exception as e:
                         core.state['bot'].say(headers[0], 'Error while pasting tweet: ' + str(e))
                         core.debug_print('Exception while pasting tweet:')
@@ -337,6 +349,10 @@ def privmsg(sender, headers, message):
                     commands.run(cmd, sender=sender_person, context='irc')
                 except SystemExit:
                     raise
+                except core.TwitterError as e:
+                    core.state['bot'].say(sender, + 'Error ' + str(e.status_code) + ': ' + str(e))
+                    core.debug_print('TwitterError ' + str(e.status_code) + ' in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to query:')
+                    core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
                 except Exception as e:
                     core.state['bot'].say(sender, 'Error: ' + str(e))
                     core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to query:')
