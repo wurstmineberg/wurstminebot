@@ -299,7 +299,8 @@ def paste_tweet(status, link=False, tellraw=False):
     else:
         j = r.json()
     if r.status_code != 200:
-        raise TwitterError(j.get('errors', {}).get('code', 0), message=j.get('errors', {}).get('message'), status_code=r.status_code)
+        first_error = j['errors'][0] if len(j.get('errors', [])) else {}
+        raise TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code)
     if 'retweeted_status' in j:
         retweeted_request = twitter.request('statuses/show/:id', {'id': j['retweeted_status']['id']})
         if isinstance(retweeted_request, TwitterAPI.TwitterResponse):
