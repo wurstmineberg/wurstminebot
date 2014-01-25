@@ -911,10 +911,7 @@ class Restart(BaseCommand):
                 core.state['bot'].say(irc_config['main_channel'], random.choice(irc_config.get('quit_messages', ['brb'])))
             core.state['bot'].disconnect('brb')
             core.cleanup()
-            context = __main__.newDaemonContext('/var/run/wurstmineberg/wurstminebot.pid')
-            subprocess.Popen('sleep 5 && service wurstminebot start', shell=True) # to make sure this bot is stopped before the next one starts
-            __main__.stop(context)
-            sys.exit()
+            subprocess.Popen(['service', 'wurstminebot', 'restart'])
         else:
             # restart the Minecraft server
             core.update_topic(special_status='The server is restarting…')
