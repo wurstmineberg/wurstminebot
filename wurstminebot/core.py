@@ -467,8 +467,15 @@ def update_topic(force=False, special_status=None):
         return
     try:
         state['online_players'] = nicksub.sorted_people(minecraft.online_players(allow_exceptions=True), context='minecraft')
-    except:
-        threading.Timer(60, update_topic).start()
+    except Exception as e:
+        if force:
+            state['online_players'] = []
+            if special_status is None:
+                special_status = 'Error getting online players: ' + str(e)
+        else:
+            threading.Timer(60, update_topic).start()
+            if special_status is None:
+                return
     if config('irc').get('player_list', 'announce') and special_status is None:
         server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])) if len(state['online_players']) else None
     else:
@@ -483,14 +490,6 @@ def update_topic(force=False, special_status=None):
     irc.set_topic(main_channel, new_topic, force=force)
 
 __version__ = str(parse_version_string())
-
-permission_levels = [
-    None,
-    'sender must be in people.json',
-    'requires invite',
-    'whitelisted only',
-    'bot-ops only'
-]
 
 state = {
     'achievement_tweets': True,
