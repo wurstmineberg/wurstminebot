@@ -2,6 +2,7 @@ import sys
 
 from wurstminebot import commands
 from wurstminebot import core
+import json
 from wurstminebot import loops
 import minecraft
 from wurstminebot import nicksub
