@@ -448,7 +448,7 @@ def update_config(path, value):
 def update_all(force=False):
     def _try_update_status():
         try:
-            minecraft.update_status()
+            minecraft.update_status(force=force)
         except (IOError, OSError):
             debug_print('Did not update status due to a FileNotFoundError')
     
