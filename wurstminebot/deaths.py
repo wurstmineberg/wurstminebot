@@ -1,5 +1,3 @@
-# http://www.minecraftwiki.net/wiki/Server#Death_messages
-
 import datetime
 import minecraft
 from wurstminebot import nicksub
@@ -214,7 +212,7 @@ messages = [
         'id': 'wither',
         'regex': 'withered away'
     }
-]
+] # http://minecraft.gamepedia.com/Server#Death_messages
 
 def mcnick(person):
     return person.minecraft if isinstance(person, nicksub.Person) else str(person)

@@ -1,3 +1,5 @@
+import sys
+
 from wurstminebot import commands
 from wurstminebot import core
 from datetime import datetime
@@ -91,7 +93,7 @@ class InputLoop(threading.Thread):
                             }, str(player))
                             core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat:')
                             if core.config('debug', False):
-                                traceback.print_exc()
+                                traceback.print_exc(file=sys.stdout)
                     else:
                         # chat message
                         irc_config = core.config('irc')
@@ -312,7 +314,7 @@ class InputLoop(threading.Thread):
         except:
             core.debug_print('Exception in log input loop:')
             if core.state.get('is_daemon', False) or core.config('debug', False):
-                traceback.print_exc()
+                traceback.print_exc(file=sys.stdout)
     
     def run(self):
         for log_line in log_tail():

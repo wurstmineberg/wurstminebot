@@ -1,5 +1,6 @@
-import json
 import sys
+
+import json
 import re
 
 CONFIG_FILE = '/opt/wurstmineberg/config/people.json'

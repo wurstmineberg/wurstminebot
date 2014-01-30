@@ -397,8 +397,8 @@ def run():
         except Exception:
             cleanup()
             debug_print('Exception in bot.run:')
-            if config('debug', False):
-                traceback.print_exc()
+            if config('debug', False) or state.get('is_daemon', False):
+                traceback.print_exc(file=sys.stdout)
             sys.exit(1)
     cleanup()
 

@@ -1,3 +1,5 @@
+import sys
+
 from wurstminebot import commands
 from wurstminebot import core
 from wurstminebot import loops
@@ -22,8 +24,8 @@ def endMOTD(sender, headers, message):
             core.state['bot'].joinchan(chan)
         except:
             core.debug_print('Exception while joining channel ' + str(chan) + ':')
-            if core.config('debug', False):
-                traceback.print_exc()
+            if core.config('debug', False) or core.state.get('is_daemon', False):
+                traceback.print_exc(file=sys.stdout)
     if irc_config.get('main_channel') is not None:
         core.state['bot'].say(irc_config['main_channel'], "aaand I'm back.")
     minecraft.tellraw({
@@ -72,14 +74,13 @@ def action(sender, headers, message):
                 }
             ])
     except SystemExit:
-        _debug_print('Exit in ACTION')
-        InputLoop.stop()
-        TimeLoop.stop()
+        core.debug_print('Exit in ACTION')
+        core.cleanup()
         raise
     except:
-        _debug_print('Exception in ACTION:')
-        if config('debug', False):
-            traceback.print_exc()
+        core.debug_print('Exception in ACTION:')
+        if core.config('debug', False) or core.state('is_daemon', False):
+            traceback.print_exc(file=sys.stdout)
 
 def bot():
     import ircbotframe
@@ -177,6 +178,8 @@ def privmsg(sender, headers, message):
                     try:
                         commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
+                        core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]))
+                        core.cleanup()
                         raise
                     except core.TwitterError as e:
                         core.state['bot'].say(headers[0], sender + ': Error ' + str(e.status_code) + ': ' + str(e))
@@ -185,14 +188,16 @@ def privmsg(sender, headers, message):
                     except Exception as e:
                         core.state['bot'].say(headers[0], sender + ': Error: ' + str(e))
                         core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
-                        if core.config('debug', False):
-                            traceback.print_exc()
+                        if core.config('debug', False) or core.state.get('is_daemon', False):
+                            traceback.print_exc(file=sys.stdout)
             elif message.startswith('!') and not re.match('!+$', message):
                 cmd = message[1:].split(' ')
                 if len(cmd):
                     try:
                         commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
+                        core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]))
+                        core.cleanup()
                         raise
                     except core.TwitterError as e:
                         core.state['bot'].say(headers[0], sender + ': Error ' + str(e.status_code) + ': ' + str(e))
@@ -201,8 +206,8 @@ def privmsg(sender, headers, message):
                     except Exception as e:
                         core.state['bot'].say(headers[0], sender + ': Error: ' + str(e))
                         core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
-                        if core.config('debug', False):
-                            traceback.print_exc()
+                        if core.config('debug', False) or core.state.get('is_daemon', False):
+                            traceback.print_exc(file=sys.stdout)
             elif headers[0] == irc_config.get('main_channel'):
                 if re.match('https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
@@ -237,12 +242,14 @@ def privmsg(sender, headers, message):
                         core.state['bot'].say(headers[0], core.paste_mojira(project, issue_id))
                         minecraft.tellraw(core.paste_mojira(project, issue_id, tellraw=True))
                     except SystemExit:
+                        core.debug_print('Exit while pasting mojira ticket')
+                        core.cleanup()
                         raise
                     except Exception as e:
                         core.state['bot'].say(headers[0], 'Error pasting mojira ticket: ' + str(e))
                         core.debug_print('Exception while pasting mojira ticket:')
-                        if core.config('debug', False):
-                            traceback.print_exc()
+                        if core.config('debug', False) or core.state.get('is_daemon', False):
+                            traceback.print_exc(file=sys.stdout)
                 elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message):
                     minecraft.tellraw([
                         {
@@ -274,6 +281,8 @@ def privmsg(sender, headers, message):
                         minecraft.tellraw(core.paste_tweet(twid, link=False, tellraw=True))
                         botsay(core.paste_tweet(twid, link=False, tellraw=False))
                     except SystemExit:
+                        core.debug_print('Exit while pasting tweet')
+                        core.cleanup()
                         raise
                     except core.TwitterError as e:
                         core.state['bot'].say(headers[0], 'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e))
@@ -282,8 +291,8 @@ def privmsg(sender, headers, message):
                     except Exception as e:
                         core.state['bot'].say(headers[0], 'Error while pasting tweet: ' + str(e))
                         core.debug_print('Exception while pasting tweet:')
-                        if core.config('debug', False):
-                            traceback.print_exc()
+                        if core.config('debug', False) or core.state.get('is_daemon', False):
+                            traceback.print_exc(file=sys.stdout)
                 else:
                     match = re.match('([a-z0-9]+:[^ ]+)(.*)$', message)
                     if match:
@@ -348,6 +357,8 @@ def privmsg(sender, headers, message):
                 try:
                     commands.run(cmd, sender=sender_person, context='irc')
                 except SystemExit:
+                    core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to query')
+                    core.cleanup()
                     raise
                 except core.TwitterError as e:
                     core.state['bot'].say(sender, + 'Error ' + str(e.status_code) + ': ' + str(e))
@@ -356,16 +367,16 @@ def privmsg(sender, headers, message):
                 except Exception as e:
                     core.state['bot'].say(sender, 'Error: ' + str(e))
                     core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to query:')
-                    if core.config('debug', False):
-                        traceback.print_exc()
+                    if core.config('debug', False) or core.state.get('is_daemon', False):
+                        traceback.print_exc(file=sys.stdout)
     except SystemExit:
         core.debug_print('Exit in PRIVMSG')
         core.cleanup()
         raise
     except:
         core.debug_print('Exception in PRIVMSG:')
-        if core.config('debug', False):
-            traceback.print_exc()
+        if core.config('debug', False) or core.state.get('is_daemon', False):
+            traceback.print_exc(file=sys.stdout)
 
 def set_topic(channel, new_topic, force=False):
     if new_topic is None:
