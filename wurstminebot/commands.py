@@ -881,7 +881,7 @@ class Raw(BaseCommand):
         return 4
     
     def run(self):
-        core.state['bot'].send(' '.join(args))
+        core.state['bot'].send(' '.join(self.arguments))
 
 class Restart(BaseCommand):
     """restart the Minecraft server or the bot"""
