@@ -1136,7 +1136,8 @@ def parse(command, sender, context, channel=None):
     addressing = None
     match = re.match('([A-Za-z]+)@([^ ]+)$', command)
     if match:
-        command, addressing = match.group(1, 2)
+        command = match.group(1)
+        addressing = nicksub.person_or_dummy(match.group(2), context=context)
     command = command.lower()
     # check the aliases first
     aliases = core.config('aliases')
