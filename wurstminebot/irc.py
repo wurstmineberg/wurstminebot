@@ -35,8 +35,9 @@ def endMOTD(sender, headers, message):
     })
     core.debug_print("aaand I'm back.")
     core.update_all()
-    core.state['input_loop'] = loops.InputLoop()
-    core.state['input_loop'].start()
+    if core.state.get('input_loop') is None:
+        core.state['input_loop'] = loops.InputLoop()
+        core.state['input_loop'].start()
 
 def error_not_chan_op(sender, headers, message):
     irc_config = core.config('irc')

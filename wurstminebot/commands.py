@@ -866,7 +866,7 @@ class Quit(BaseCommand):
         if 'main_channel' in irc_config:
             core.state['bot'].say(irc_config['main_channel'], ('bye, ' + quitMsg) if quitMsg else random.choice(irc_config.get('quit_messages', ['bye'])))
         core.state['bot'].disconnect(quitMsg if quitMsg else 'bye')
-        core.state['bot'].stop()
+        core.cleanup()
         sys.exit()
 
 class Raw(BaseCommand):

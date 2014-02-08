@@ -318,7 +318,7 @@ class InputLoop(threading.Thread):
     
     def run(self):
         for log_line in log_tail():
-            if self.stopped or not core.state['bot'].keepGoing:
+            if self.stopped or 'bot' not in core.state or not core.state['bot'].keepGoing:
                 break
             InputLoop.process_log_line(log_line)
     
