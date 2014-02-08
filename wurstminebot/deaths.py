@@ -214,9 +214,6 @@ messages = [
     }
 ] # http://minecraft.gamepedia.com/Server#Death_messages
 
-def mcnick(person):
-    return person.minecraft if isinstance(person, nicksub.Person) else str(person)
-
 class Death:
     def __init__(self, log_line):
         for death in messages:
@@ -226,35 +223,23 @@ class Death:
             # death
             self.id = death['id']
             self.timestamp = minecraft.regexes.strptime(datetime.date.today(), match.group(1))
-            try:
-                self.person = nicksub.Person(match.group(2), context='minecraft')
-            except nicksub.PersonNotFoundError:
-                self.person = match.group(2)
-            self.partial_message = log_line[len('[00:00:00] [Server thread/INFO]: ' + mcnick(self.person) + ' '):]
+            self.person = nicksub.person_or_dummy(match.group(2), context='minecraft')
+            self.partial_message = log_line[len('[00:00:00] [Server thread/INFO]: ' + self.person.nick('minecraft') + ' '):]
             self.groups = match.groups()[2:]
             break
         else:
             raise ValueError('Log line is not a death')
     
     def irc_message(self, tweet_info=None):
-        if isinstance(self.person, nicksub.Person):
-            victim_irc = self.person.irc_nick()
-        else:
-            victim_irc = str(self.person)
+        victim_irc = self.person.irc_nick()
         return victim_irc + ' ' + nicksub.textsub(self.partial_message, 'minecraft', 'irc', strict=True) + ('' if tweet_info is None else ' [' + str(tweet_info) + ']')
     
     def message(self):
-        return (mcnick(self.person)) + ' ' + self.partial_message
+        return (self.person.nick('minecraft')) + ' ' + self.partial_message
     
     def tweet(self, comment=None):
-        if isinstance(self.person, nicksub.Person):
-            if self.person.twitter is None:
-                victim_twitter = self.person.display_name()
-            else:
-                victim_twitter = '@' + self.person.twitter
-        else:
-            victim_twitter = str(self.person)
+        victim_twitter = self.person.nick('twitter', twitter_at_prefix=True)
         status = '[DEATH] ' + victim_twitter + ' ' + nicksub.textsub(self.partial_message, 'minecraft', 'twitter', strict=True)
-        if len(status + ' … ' + comment) <= 140:
+        if comment is not None and len(status + ' … ' + comment) <= 140:
             status += ' … ' + comment
         return status
