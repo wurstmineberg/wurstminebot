@@ -1,6 +1,6 @@
 **wurstminebot** is an IRC bot for Minecraft. It was written for [wurstmineberg](http://wurstmineberg.de/) and may require some tweaking to run on your server. It also has some dependencies which we haven't added to this repository yet.
 
-This is `wurstminebot` version 3.1.18 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`__main__.py`](wurstminebot/__main__.py), as found in the docstring, as well as the commands, as explained in the `help` command.
+This is `wurstminebot` version 3.2.0 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`__main__.py`](wurstminebot/__main__.py), as found in the docstring, as well as the commands, as explained in the `help` command.
 
 Requirements
 ============
@@ -10,6 +10,7 @@ Requirements
 *   [TwitterAPI](https://github.com/geduldig/TwitterAPI) 2.1
 *   [docopt](http://docopt.org/)
 *   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.13
+*   [minecraft-api](https://github.com/wurstmineberg/minecraft-api) 1.1 (required for Cloud command only)
 *   [requests](http://www.python-requests.org/) 2.1
 
 Configuration

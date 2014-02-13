@@ -268,6 +268,55 @@ class Alias(BaseCommand):
             else:
                 self.reply('Alias added.')
 
+class Cloud(BaseCommand):
+    """search for an item in the Cloud, our public item storage"""
+    
+    usage = '<item_id> [<damage>]'
+    
+    def parse_args(self):
+        if len(self.arguments) not in range(1, 3):
+            return False
+        if len(self.arguments) >= 2:
+            try:
+                int(self.arguments[1])
+            except ValueError:
+                traceback.print_exc()
+                return False
+        return True
+    
+    def run(self):
+        import api
+        if len(self.arguments) < 2:
+            item = api.api_item_by_id(self.arguments[0])
+        else:
+            item = api.api_item_by_damage(self.arguments[0], int(self.arguments[1]))
+        item_name = str(item['name'] if 'name' in item else self.arguments[0])
+        if 'cloud' not in item:
+            self.reply("I don't know where, if at all, " + item_name + ' is in the Cloud')
+        if item['cloud'] is None:
+            self.reply(item_name + ' is not available in the Cloud')
+        ordinals = {
+            1: 'st',
+            2: 'nd',
+            3: 'rd'
+        }
+        x = item['cloud']['x']
+        y = item['cloud']['y']
+        if x == 0:
+            corridor = 'central corridor'
+        elif x == 1:
+            corridor = 'left corridor'
+        elif x == -1 and y != 1:
+            corridor = 'right corridor'
+        else:
+            if x < 0:
+                direction = 'right'
+                x *= -1
+            else:
+                direction = 'left'
+            corridor = str(x) + ordinals.get(x, 'th') + ' corridor to the ' + direction
+        self.reply(str(y) + ordinals.get(y, 'th') + ' floor, ' + corridor)
+
 class Command(BaseCommand):
     """perform a Minecraft server command"""
     
@@ -1181,6 +1230,7 @@ def run(command_name, sender, context, channel=None):
 classes = [
     AchievementTweet,
     Alias,
+    Cloud,
     Command,
     DeathGames,
     DeathTweet,
