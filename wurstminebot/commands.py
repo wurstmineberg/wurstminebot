@@ -286,15 +286,22 @@ class Cloud(BaseCommand):
     
     def run(self):
         import api
-        if len(self.arguments) < 2:
-            item = api.api_item_by_id(self.arguments[0])
-        else:
-            item = api.api_item_by_damage(self.arguments[0], int(self.arguments[1]))
+        import bottle
+        try:
+            if len(self.arguments) < 2:
+                item = api.api_item_by_id(self.arguments[0])
+            else:
+                item = api.api_item_by_damage(self.arguments[0], int(self.arguments[1]))
+        except bottle.HTTPError as e:
+            self.reply(str(e.body))
+            return
         item_name = str(item['name'] if 'name' in item else self.arguments[0])
         if 'cloud' not in item:
             self.reply("I don't know where, if at all, " + item_name + ' is in the Cloud')
+            return
         if item['cloud'] is None:
             self.reply(item_name + ' is not available in the Cloud')
+            return
         ordinals = {
             1: 'st',
             2: 'nd',
