@@ -170,7 +170,7 @@ class AliasCommand(BaseCommand):
             if self.context == 'irc' and self.channel is not None:
                 core.state['bot'].say(self.channel, self.sender.irc_nick(respect_highlight_option=False) + ': ' + self.alias_dict['text'])
             elif self.context == 'irc' and self.sender.irc_nick(fallback=None) is not None:
-                core.state['bot'].say(self.sender.irc_nick(respect_highlight_option=False), aliases[cmd])
+                core.state['bot'].say(self.sender.irc_nick(respect_highlight_option=False), self.alias_dict['text'])
             elif self.context == 'minecraft' and 'main_channel' in core.config('irc'):
                 core.state['bot'].say(core.config('irc')['main_channel'], '<' + self.sender.irc_nick() + '> ' + self.alias_dict['text'])
         else:
