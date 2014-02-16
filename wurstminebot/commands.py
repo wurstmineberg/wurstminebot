@@ -255,7 +255,7 @@ class Alias(BaseCommand):
                 core.update_config(['aliases'], aliases)
                 self.reply('Alias deleted. (Was ' + deleted_alias + ')', 'Alias deleted. (Was ' + deleted_alias + ')')
             else:
-                self.warning('The alias you' + (' just ' if random.randrange(0, 1) else ' ') + 'tried to delete ' + ("didn't" if random.randrange(0, 1) else 'did not') + (' even ' if random.randrange(0, 1) else ' ') + 'exist' + (' in the first place!' if random.randrange(0, 1) else '!') + (" So I guess everything's fine then?" if random.randrange(0, 1) else '')) # fun with randomized replies
+                self.warning('The alias you' + (' just ' if random.randrange(0, 2) else ' ') + 'tried to delete ' + ("didn't" if random.randrange(0, 2) else 'did not') + (' even ' if random.randrange(0, 2) else ' ') + 'exist' + (' in the first place!' if random.randrange(0, 2) else '!') + (" So I guess everything's fine then?" if random.randrange(0, 2) else '')) # fun with randomized replies
         else:
             alias_existed = alias in aliases
             aliases[alias] = {
