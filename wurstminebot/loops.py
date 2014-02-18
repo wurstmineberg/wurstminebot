@@ -384,12 +384,12 @@ def log_tail(timeout=0.5):
 
 def tell_time(func=None, comment=False, restart=False):
     if func is None:
-        def func(msg):
+        def func(msg, color='gold'):
             for line in msg.splitlines():
                 try:
                     minecraft.tellraw({
                         'text': line,
-                        'color': 'gold'
+                        'color': color
                     })
                 except socket.error:
                     core.debug_print('telltime is disconnected from Minecraft')
@@ -405,18 +405,7 @@ def tell_time(func=None, comment=False, restart=False):
         if custom_func:
             func(msg)
         else:
-            for line in msg.splitlines():
-                try:
-                    minecraft.tellraw({
-                        'text': line,
-                        'color': 'red'
-                    })
-                except socket.error:
-                    core.debug_print('telltime is disconnected from Minecraft')
-                    irc_config = core.config('irc')
-                    if 'main_channel' in irc_config:
-                        core.state['bot'].say(irc_config['main_channel'], 'Warning! Telltime is disconnected from Minecraft.')
-                    break
+            func(msg, color='red')
     
     localnow = datetime.now()
     utcnow = datetime.utcnow()
@@ -440,15 +429,17 @@ def tell_time(func=None, comment=False, restart=False):
             func('...Or redstoning. Or building. Whatever floats your boat.')
         elif localnow.hour == 3:
             func('Seems like you are having fun.')
-            time.sleep(60)
-            func("I heard that zombie over there talk trash about you. Thought you'd wanna know...")
+            mob = random.choice([None, 'zombie', 'Enderman'])
+            if mob is not None:
+                time.sleep(60)
+                func('I heard that ' + mob + " over there talk trash about you. Thought you'd wanna know...")
         elif localnow.hour == 4:
             func('Getting pretty late, huh?')
         elif localnow.hour == 5:
             warning('It is really getting late. You should go to sleep.')
         elif localnow.hour == 6:
             func('Are you still going, just starting or asking yourself the same thing?')
-        elif localnow.hour == 11 and localnow.minute < 5 and restart:
+        elif localnow.hour == 11 and restart:
             players = set(minecraft.online_players())
             if len(players):
                 warning('The server is going to restart in 5 minutes.')
