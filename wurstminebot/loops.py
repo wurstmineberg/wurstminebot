@@ -120,7 +120,7 @@ class InputLoop(threading.Thread):
                         else:
                             new_player = True
                     with open(os.path.join(core.config('paths')['logs'], 'logins.log'), 'a') as loginslog:
-                        print(minecraft.regexes.strptime(datetime.date.today(), timestamp).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog) # logs in UTC
+                        print(minecraft.regexes.strptime(date.today(), timestamp).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog) # logs in UTC
                     if joined:
                         if new_player:
                             welcome_message = (0, 2) # The “welcome to the server” message
