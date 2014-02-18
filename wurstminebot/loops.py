@@ -2,8 +2,10 @@ import sys
 
 from wurstminebot import commands
 from wurstminebot import core
+from datetime import date
 from datetime import datetime
 from wurstminebot import deaths
+from datetime import time as dtime
 import json
 import minecraft
 from wurstminebot import nicksub
@@ -13,6 +15,7 @@ import re
 import socket
 import threading
 import time
+from datetime import timezone
 import traceback
 
 class InputLoop(threading.Thread):
@@ -117,7 +120,7 @@ class InputLoop(threading.Thread):
                         else:
                             new_player = True
                     with open(os.path.join(core.config('paths')['logs'], 'logins.log'), 'a') as loginslog:
-                        print(timestamp + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog)
+                        print(minecraft.regexes.strptime(datetime.date.today(), timestamp).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog) # logs in UTC
                     if joined:
                         if new_player:
                             welcome_message = (0, 2) # The “welcome to the server” message
@@ -220,7 +223,7 @@ class InputLoop(threading.Thread):
                 except ValueError:
                     return # no death, continue parsing here or ignore this line
                 with open(os.path.join(core.config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
-                    print(death.timestamp.strftime('%Y-%m-%d %H:%M:%S') + ' ' + death.message(), file=deathslog)
+                    death.log(deathslog)
                 if core.state['death_tweets']:
                     if death.message() == core.state['last_death']:
                         comment = 'Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
@@ -304,7 +307,7 @@ class InputLoop(threading.Thread):
                     twid = 'deathtweets are disabled'
                 core.debug_print('[death] ' + death.irc_message(tweet_info=twid))
                 irc_config = core.config('irc')
-                if 'main_channel' in irc_config:
+                if 'main_channel' in irc_config and core.state.get('bot'):
                     core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
         except SystemExit:
             core.debug_print('Exit in log input loop')
