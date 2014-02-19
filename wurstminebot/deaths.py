@@ -217,14 +217,17 @@ messages = [
 ] # http://minecraft.gamepedia.com/Server#Death_messages
 
 class Death:
-    def __init__(self, log_line):
+    def __init__(self, log_line, time=None):
         for death in messages:
             match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death['regex'] + '$', log_line)
             if not match:
                 continue
             # death
             self.id = death['id']
-            self.timestamp = minecraft.regexes.strptime(datetime.date.today(), match.group(1)).astimezone(datetime.timezone.utc)
+            if time is None:
+                self.timestamp = minecraft.regexes.strptime(datetime.date.today(), match.group(1)).astimezone(datetime.timezone.utc) # not guaranteed to be accurate
+            else:
+                self.timestamp = time
             self.person = nicksub.person_or_dummy(match.group(2), context='minecraft')
             self.partial_message = log_line[len('[00:00:00] [Server thread/INFO]: ' + self.person.nick('minecraft') + ' '):]
             self.groups = match.groups()[2:]
