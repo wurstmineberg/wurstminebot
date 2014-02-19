@@ -971,7 +971,7 @@ class Restart(BaseCommand):
         else:
             # restart the Minecraft server
             core.update_topic(special_status='The server is restarting…')
-            if minecraft.restart(reply=self.reply):
+            if minecraft.restart(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
                 self.reply('Server restarted.')
             else:
                 self.reply('Could not restart the server!')
@@ -1029,7 +1029,7 @@ class Stop(BaseCommand):
             return Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
         # stop the Minecraft server
         core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
-        if minecraft.stop(reply=self.reply):
+        if minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
             self.reply('Server stopped.')
         else:
             self.warning('The server could not be stopped! D:')
@@ -1130,7 +1130,7 @@ class Update(BaseCommand):
                 version, is_snapshot, version_text = minecraft.update(version=self.arguments[0], snapshot=False, reply=self.reply)
         else: # !update [snapshot]
             core.update_topic(special_status='The server is being updated, wait a sec.')
-            version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=self.reply)
+            version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
         try:
             twid = core.tweet('Server updated to ' + version_text + '! Wheee! See ' + minecraft.wiki_version_link(version) + ' for details.')
         except core.TwitterError:
