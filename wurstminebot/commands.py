@@ -4,12 +4,13 @@ from wurstminebot import core
 from datetime import datetime
 import minecraft
 from wurstminebot import nicksub
-import threading
-from datetime import timedelta
+import os.path
 import random
 import re
 import requests
 import subprocess
+import threading
+from datetime import timedelta
 
 class BaseCommand:
     """base class for other commands, not a real command"""
