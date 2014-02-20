@@ -219,7 +219,7 @@ class InputLoop(threading.Thread):
                 break
             else:
                 try:
-                    death = deaths.Death(log_line, time=datetime.utcnow())
+                    death = deaths.Death(log_line, time=datetime.now(timezone.utc))
                 except ValueError:
                     return # no death, continue parsing here or ignore this line
                 with open(os.path.join(core.config('paths')['logs'], 'deaths.log'), 'a') as deathslog:
