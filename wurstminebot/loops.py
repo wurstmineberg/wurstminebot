@@ -109,7 +109,7 @@ class InputLoop(threading.Thread):
                             raise
                         except Exception as e:
                             minecraft.tellraw({
-                                'Error pasting mojira ticket: ' + str(e),
+                                'text': 'Error pasting mojira ticket: ' + str(e),
                                 'color': 'red'
                             })
                             core.debug_print('Exception while pasting mojira ticket:')
@@ -132,14 +132,14 @@ class InputLoop(threading.Thread):
                             raise
                         except core.TwitterError as e:
                             minecraft.tellraw({
-                                'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e),
+                                'text': 'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e),
                                 'color': 'red'
                             })
                             core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
                             core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
                         except Exception as e:
                             minecraft.tellraw({
-                                'Error while pasting tweet: ' + str(e),
+                                'text': 'Error while pasting tweet: ' + str(e),
                                 'color': 'red'
                             })
                             core.debug_print('Exception while pasting tweet:')
