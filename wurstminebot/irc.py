@@ -41,7 +41,9 @@ def endMOTD(sender, headers, message):
 
 def error_not_chan_op(sender, headers, message):
     irc_config = core.config('irc')
-    if 'main_channel' in irc_config:
+    if 'nickserv_password' in irc_config:
+        core.state['bot'].say('NickServ', 'IDENTIFY ' + irc_config['nickserv_password'])
+    elif 'main_channel' in irc_config:
         core.state['bot'].say(irc_config['main_channel'], random.choice([
             'To change the topic, I need to be a channel operator.',
             'op me pls',
