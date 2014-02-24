@@ -190,6 +190,8 @@ def death_games_log(attacker, target, success=True):
 
 def debug_print(msg):
     if state.get('is_daemon', False) or config('debug', False):
+        if state.get('is_daemon', False):
+            sys.stdout = open('/opt/wurstmineberg/log/wurstminebot.log', 'a')
         print('DEBUG] ' + msg)
 
 def minecraft_wiki_lookup(article, reply=None):
