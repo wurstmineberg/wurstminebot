@@ -264,8 +264,11 @@ def parse_timedelta(time_string):
 def paste_mojira(project, issue_id, link=False, tellraw=False):
     request = requests.get('http://bugs.mojang.com/browse/' + project + '-' + str(issue_id))
     if request.status_code == 200:
-        match = re.match('<title>\\[([A-Z]+)-([0-9]+)\\] (.+) - Mojira</title>', request.text.splitlines()[18])
-        if not match:
+        for line in request.text.splitlines():
+            match = re.match('<title>\\[([A-Z]+)-([0-9]+)\\] (.+) - M?o?[Jj][Ii][Rr][Aa]</title>', line)
+            if match:
+                break
+        else:
             if tellraw:
                 return {
                     'text': 'could not get title',

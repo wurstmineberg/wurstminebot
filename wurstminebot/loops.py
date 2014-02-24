@@ -73,7 +73,7 @@ class InputLoop(threading.Thread):
                         sender_person = nicksub.Person(player, context='minecraft')
                     except nicksub.PersonNotFoundError:
                         sender_person = None
-                    if message.startswith('!') and not re.match('!+$', message):
+                    if re.match('![A-Za-z]', message):
                         # command
                         cmd = message[1:].split(' ')
                         try:
