@@ -192,7 +192,7 @@ def privmsg(sender, headers, message):
                         core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
                         if core.config('debug', False) or core.state.get('is_daemon', False):
                             traceback.print_exc(file=sys.stdout)
-            elif message.startswith('!') and not re.match('!+$', message):
+            elif re.match('![A-Za-z]', message):
                 cmd = message[1:].split(' ')
                 if len(cmd):
                     try:

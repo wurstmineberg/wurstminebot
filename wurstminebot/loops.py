@@ -59,25 +59,18 @@ class InputLoop(threading.Thread):
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
                         player, message = match.group(1, 2)
-                        try:
-                            sender_person = nicksub.Person(player, context='minecraft')
-                        except nicksub.PersonNotFoundError:
-                            sender_person = None
-                        sender = player if sender_person is None else sender_person.irc_nick()
+                        sender_person = nicksub.person_or_dummy(player, context='minecraft')
+                        sender = sender_person.irc_nick()
                         subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
                         core.state['bot'].log(irc_config['main_channel'], 'ACTION', sender, [irc_config['main_channel']], subbed_message)
                         core.state['bot'].say(irc_config['main_channel'], '* ' + sender + ' ' + subbed_message)
                 elif match_type == 'chat_message':
                     player, message = match.group(1, 2)
-                    try:
-                        sender_person = nicksub.Person(player, context='minecraft')
-                    except nicksub.PersonNotFoundError:
-                        sender_person = None
-                    if re.match('![A-Za-z]', message):
-                        # command
+                    sender_person = nicksub.person_or_dummy(player, context='minecraft')
+                    if re.match('![A-Za-z]', message): # command
                         cmd = message[1:].split(' ')
                         try:
-                            commands.run(cmd, sender=(player if sender_person is None else sender_person), context='minecraft')
+                            commands.run(cmd, sender=sender_person, context='minecraft')
                         except SystemExit:
                             core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat')
                             core.cleanup()
@@ -97,11 +90,65 @@ class InputLoop(threading.Thread):
                             core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat:')
                             if core.config('debug', False):
                                 traceback.print_exc(file=sys.stdout)
-                    else:
-                        # chat message
+                    elif re.match('https?://bugs\\.mojang\\.com/browse/[A-Z]+-[0-9]+', message): # Mojira ticket
                         irc_config = core.config('irc')
                         if 'main_channel' in irc_config:
-                            sender = player if sender_person is None else sender_person.irc_nick()
+                            sender = sender_person.irc_nick()
+                            subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
+                            core.state['bot'].log(irc_config['main_channel'], 'PRIVMSG', sender, [irc_config['main_channel']], subbed_message)
+                            core.state['bot'].say(irc_config['main_channel'], '<' + sender + '> ' + subbed_message)
+                        try:
+                            match = re.match('https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/([A-Z]+)-([0-9]+)', message)
+                            project = match.group(2)
+                            issue_id = int(match.group(3))
+                            core.state['bot'].say(headers[0], core.paste_mojira(project, issue_id))
+                            minecraft.tellraw(core.paste_mojira(project, issue_id, tellraw=True))
+                        except SystemExit:
+                            core.debug_print('Exit while pasting mojira ticket')
+                            core.cleanup()
+                            raise
+                        except Exception as e:
+                            minecraft.tellraw({
+                                'Error pasting mojira ticket: ' + str(e),
+                                'color': 'red'
+                            })
+                            core.debug_print('Exception while pasting mojira ticket:')
+                            if core.config('debug', False) or core.state.get('is_daemon', False):
+                                traceback.print_exc(file=sys.stdout)
+                    elif re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+$', message): # tweet
+                        irc_config = core.config('irc')
+                        if 'main_channel' in irc_config:
+                            sender = sender_person.irc_nick()
+                            subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
+                            core.state['bot'].log(irc_config['main_channel'], 'PRIVMSG', sender, [irc_config['main_channel']], subbed_message)
+                            core.state['bot'].say(irc_config['main_channel'], '<' + sender + '> ' + subbed_message)
+                        try:
+                            twid = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)$', message).group(1)
+                            minecraft.tellraw(core.paste_tweet(twid, link=False, tellraw=True))
+                            botsay(core.paste_tweet(twid, link=False, tellraw=False))
+                        except SystemExit:
+                            core.debug_print('Exit while pasting tweet')
+                            core.cleanup()
+                            raise
+                        except core.TwitterError as e:
+                            minecraft.tellraw({
+                                'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e),
+                                'color': 'red'
+                            })
+                            core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
+                            core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
+                        except Exception as e:
+                            minecraft.tellraw({
+                                'Error while pasting tweet: ' + str(e),
+                                'color': 'red'
+                            })
+                            core.debug_print('Exception while pasting tweet:')
+                            if core.config('debug', False) or core.state.get('is_daemon', False):
+                                traceback.print_exc(file=sys.stdout)
+                    else: # chat message
+                        irc_config = core.config('irc')
+                        if 'main_channel' in irc_config:
+                            sender = sender_person.irc_nick()
                             subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
                             core.state['bot'].log(irc_config['main_channel'], 'PRIVMSG', sender, [irc_config['main_channel']], subbed_message)
                             core.state['bot'].say(irc_config['main_channel'], '<' + sender + '> ' + subbed_message)
