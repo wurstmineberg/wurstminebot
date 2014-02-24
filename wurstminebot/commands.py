@@ -11,6 +11,7 @@ import requests
 import subprocess
 import threading
 from datetime import timedelta
+from datetime import timezone
 
 class BaseCommand:
     """base class for other commands, not a real command"""
@@ -577,6 +578,7 @@ class LastSeen(BaseCommand):
                 if lastseen is None:
                     reply('I have not seen ' + player + ' on the server yet.')
                 else:
+                    lastseen= lastseen.astimezone(timezone.utc)
                     if lastseen.date() == datetime.utcnow().date():
                         datestr = 'today at ' + lastseen.strftime('%H:%M UTC')
                         tellraw_date = [
