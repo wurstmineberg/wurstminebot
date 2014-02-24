@@ -289,7 +289,7 @@ def paste_mojira(project, issue_id, link=False, tellraw=False):
                 }
             }
         else:
-            return '[' + project + '-' + issue_id + '] ' + title + (' [http://bugs.mojang.com/browse/' + project + '-' + str(issue_id) + ']' if link else '')
+            return '[' + project + '-' + str(issue_id) + '] ' + title + (' [http://bugs.mojang.com/browse/' + project + '-' + str(issue_id) + ']' if link else '')
     elif tellraw:
         return {
             'text': 'Error ' + str(request.status_code),
