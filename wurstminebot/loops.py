@@ -101,7 +101,8 @@ class InputLoop(threading.Thread):
                             match = re.match('https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/([A-Z]+)-([0-9]+)', message)
                             project = match.group(2)
                             issue_id = int(match.group(3))
-                            core.state['bot'].say(headers[0], core.paste_mojira(project, issue_id))
+                            if 'main_channel' in irc_config:
+                                core.state['bot'].say(irc_config['main_channel'], core.paste_mojira(project, issue_id))
                             minecraft.tellraw(core.paste_mojira(project, issue_id, tellraw=True))
                         except SystemExit:
                             core.debug_print('Exit while pasting mojira ticket')
@@ -125,7 +126,10 @@ class InputLoop(threading.Thread):
                         try:
                             twid = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)$', message).group(1)
                             minecraft.tellraw(core.paste_tweet(twid, link=False, tellraw=True))
-                            botsay(core.paste_tweet(twid, link=False, tellraw=False))
+                            if 'main_channel' in irc_config:
+                                pasted_tweet_irc = core.paste_tweet(twid, link=False, tellraw=False)
+                                for line in pasted_tweet_irc.splitlines():
+                                    core.state['bot'].say(irc_config['main_channel'], line)
                         except SystemExit:
                             core.debug_print('Exit while pasting tweet')
                             core.cleanup()
