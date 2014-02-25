@@ -22,6 +22,8 @@ def config(person_id=None):
         raise PersonNotFoundError('person with id ' + str(person_id) + ' not found')
 
 def set_config(config_dict):
+    if not isinstance(config_dict, dict):
+        config_dict = {'people': config_dict}
     with open(CONFIG_FILE, 'w') as config_file:
         json.dump(config_dict, config_file, sort_keys=True, indent=4, separators=(',', ': '))
 
