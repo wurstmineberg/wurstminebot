@@ -230,7 +230,7 @@ class Alias(BaseCommand):
     def parse_args(self):
         if len(self.arguments) == 0:
             return False
-        if not re.match('[A-Za-z]+', self.arguments[0]):
+        if not re.match('[A-Za-z]+$', self.arguments[0]):
             return False
         return True
     
