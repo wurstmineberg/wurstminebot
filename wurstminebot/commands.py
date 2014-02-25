@@ -576,9 +576,9 @@ class LastSeen(BaseCommand):
             with core.state['log_lock']:
                 lastseen = minecraft.last_seen(person.minecraft)
                 if lastseen is None:
-                    reply('I have not seen ' + player + ' on the server yet.')
+                    self.reply('I have not seen ' + player + ' on the server yet.')
                 else:
-                    lastseen= lastseen.astimezone(timezone.utc)
+                    lastseen = lastseen.astimezone(timezone.utc)
                     if lastseen.date() == datetime.utcnow().date():
                         datestr = 'today at ' + lastseen.strftime('%H:%M UTC')
                         tellraw_date = [
