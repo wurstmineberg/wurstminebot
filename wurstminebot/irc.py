@@ -38,6 +38,9 @@ def endMOTD(sender, headers, message):
     if core.state.get('input_loop') is None:
         core.state['input_loop'] = loops.InputLoop()
         core.state['input_loop'].start()
+    if core.state.get('twitter_stream') is None and core.twitter is not None:
+        core.state['twitter_stream'] = loops.TwitterStream(core.twitter)
+        core.state['twitter_stream'].start()
 
 def error_not_chan_op(sender, headers, message):
     irc_config = core.config('irc')

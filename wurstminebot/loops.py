@@ -415,6 +415,29 @@ class TimeLoop(threading.Thread):
     def stop(self):
         self.stopped = True
 
+class TwitterStream(threading.Thread):
+    def __init__(self, twitter_api):
+        super().__init__(name='wurstminebot TwitterStream')
+        self.stopped = False
+        self.twitter_api = twitter_api
+    
+    def run(self):
+        response = self.twitter_api.request('user')
+        for tweet in response:
+            if self.stopped:
+                break
+            if not ('id' in tweet and 'entities' in tweet and 'user_mentions' in tweet['entities']):
+                continue
+            for entity in tweet['entity']['user_mentions']:
+                if entity.get('screen_name') == core.config('twitter').get('screen_name'):
+                    break
+            else:
+                continue
+            minecraft.tellraw(core.paste_tweet(tweet['id'], link=True, tellraw=True))
+            irc_config = core.config('irc')
+            if core.state.get('bot') and 'main_channel' in irc_config:
+                core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(tweet['id'], link=True))
+
 def log_tail(timeout=0.5):
     logpath = os.path.join(core.config('paths')['minecraft_server'], 'logs', 'latest.log')
     try:

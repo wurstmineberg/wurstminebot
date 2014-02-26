@@ -59,6 +59,9 @@ def cleanup():
     if state.get('time_loop') is not None:
         state['time_loop'].stop()
     state['time_loop'] = None
+    if state.get('twitter_stream') is not None:
+        state['twitter_stream'].stop()
+    state['twitter_stream'] = None
     if state.get('bot') is not None:
         state['bot'].stop()
     state['bot'] = None
@@ -508,7 +511,8 @@ state = {
     'last_death': '',
     'log_lock': threading.Lock(),
     'online_players': [],
-    'time_loop': None
+    'time_loop': None,
+    'twitter_stream': None
 }
 
 try:
