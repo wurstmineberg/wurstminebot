@@ -32,6 +32,8 @@ def update_config(person_id, path, value=None, delete=False):
     full_config_dict = config_dict
     if isinstance(config_dict, dict):
         config_dict = config_dict['people']
+    else:
+        full_config_dict = {'people': config_dict}
     person_index = index(person_id)
     if len(path) > 1:
         for key in path[:-1]:
@@ -47,15 +49,9 @@ def update_config(person_id, path, value=None, delete=False):
             config_dict[path[-1]] = value
     else:
         if delete:
-            if isinstance(full_config_dict, dict):
-                del full_config_dict['people'][person_index]
-            else:
-                del full_config_dict[person_index]
+            del full_config_dict['people'][person_index]
         else:
-            if isinstance(full_config_dict, dict):
-                full_config_dict['people'][person_index] = value
-            else:
-                full_config_dict[person_index] = value
+            full_config_dict['people'][person_index] = value
     set_config(full_config_dict)
 
 class PersonNotFoundError(Exception):
