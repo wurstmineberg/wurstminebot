@@ -29,24 +29,28 @@ def set_config(config_dict):
 
 def update_config(person_id, path, value=None, delete=False):
     config_dict = config()
-    full_config_dict = config_dict
     if isinstance(config_dict, dict):
-        config_dict = config_dict['people']
+        full_config_dict = config_dict
     else:
         full_config_dict = {'people': config_dict}
+    for person_dict in full_config_dict['people']:
+        if person_dict['id'] == person_id:
+            break
+    else:
+        raise KeyError('person with id ' + str(person_id) + ' not found')
     person_index = index(person_id)
     if len(path) > 1:
         for key in path[:-1]:
-            if not isinstance(config_dict, dict):
+            if not isinstance(person_dict, dict):
                 raise KeyError('Trying to update a non-dict config key')
-            if key not in config_dict:
-                config_dict[key] = {}
-            config_dict = config_dict[key]
+            if key not in person_dict:
+                person_dict[key] = {}
+            person_dict = person_dict[key]
     if len(path) > 0:
         if delete:
-            del config_dict[path[-1]]
+            del person_dict[path[-1]]
         else:
-            config_dict[path[-1]] = value
+            person_dict[path[-1]] = value
     else:
         if delete:
             del full_config_dict['people'][person_index]
