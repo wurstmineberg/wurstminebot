@@ -2,7 +2,6 @@ import sys
 
 sys.path.append('/opt/py')
 
-import TwitterAPI
 from datetime import datetime
 import json
 import minecraft
@@ -516,6 +515,7 @@ state = {
 }
 
 try:
+    import TwitterAPI
     twitter = TwitterAPI.TwitterAPI(config('twitter')['consumer_key'], config('twitter')['consumer_secret'], config('twitter')['access_token_key'], config('twitter')['access_token_secret'])
 except KeyError:
     twitter = None

@@ -1,9 +1,8 @@
-import sys
-
-import datetime
+from datetime import date
 import minecraft
 from wurstminebot import nicksub
 import re
+from datetime import timezone
 
 messages = [
     {
@@ -225,7 +224,7 @@ class Death:
             # death
             self.id = death['id']
             if time is None:
-                self.timestamp = minecraft.regexes.strptime(datetime.date.today(), match.group(1)).astimezone(datetime.timezone.utc) # not guaranteed to be accurate
+                self.timestamp = minecraft.regexes.strptime(date.today(), match.group(1)).astimezone(timezone.utc) # not guaranteed to be accurate
             else:
                 self.timestamp = time
             self.person = nicksub.person_or_dummy(match.group(2), context='minecraft')
@@ -240,7 +239,7 @@ class Death:
         return victim_irc + ' ' + nicksub.textsub(self.partial_message, 'minecraft', 'irc', strict=True) + ('' if tweet_info is None else ' [' + str(tweet_info) + ']')
     
     def log(self, file_obj=None):
-        log_message = self.timestamp.astimezone(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S') + ' ' + self.message()
+        log_message = self.timestamp.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') + ' ' + self.message()
         if file_obj is None:
             print(log_message)
         else:

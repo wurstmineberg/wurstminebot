@@ -7,7 +7,6 @@ from wurstminebot import nicksub
 import os.path
 import random
 import re
-import requests
 import subprocess
 import threading
 from datetime import timedelta

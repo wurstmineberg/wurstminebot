@@ -2,10 +2,8 @@ import sys
 
 from wurstminebot import commands
 from wurstminebot import core
-from datetime import date
 from datetime import datetime
 from wurstminebot import deaths
-from datetime import time as dtime
 import json
 import minecraft
 from wurstminebot import nicksub

@@ -8,7 +8,6 @@ import minecraft
 from wurstminebot import nicksub
 import random
 import re
-import threading
 import traceback
 
 def endMOTD(sender, headers, message):
