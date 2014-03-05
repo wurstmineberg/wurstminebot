@@ -426,10 +426,7 @@ class TwitterStream(threading.Thread):
                 break
             if not ('id' in tweet and 'entities' in tweet and 'user_mentions' in tweet['entities']):
                 continue
-            for entity in tweet['entity']['user_mentions']:
-                if entity.get('screen_name') == core.config('twitter').get('screen_name'):
-                    break
-            else:
+            if not any(entity.get('screen_name') == core.config('twitter').get('screen_name') for entity in tweet.get('entities', {}).get('user_mentions', [])):
                 continue
             minecraft.tellraw(core.paste_tweet(tweet['id'], link=True, tellraw=True))
             irc_config = core.config('irc')
