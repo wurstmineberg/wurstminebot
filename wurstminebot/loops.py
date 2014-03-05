@@ -435,6 +435,13 @@ class TwitterStream(threading.Thread):
             irc_config = core.config('irc')
             if core.state.get('bot') and 'main_channel' in irc_config:
                 core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(tweet['id'], link=True))
+    
+    def start(self):
+        self.stopped = False
+        super().start()
+    
+    def stop(self):
+        self.stopped = True
 
 def log_tail(timeout=0.5):
     logpath = os.path.join(core.config('paths')['minecraft_server'], 'logs', 'latest.log')
