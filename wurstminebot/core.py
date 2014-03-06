@@ -300,7 +300,7 @@ def paste_mojira(project, issue_id, link=False, tellraw=False):
     else:
         return 'Error ' + str(request.status_code)
 
-def paste_tweet(status, link=False, tellraw=False):
+def paste_tweet(status, link=False, tellraw=False, multi_line='all'):
     r = twitter.request('statuses/show/:' + str(status))
     if isinstance(r, TwitterAPI.TwitterResponse):
         j = r.response.json()
@@ -385,7 +385,13 @@ def paste_tweet(status, link=False, tellraw=False):
             ] if link else [])
         }
     else:
-        return tweet_author + text + ((' [' + tweet_url + ']') if link else '')
+        if multi_line == 'truncate':
+            text = text.splitlines()[0] + ' [… ' + (' ' + tweet_url + ']' if link else ']')
+        elif multi_line == 'collapse':
+            text = re.sub('\n', ' ', text) + ((' [' + tweet_url + ']') if link else '')
+        else:
+            text += ((' [' + tweet_url + ']') if link else '')
+        return tweet_author + text
 
 def run():
     from wurstminebot import loops

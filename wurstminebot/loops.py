@@ -431,7 +431,7 @@ class TwitterStream(threading.Thread):
             minecraft.tellraw(core.paste_tweet(tweet['id'], link=True, tellraw=True))
             irc_config = core.config('irc')
             if core.state.get('bot') and 'main_channel' in irc_config:
-                core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(tweet['id'], link=True))
+                core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(tweet['id'], link=True, multi_line='truncate'))
     
     def start(self):
         self.stopped = False
