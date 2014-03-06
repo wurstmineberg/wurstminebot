@@ -56,11 +56,14 @@ class BaseCommand:
                 minecraft.tellraw(tellraw_reply, self.sender.minecraft)
         elif self.channel is None:
             if self.addressing is None:
-                core.state['bot'].say(self.sender.irc_nick(respect_highlight_option=False), irc_reply)
+                for line in irc_reply.splitlines():
+                    core.state['bot'].say(self.sender.irc_nick(respect_highlight_option=False), line)
             else:
-                core.state['bot'].say(self.addressing.irc_nick(respect_highlight_option=False), '(from ' + self.sender.irc_nick(respect_highlight_option=False) + ') ' + irc_reply)
+                for line in ('(from ' + self.sender.irc_nick(respect_highlight_option=False) + ') ' + irc_reply).splitlines():
+                    core.state['bot'].say(self.addressing.irc_nick(respect_highlight_option=False), line)
         else:
-            core.state['bot'].say(self.channel, (self.sender.irc_nick(respect_highlight_option=False) if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False)) + ': ' + irc_reply)
+            for line in irc_reply.splitlines():
+                core.state['bot'].say(self.channel, (self.sender.irc_nick(respect_highlight_option=False) if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False)) + ': ' + line)
 
     def run(self):
         raise NotImplementedError('Implement run method of Command subclass')
