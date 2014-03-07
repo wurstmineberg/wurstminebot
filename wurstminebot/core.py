@@ -386,7 +386,8 @@ def paste_tweet(status, link=False, tellraw=False, multi_line='all'):
         }
     else:
         if multi_line == 'truncate':
-            text = text.splitlines()[0] + ' [… ' + (' ' + tweet_url + ']' if link else ']')
+            lines = text.splitlines()
+            text = lines[0] + (' [… ' if len(lines) > 1 else ' [') + (' ' + tweet_url + ']' if link else ']')
         elif multi_line == 'collapse':
             text = re.sub('\n', ' ', text) + ((' [' + tweet_url + ']') if link else '')
         else:
