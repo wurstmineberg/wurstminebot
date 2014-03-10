@@ -280,7 +280,7 @@ def paste_mojira(project, issue_id, link=False, tellraw=False):
                 }
             else:
                 return 'could not get title'
-        title = match.group(3)
+        title = xml.sax.saxutils.unescape(match.group(3))
         if tellraw:
             return {
                 'text': '[' + project + '-' + str(issue_id) + '] ' + title,
