@@ -279,11 +279,11 @@ class InputLoop(threading.Thread):
                     elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
                         comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
                         try:
-                            target = nicksub.Person(death.groups[0], context='minecraft')
+                            attacker = nicksub.Person(death.groups[0], context='minecraft')
                         except nicksub.PersonNotFoundError:
                             pass # don't automatically log
                         else:
-                            core.death_games_log(death.person, target, success=True)
+                            core.death_games_log(attacker, death.person, success=True)
                     else:
                         death_comments = dict(((1, index), 1.0) for index in range(len(core.config('comment_lines').get('death', []))))
                         for index, adv_death_comment in enumerate(core.config('advanced_comment_lines').get('death', [])):
