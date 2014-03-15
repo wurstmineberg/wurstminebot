@@ -4,7 +4,10 @@ class Text:
     def __add__(self, other):
         if isinstance(other, str):
             other = LiteralText(other)
-        return ConcatenatedText(self, other)
+        if isinstance(other, Text):
+            return ConcatenatedText(self, other)
+        else:
+            return NotImplemented
     
     def __init__(self, from_string, context=None):
         pass #TODO parse from_string
@@ -12,12 +15,18 @@ class Text:
     def __or__(self, other):
         if isinstance(other, str):
             other = LiteralText(other)
-        return RandomText(self, other)
+        if isinstance(other, Text):
+            return RandomText(self, other)
+        else:
+            return NotImplemented
     
     def __radd__(self, other):
         if isinstance(other, str):
             other = LiteralText(other)
-        return ConcatenatedText(other, self)
+        if isinstance(other, Text):
+            return ConcatenatedText(other, self)
+        else:
+            return NotImplemented
     
     __ror__ = __or__
     
