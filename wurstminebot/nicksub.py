@@ -2,6 +2,7 @@ import sys
 
 import json
 import re
+from wurstminebot import textsub
 
 CONFIG_FILE = '/opt/wurstmineberg/config/people.json'
 
@@ -113,7 +114,7 @@ def twitterNicks(include_ids=False, twitter_at_prefix=False):
             formatted_nick = ('@' + person['twitter']) if twitter_at_prefix else person['twitter']
             yield (person['id'], formatted_nick) if include_ids else formatted_nick
 
-class BasePerson:
+class BasePerson(textsub.Text):
     def __eq__(self, other):
         try:
             return self.id == other.id
@@ -178,6 +179,15 @@ class BasePerson:
         opts[option_name] = value
         self.options = opts
     
+    def to_string(self, context=None, char_limit=float('inf')):
+        if context is None:
+            ret = self.display_name()
+        else:
+            ret = self.nick(context, twitter_at_prefix=True)
+        if len(ret) > char_limit:
+            raise ValueError('the person name ' + repr(ret) + ' does not fit into the character limit of ' + repr(char_limit))
+        return ret
+    
     def whitelisted(self):
         return self.status in ['founding', 'later', 'postfreeze']
 
@@ -222,6 +232,9 @@ class Person(BasePerson):
                 raise PersonNotFoundError('person with twitter nick ' + str(id_or_nick) + ' not found')
         else:
             raise ValueError('unknown context: ' + str(context))
+    
+    def __repr__(self):
+        return 'wurstminebot.nicksub.Person(' + self.id + ')'
     
     @property
     def description(self):
