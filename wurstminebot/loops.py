@@ -161,17 +161,23 @@ class InputLoop(threading.Thread):
                     except nicksub.PersonNotFoundError:
                         person = None
                     joined = bool(match.group(3) == 'joined')
-                    with open(os.path.join(core.config('paths')['logs'], 'logins.log')) as loginslog:
-                        for line in loginslog:
-                            if player in line:
-                                new_player = False
-                                break
-                        else:
-                            new_player = True
+                    if person is None:
+                        unknown_player = True
+                    else:
+                        unknown_player = False
+                        with open(os.path.join(core.config('paths')['logs'], 'logins.log')) as loginslog:
+                            for line in loginslog:
+                                if person.id in line:
+                                    new_player = False
+                                    break
+                            else:
+                                new_player = True
                     with open(os.path.join(core.config('paths')['logs'], 'logins.log'), 'a') as loginslog:
-                        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ' ' + player + ' ' + ('joined' if joined else 'left') + ' the game', file=loginslog) # logs in UTC
+                        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), ('?' if person is None else person.id), ('joined' if joined else 'left'), player, file=loginslog) # logs in UTC
                     if joined:
-                        if new_player:
+                        if unknown_player:
+                            welcome_message = (0, 3) # The “you're not in the database” message
+                        elif new_player:
                             welcome_message = (0, 2) # The “welcome to the server” message
                         else:
                             welcome_messages = dict(((1, index), 1.0) for index in range(len(core.config('comment_lines').get('server_join', []))))
@@ -237,6 +243,11 @@ class InputLoop(threading.Thread):
                             minecraft.tellraw({
                                 'text': 'Hello ' + player + '. Welcome to the server!',
                                 'color': 'gray'
+                            }, player)
+                        elif welcome_message == (0, 3):
+                            minecraft.tellraw({
+                                'color': 'gray',
+                                'text': 'Hello ' + player + '. Do I know you?'
                             }, player)
                         elif welcome_message[0] == 1:
                             minecraft.tellraw({
