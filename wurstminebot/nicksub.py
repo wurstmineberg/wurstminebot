@@ -182,11 +182,13 @@ class BasePerson:
         return self.status in ['founding', 'later', 'postfreeze']
 
 class Person(BasePerson):
-    def __init__(self, id_or_nick, context=None, strict=True):
+    def __init__(self, id_or_nick, context=None, strict=False):
         if id_or_nick is None:
             raise TypeError('id or nick may not be None')
         if context is None:
             self.id = id_or_nick
+            if not strict:
+                self.id = self.id.lower()
             config(self.id) # raises PersonNotFoundError if the id is invalid
         elif context == 'irc':
             for id, irc_nick in ircNicks(mode='all', include_ids=True):
