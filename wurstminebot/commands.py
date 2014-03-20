@@ -1049,7 +1049,8 @@ class Time(BaseCommand):
     """reply with the current time"""
     
     def run(self):
-        core.telltime(func=self.reply)
+        from wurstminebot import loops
+        loops.tell_time(func=self.reply)
 
 class Topic(BaseCommand):
     """change the main channel's topic"""
