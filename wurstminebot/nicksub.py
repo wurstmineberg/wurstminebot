@@ -349,6 +349,19 @@ class Person(BasePerson):
     def status(self):
         update_config(self.id, ['status'], delete=True)
     
+    def to_tellraw(self, default_color=None):
+        if self.minecraft is not None:
+            ret = {
+                'hoverEvent': {
+                    'action': 'show_text',
+                    'value': self.id
+                },
+                'text': self.minecraft
+            }
+        if default_color is not None:
+            ret['color'] = default_color
+        return ret
+    
     @property
     def twitter(self):
         return config(self.id).get('twitter')

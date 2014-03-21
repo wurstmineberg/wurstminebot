@@ -35,16 +35,42 @@ class Text:
     
     def to_string(self, context=None, char_limit=float('inf')):
         return ''
+    
+    def to_tellraw(self, default_color=None):
+        if default_color is None:
+            return self.to_string(context='minecraft')
+        return {
+            'color': default_color,
+            'text': self.to_string(context='minecraft')
+        }
 
 class ConcatenatedText(Text):
-    def __init__(self, left_text, right_text):
-        self.left_text = left_text
-        self.right_text = right_text
+    def __init__(self, *texts):
+        self.texts = texts
     
     def to_string(self, context=None, char_limit=float('inf')):
         #TODO try shorter left strings
-        left_string = self.left_text.to_string(context=context, char_limit=char_limit)
-        return left_string + self.right_text.to_string(context=context, char_limit=char_limit - len(left_string))
+        ret = ''
+        for text in self.texts:
+            ret += text.to_string(context=context, char_limit=char_limit - len(ret))
+        return ret
+    
+    def to_tellraw(self, default_color=None):
+        ret = []
+        for text in self.texts:
+            tellraw_section = text.to_tellraw(default_color=default_color)
+            if isinstance(tellraw_section, str):
+                if default_color is None:
+                    tellraw_section = {'text': tellraw_section}
+                else:
+                    tellraw_section = {
+                        'color': default_color,
+                        'text': tellraw_section
+                    }
+            if isinstance(tellraw_section, dict):
+                tellraw_section = [tellraw_section]
+            ret += tellraw_section
+        return ret
 
 class LiteralText(Text):
     def __init__(self, from_string):
@@ -69,3 +95,6 @@ class RandomText(Text):
                 continue
         else:
             raise ValueError('none of the random texts fit into the character limit of ' + repr(char_limit))
+    
+    def to_tellraw(self, default_color=None):
+        return random.choice(self.choices).to_tellraw(default_color=default_color)
