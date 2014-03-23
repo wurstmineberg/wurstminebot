@@ -1071,14 +1071,23 @@ class Status(BaseCommand):
             if version is None:
                 self.reply('unknown Minecraft version')
             else:
-                self.reply('Minecraft version ' + version, {
+                try:
+                    minecraft_wiki_result = requests.get('http://minecraft.gamepedia.com/api.php?format=json&action=query&titles=' + urllib.parse.quote(version)).json()
+                    for page_info in minecraft_wiki_result['query']['pages'].values():
+                        if 'missing' in page_info:
+                            raise KeyError('could not get version URL')
+                        else:
+                            version_url = 'http://minecraft.gamepedia.com/' + page_info['title']
+                except:
+                    version_url = 'http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if 'pre' in version or version[2:3] == 'w' else '#') + version
+                self.reply('Minecraft version ' + version + ' [' + version_url + ']', {
                     'text': 'Minecraft version ',
                     'extra': [
                         {
                             'text': version,
                             'clickEvent': {
                                 'action': 'open_url',
-                                'value': 'http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if 'pre' in version or version[2:3] == 'w' else '#') + version
+                                'value': version_url
                             }
                         }
                     ]
