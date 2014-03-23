@@ -12,6 +12,7 @@ import subprocess
 import threading
 from datetime import timedelta
 from datetime import timezone
+import urllib.parse
 
 class BaseCommand:
     """base class for other commands, not a real command"""
@@ -1080,18 +1081,20 @@ class Status(BaseCommand):
                             version_url = 'http://minecraft.gamepedia.com/' + page_info['title']
                 except:
                     version_url = 'http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if 'pre' in version or version[2:3] == 'w' else '#') + version
-                self.reply('Minecraft version ' + version + ' [' + version_url + ']', {
-                    'text': 'Minecraft version ',
-                    'extra': [
-                        {
-                            'text': version,
-                            'clickEvent': {
-                                'action': 'open_url',
-                                'value': version_url
-                            }
-                        }
-                    ]
-                })
+                self.reply('Minecraft version ' + version + ' [' + version_url + ']', [
+                    {
+                        'color': 'gold',
+                        'text': 'Minecraft version '
+                    },
+                    {
+                        'clickEvent': {
+                            'action': 'open_url',
+                            'value': version_url
+                        },
+                        'color': 'gold',
+                        'text': version
+                    }
+                ])
         else:
             self.reply('The server is currently offline.')
         response = requests.get('http://status.mojang.com/check')
