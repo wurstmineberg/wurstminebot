@@ -465,7 +465,7 @@ class Help(BaseCommand):
     def run(self):
         if len(self.arguments) == 0:
             self.reply('Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.')
-            self.reply('Execute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.', 'Execute "help commands" for a list of commands, or "help <command>" (replace <command> with a command name) for help on a specific command.')
+            self.reply('Execute “Help commands” for a list of commands, or “Help <command>” (replace <command> with a command name) for help on a specific command.', 'Execute "Help commands" for a list of commands, or "Help <command>" (replace <command> with a command name) for help on a specific command.')
             help_text = 'To execute a command, send it to me in private chat (here) or address me in a channel (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
             help_text_tellraw = 'You can execute a command by typing "!<command>..." in the in-game chat or an IRC channel. You can also send the command to me in a private IRC query (without the "!") or address me in a channel (like this: "wurstminebot: <command>...").'
             self.reply(help_text, help_text_tellraw)
@@ -475,7 +475,7 @@ class Help(BaseCommand):
                 help_text = 'Currently defined aliases: ' + ', '.join(sorted(list(core.config('aliases').keys()))) + '. For more information, execute'
             else:
                 help_text = 'No aliases are currently defined. For more information, execute'
-            self.reply(help_text + ' “help alias”.', help_text + ' "help alias".')
+            self.reply(help_text + ' “Help alias”.', help_text + ' "Help alias".')
         elif self.arguments[0].lower() == 'commands':
             num_aliases = len(list(core.config('aliases').keys()))
             self.reply('Available commands: ' + ', '.join(sorted([command_class.__name__ for command_class in classes])) + (', and ' + str(num_aliases) + ' aliases.' if num_aliases > 0 else '.'))
@@ -486,9 +486,9 @@ class Help(BaseCommand):
             elif alias_dict.get('type') == 'disable':
                 self.reply(self.arguments[0].lower() + ' is disabled.')
             elif alias_dict.get('type') == 'reply':
-                self.reply(self.arguments[0].lower() + ' is an echo alias.')
+                self.reply(self.arguments[0].lower() + ' is an echo alias. Execute it to see what the reply is.')
             elif alias_dict.get('type') == 'say':
-                self.reply(self.arguments[0].lower() + ' is an alias.')
+                self.reply(self.arguments[0].lower() + ' is an alias. Execute it to see what it stands for.')
             else:
                 self.reply(self.arguments[0] + ' is a broken alias.')
         else:
