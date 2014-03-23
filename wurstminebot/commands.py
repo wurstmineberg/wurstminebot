@@ -1102,6 +1102,10 @@ class Status(BaseCommand):
                             'text': ' '
                         },
                         {
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': key
+                            },
                             'color': 'gold',
                             'text': key
                         },
