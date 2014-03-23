@@ -1059,6 +1059,7 @@ class Status(BaseCommand):
     """print some server status"""
     
     def run(self):
+        import requests
         if minecraft.status():
             if self.context != 'minecraft':
                 players = minecraft.online_players()
@@ -1084,6 +1085,35 @@ class Status(BaseCommand):
                 })
         else:
             self.reply('The server is currently offline.')
+        response = requests.get('http://status.mojang.com/check')
+        for item in response.json():
+            for key, value in item.items():
+                if value != 'green':
+                    self.reply('Mojang service ' + key + ' has status ' + json.dumps(value), [
+                        {
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': 'http://status.mojang.com/check'
+                            },
+                            'color': 'gold',
+                            'text': 'Mojang service'
+                        },
+                        {
+                            'text': ' '
+                        },
+                        {
+                            'color': 'gold',
+                            'text': key
+                        },
+                        {
+                            'color': 'gold',
+                            'text': ' has status '
+                        },
+                        {
+                            'color': value if value in ('yellow', 'red') else 'gold',
+                            'text': json.dumps(value)
+                        }
+                    ])
 
 class Stop(BaseCommand):
     """stop the Minecraft server or the bot"""
