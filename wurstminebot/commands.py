@@ -989,6 +989,72 @@ class Restart(BaseCommand):
                 self.reply('Could not restart the server!')
             core.update_topic()
 
+class Retweet(BaseCommand):
+    """retweet a tweet with the bot's twitter account"""
+    
+    usage = '(<url> | <status_id>) [nopaste]'
+    
+    def parse_args(self):
+        if len(self.arguments) != 1:
+            if len(self.arguments) != 2:
+                return False
+            if self.arguments[1].lower() != 'nopaste':
+                return False
+        if not re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+', self.arguments[0]):
+            try:
+                int(self.arguments[0])
+            except ValueError:
+                return False
+        return True
+    
+    def permission_level(self):
+        return 4
+    
+    def run(self):
+        import TwitterAPI
+        if len(self.arguments) > 1:
+            paste = self.arguments[1].lower() != 'nopaste'
+        else:
+            paste = True
+        match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', self.arguments[0])
+        twid = int(match.group(1) if match else self.arguments[0])
+        r = core.twitter.request('statuses/retweet/:' + twid)
+        if isinstance(r, TwitterAPI.TwitterResponse):
+            j = r.response.json()
+        else:
+            j = r.json()
+        if r.status_code == 200:
+            twid = j['id']
+        else:
+            first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
+            raise core.TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code, errors=j.get('errors', []))
+        url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
+        if paste:
+            if self.context == 'minecraft':
+                minecraft.tellraw({
+                    'text': '',
+                    'extra': [
+                        {
+                            'text': url,
+                            'color': 'gold',
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': url
+                            }
+                        }
+                    ]
+                })
+            else:
+                minecraft.tellraw(core.paste_tweet(twid, tellraw=True, link=True))
+            if self.channel is not None:
+                core.state['bot'].say(self.channel, url)
+            irc_config = core.config('irc')
+            if 'main_channel' in irc_config and self.channel != irc_config['main_channel']:
+                for line in core.paste_tweet(twid, link=True).splitlines():
+                    core.state['bot'].say(irc_config['main_channel'], line)
+        else:
+            self.reply(url)
+
 class Status(BaseCommand):
     """print some server status"""
     
@@ -1082,7 +1148,7 @@ class Tweet(BaseCommand):
     def run(self):
         status = nicksub.textsub(' '.join(self.arguments), self.context, 'twitter')
         twid = core.tweet(status)
-        url = 'https://twitter.com/wurstmineberg/status/' + str(twid)
+        url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
         if self.context == 'minecraft':
             minecraft.tellraw({
                 'text': '',
