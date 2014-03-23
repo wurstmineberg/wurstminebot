@@ -1349,4 +1349,4 @@ def run(command_name, sender, context, channel=None):
     command.run()
     return True
 
-classes = (command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand')
+classes = [command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand']
