@@ -2,6 +2,7 @@ import sys
 
 from wurstminebot import core
 from datetime import datetime
+import inspect
 import minecraft
 from wurstminebot import nicksub
 import os.path
@@ -1239,32 +1240,4 @@ def run(command_name, sender, context, channel=None):
     command.run()
     return True
 
-classes = [
-    AchievementTweet,
-    Alias,
-    Cloud,
-    Command,
-    DeathGames,
-    DeathTweet,
-    FixStatus,
-    Help,
-    Join,
-    LastSeen,
-    Leak,
-    MinecraftWiki,
-    Option,
-    PasteMojira,
-    PasteTweet,
-    People,
-    Quit,
-    Raw,
-    Restart,
-    Status,
-    Stop,
-    Time,
-    Topic,
-    Tweet,
-    Update,
-    Version,
-    Whitelist
-]
+classes = (command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand')
