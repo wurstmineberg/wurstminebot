@@ -47,12 +47,11 @@ def start(context):
         print('[ !! ] Wurstminebot is already running!')
         return
     else:
-        print('[ ok ]')
         # Removes the PID file
         stop(context)
     print('[....] Daemonizing', end='\r')
     with context:
-        print('[ ok ]')
+        print('[ ** ] Starting wurstminebot version', __version__)
         core.state['is_daemon'] = True
         core.run()
         print('[ ** ] Terminating')
