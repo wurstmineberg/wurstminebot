@@ -1292,7 +1292,7 @@ class Whitelist(BaseCommand):
                 screen_name = self.arguments[2][1:] if self.arguments[2].startswith('@') else self.arguments[2]
             else:
                 screen_name = None
-            minecraft.whitelist_add(self.arguments[0], self.arguments[1])
+            minecraft.whitelist_add(self.arguments[0], self.arguments[1], people_file=core.config('paths').get('people'))
         except ValueError:
             self.warning('id ' + self.arguments[0] + ' already exists')
         else:
