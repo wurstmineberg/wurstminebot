@@ -814,7 +814,7 @@ class PasteTweet(BaseCommand):
 class People(BaseCommand):
     """people.json management"""
     
-    usage = '[<person> [<attribute> [<value>]]]'
+    usage = '[<person> [<attribute> [<value>...]]]'
     
     def parse_args(self):
         if len(self.arguments) >= 1:
