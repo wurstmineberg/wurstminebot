@@ -24,9 +24,9 @@ class ErrorMessage:
     @staticmethod
     def unknown(command=None):
         if command is None or command == '':
-            return 'Unknown command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
+            return 'Unknown command. Execute “Help commands” for a list of commands, or “Help aliases” for a list of aliases.'
         else:
-            return '“' + str(command) + '” is not a command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
+            return '“' + str(command) + '” is not a command. Execute “Help commands” for a list of commands, or “Help aliases” for a list of aliases.'
     
     @staticmethod
     def permission(level=0):
