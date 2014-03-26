@@ -501,6 +501,42 @@ class Help(BaseCommand):
             else:
                 self.reply(core.ErrorMessage.unknown(self.arguments[0]))
 
+class Invite(BaseCommand):
+    """invite a new player"""
+    
+    usage = '<unique_id> <minecraft_name> [<twitter_username>]'
+    
+    def parse_args(self):
+        if len(self.arguments) not in range(2, 4):
+            return False
+        if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
+            return False # <unique_id> is not a valid Wurstmineberg ID, must be alphanumeric, 2 to 15 characters, and start with a letter
+        try:
+            nicksub.Person(self.arguments[0], strict=False)
+        except:
+            pass # person with this ID does not exist
+        else:
+            return False # person with this ID already exists
+        if not re.match(minecraft.regexes.player, self.arguments[1]):
+            return False # <minecraft_name> is not a valid Minecraft nickname
+        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+            return False # <twitter_username> is invalid, see https://support.twitter.com/articles/101299
+        return True
+    
+    def permission_level(self):
+        return 3
+    
+    def run(self):
+        if len(self.arguments) == 3 and self.arguments[2] is not None and len(self.arguments[2]):
+            screen_name = self.arguments[2][1:] if self.arguments[2].startswith('@') else self.arguments[2]
+        else:
+            screen_name = None
+        minecraft.whitelist_add(self.arguments[0].lower(), minecraft_nick=self.arguments[1], people_file=core.config('paths').get('people'), person_status='invited', invited_by=self.sender)
+        self.reply('A new person with id ' + self.arguments[0].lower() + ' is now invited. The !Whitelist command must be run by a bot op.')
+        if screen_name is not None:
+            core.set_twitter(nicksub.Person(self.arguments[0]), screen_name)
+            self.reply('@' + core.config('twitter')['screen_name'] + ' is now following @' + screen_name)
+
 class Join(BaseCommand):
     """make the bot join a channel"""
     
@@ -1279,8 +1315,12 @@ class Whitelist(BaseCommand):
     def parse_args(self):
         if len(self.arguments) not in range(2, 4):
             return False
-        if not re.match('[a-z][0-9a-z]+', self.arguments[0]):
-            return False
+        if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
+            return False # <unique_id> is not a valid Wurstmineberg ID, must be alphanumeric, 2 to 15 characters, and start with a letter
+        if not re.match(minecraft.regexes.player, self.arguments[1]):
+            return False # <minecraft_name> is not a valid Minecraft nickname
+        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+            return False # <twitter_username> is invalid, see https://support.twitter.com/articles/101299
         return True
     
     def permission_level(self):
