@@ -859,6 +859,12 @@ class People(BaseCommand):
             except nicksub.PersonNotFoundError:
                 return False
             if len(self.arguments) >= 2:
+                if self.arguments[1].lower() == 'gravatar':
+                    if len(self.arguments) > 3:
+                        return False
+                    if '@' not in self.arguments[2]:
+                        return False
+                    return True
                 if self.arguments[1].lower() in ['description', 'name', 'wiki']:
                     return True
                 if self.arguments[1].lower() in ['reddit', 'twitter', 'website']:
@@ -885,8 +891,19 @@ class People(BaseCommand):
                         else:
                             self.reply('no description')
                     else:
+                        old_description = person.description
                         person.description = ' '.join(self.arguments[2:])
-                        self.reply('description updated')
+                        self.reply('description ' + ('updated, was “' + old_description + '”' if old_description else 'added')
+                elif self.arguments[1].lower() == 'gravatar':
+                    if len(self.arguments) == 2:
+                        if person.gravatar_email:
+                            self.reply(person.gravatar_email)
+                        else:
+                            self.reply('no Gravatar address')
+                    else:
+                        old_gravatar = person.gravatar_email
+                        person.gravatar_email = self.arguments[2]
+                        self.reply('Gravatar address ' + ('changed, was ' + old_gravatar if old_gravatar else 'added'))
                 elif self.arguments[1].lower() == 'name':
                     if len(self.arguments) == 2:
                         if person.name:
@@ -894,9 +911,9 @@ class People(BaseCommand):
                         else:
                             self.reply('no name, using id: ' + person.id)
                     else:
-                        had_name = person.name is not None
+                        old_name = person.name
                         person.name = ' '.join(self.arguments[2:])
-                        self.reply('name ' + ('changed' if had_name else 'added'))
+                        self.reply('name ' + ('changed, was “' + old_name + '”' if old_name else 'added'))
                 elif self.arguments[1].lower() == 'reddit':
                     if len(self.arguments) == 2:
                         if person.reddit:
@@ -904,10 +921,10 @@ class People(BaseCommand):
                         else:
                             self.reply('no reddit nick')
                     else:
-                        had_reddit_nick = person.reddit is not None
+                        old_reddit_nick = person.reddit
                         reddit_nick = self.arguments[2][3:] if self.arguments[2].startswith('/u/') else self.arguments[2]
                         person.reddit = reddit_nick
-                        self.reply('reddit nick ' + ('changed' if had_reddit_nick else 'added'))
+                        self.reply('reddit nick ' + ('changed, was /u/' + old_reddit_nick if old_reddit_nick else 'added'))
                 elif self.arguments[1].lower() == 'twitter':
                     if len(self.arguments) == 2:
                         if person.twitter:
@@ -925,9 +942,9 @@ class People(BaseCommand):
                         else:
                             self.reply('no website')
                     else:
-                        had_website = person.website is not None
+                        old_website = person.website
                         person.website = self.arguments[2]
-                        self.reply('website ' + ('changed' if had_website else 'added'))
+                        self.reply('website ' + ('changed, was ' + old_website if old_website else 'added'))
                 elif self.arguments[1].lower() == 'wiki':
                     if len(self.arguments) == 2:
                         if person.wiki:
@@ -935,9 +952,13 @@ class People(BaseCommand):
                         else:
                             self.reply('no wiki account')
                     else:
-                        had_wiki = person.wiki is not None
-                        person.wiki = self.arguments[2]
-                        self.reply('wiki account ' + ('changed' if had_wiki else 'added'))
+                        old_wiki = person.wiki
+                        new_wiki = self.arguments[2]
+                        if new_wiki.startswith('User:') or new_wiki.startswith('user:'):
+                            new_wiki = new_wiki[5:]
+                        new_wiki = new_wiki[0].upper() + new_wiki[1:]
+                        person.wiki = new_wiki
+                        self.reply('wiki account ' + ('changed, was “' + old_wiki + '”' if old_wiki else 'added'))
             else:
                 if 'name' in person:
                     self.reply('person with id ' + arguments[0] + ' and name ' + person['name'])

@@ -238,6 +238,18 @@ class Person(BasePerson):
         update_config(self.id, ['description'], delete=True)
     
     @property
+    def gravatar_email(self):
+        return config(self.id).get('gravatar')
+    
+    @gravatar_email.setter
+    def gravatar_email(self, value):
+        update_config(self.id, ['gravatar'], value=value)
+    
+    @gravatar_email.deleter
+    def gravatar_email(self):
+        update_config(self.id, ['gravatar'], delete=True)
+    
+    @property
     def irc_nicks(self):
         return config(self.id).get('irc', {}).get('nicks', [])
     
