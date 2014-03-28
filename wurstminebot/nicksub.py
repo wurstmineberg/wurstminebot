@@ -238,6 +238,26 @@ class Person(BasePerson):
         update_config(self.id, ['description'], delete=True)
     
     @property
+    def fav_color(self):
+        color = config(self.id).get('favColor')
+        if color:
+            return color.get('red', 0), color.get('green', 0), color.get('blue', 0)
+        else:
+            return None
+    
+    @fav_color.setter
+    def fav_color(self, value):
+        update_config(self.id, ['favColor'], value={
+            'red': value[0],
+            'green': value[1],
+            'blue': value[2]
+        })
+    
+    @fav_color.deleter
+    def fav_color(self):
+        update_config(self.id, ['favColor'], value=None, delete=False)
+    
+    @property
     def gravatar_email(self):
         return config(self.id).get('gravatar')
     
