@@ -912,7 +912,7 @@ class People(BaseCommand):
                     else:
                         old_description = person.description
                         person.description = ' '.join(self.arguments[2:])
-                        self.reply('description ' + ('updated, was “' + old_description + '”' if old_description else 'added')
+                        self.reply('description ' + ('updated, was “' + old_description + '”' if old_description else 'added'))
                 elif self.arguments[1].lower() == 'favcolor':
                     if len(self.arguments) == 2:
                         if person.fav_color:
