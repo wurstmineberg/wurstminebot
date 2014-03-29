@@ -879,6 +879,8 @@ class People(BaseCommand):
                             return False
                     return False
                 if self.arguments[1].lower() == 'gravatar':
+                    if len(self.arguments) == 2:
+                        return True
                     if len(self.arguments) > 3:
                         return False
                     if '@' not in self.arguments[2]:
