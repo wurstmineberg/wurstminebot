@@ -127,25 +127,38 @@ class AliasCommand(BaseCommand):
                 if isinstance(tellraw_text, str):
                     tellraw_text = [
                         {
-                            'text': tellraw_text,
-                            'color': 'aqua'
+                            'color': 'aqua',
+                            'text': tellraw_text
                         }
                     ]
                 if isinstance(tellraw_text, dict):
                     tellraw_text = [tellraw_text]
                 minecraft.tellraw([
                     {
-                        'text': '<' + (self.sender.nick('minecraft')) + '>',
-                        'color': 'aqua',
-                        'hoverEvent': {
-                            'action': 'show_text',
-                            'value': (self.sender.irc_nick(respect_highlight_option=False)) + ' in ' + self.channel
-                        },
                         'clickEvent': {
                             'action': 'suggest_command',
-                            'value': (self.sender.nick('minecraft')) + ': '
-                        }
+                            'value': self.sender.nick('minecraft') + ': '
+                        },
+                        'color': 'aqua',
+                        'text': '<' + self.sender.nick('minecraft') + '>'
+                    }
+                ] + ([] if self.addressing is None else [
+                    {
+                        'text': ' '
                     },
+                    {
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': self.addressing.nick('minecraft') + ': '
+                        },
+                        'color': 'gold',
+                        'text': self.addressing.nick('minecraft')
+                    },
+                    {
+                        'color': 'gold',
+                        'text': ':'
+                    }
+                ]) + [
                     {
                         'text': ' '
                     }
@@ -157,28 +170,53 @@ class AliasCommand(BaseCommand):
                 if isinstance(tellraw_text, str):
                     tellraw_text = [
                         {
-                            'text': tellraw_text,
-                            'color': 'aqua'
+                            'color': 'gold',
+                            'text': tellraw_text
                         }
                     ]
                 if isinstance(tellraw_text, dict):
                     tellraw_text = [tellraw_text]
                 minecraft.tellraw([
                     {
-                        'text': self.sender.nick('minecraft'),
-                        'color': 'gold'
+                        'color': 'gold',
+                        'text': '<'
                     },
                     {
-                        'text': ': ',
-                        'color': 'gold'
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': self.sender.nick('minecraft') + ': '
+                        },
+                        'color': 'gold',
+                        'hoverEvent': {
+                            'action': 'show_text',
+                            'value': self.sender.irc_nick(respect_highlight_option=False) + ' in ' + self.channel
+                        },
+                        'text': self.sender.nick('minecraft')
+                    },
+                    {
+                        'color': 'gold',
+                        'text': '> '
                     }
-                ] + tellraw_text)
+                ] + ([] if self.addressing is None else [
+                    {
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': self.addressing.nick('minecraft') + ': '
+                        },
+                        'color': 'gold',
+                        'text': self.addressing.nick('minecraft')
+                    },
+                    {
+                        'color': 'gold',
+                        'text': ':'
+                    }
+                ]) + tellraw_text)
             if self.context == 'irc' and self.channel is not None:
-                core.state['bot'].say(self.channel, self.sender.irc_nick(respect_highlight_option=False) + ': ' + self.alias_dict['text'])
+                core.state['bot'].say(self.channel, '<' + self.sender.irc_nick(respect_highlight_option=False) + '> ' + ('' if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False) + ': ') + self.alias_dict['text'])
             elif self.context == 'irc' and self.sender.irc_nick(fallback=None) is not None:
                 core.state['bot'].say(self.sender.irc_nick(respect_highlight_option=False), self.alias_dict['text'])
             elif self.context == 'minecraft' and 'main_channel' in core.config('irc'):
-                core.state['bot'].say(core.config('irc')['main_channel'], '<' + self.sender.irc_nick() + '> ' + self.alias_dict['text'])
+                core.state['bot'].say(core.config('irc')['main_channel'], '<' + self.sender.irc_nick() + '> ' + ('' if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False) + ': ') + self.alias_dict['text'])
         else:
             raise ValueError('No such alias type')
 
