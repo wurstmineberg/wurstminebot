@@ -787,27 +787,46 @@ class MinecraftWiki(BaseCommand):
 class Option(BaseCommand):
     """change your options"""
     
-    usage = '<option> [on | off]'
+    usage = '<option> [(on | off | reset | show) [<person>]]'
     
     def parse_args(self):
-        if len(self.arguments) not in range(1, 3):
+        if len(self.arguments) not in range(1, 4):
             return False
-        if len(self.arguments) == 2 and self.arguments[1].lower() not in ('true', 'false', 'yes', 'no', 'on', 'off'):
+        if not re.match('[a-z_]+$', self.arguments[0].lower()):
+            return False # option names only contain letters and underscores
+        if len(self.arguments) >= 2 and self.arguments[1].lower() not in ('\\delete', '\\reset', 'true', 'false', 'yes', 'no', 'on', 'off', 'reset', 'delete', 'show'):
             return False
+        if len(self.arguments) >= 3 and not nicksub.exists(self.arguments[2]):
+            return False # <person> must be an existing Wurstmineberg ID
         return True
     
     def permission_level(self):
+        if len(self.arguments) >= 3 and self.arguments[1].lower() != 'show' and nicksub.Person(self.arguments[2]) != self.sender:
+            return 4
         return 1
     
     def run(self):
-        if len(self.arguments) == 1:
-            flag = self.sender.option(self.arguments[0])
-            is_default = self.sender.option_is_default(self.arguments[0])
-            self.reply('option ' + self.arguments[0] + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
+        target_person = nicksub.Person(self.arguments[2]) if len(self.arguments) >= 3 else self.sender
+        target_nick = 'you' if target_person == (self.addressing or self.sender) else target_person.nick(self.context)
+        if len(self.arguments) == 1 or self.arguments[1].lower() == 'show':
+            flag = target_person.option(self.arguments[0])
+            is_default = target_person.option_is_default(self.arguments[0])
+            self.reply('option ' + self.arguments[0].lower() + ' is ' + ('on' if flag else 'off') + ' for ' + target_nick + (' by default' if is_default else '))
+        elif self.arguments[1].lower in ('on', 'true', 'yes'):
+            previous_value = target_person.option(self.arguments[0])
+            previous_value_is_default = target_person.option_is_default(self.arguments[0])
+            target_person.set_option(self.arguments[0], True)
+            self.reply('option ' + self.arguments[0].lower() + ' is now on for ' + target_nick + ' (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
+        elif self.arguments[1].lower in ('false', 'no', 'off'):
+            previous_value = target_person.option(self.arguments[0])
+            previous_value_is_default = target_person.option_is_default(self.arguments[0])
+            target_person.set_option(self.arguments[0], False)
+            self.reply('option ' + self.arguments[0].lower() + ' is now off for ' + target_nick + ' (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
         else:
-            flag = self.arguments[1].lower() in ('true', 'yes', 'on')
-            self.sender.set_option(self.arguments[0], flag)
-            self.reply('option ' + self.arguments[0] + ' is now ' + ('on' if flag else 'off') + ' for you')
+            previous_value = target_person.option(self.arguments[0])
+            previous_value_is_default = target_person.option_is_default(self.arguments[0])
+            target_person.del_option(self.arguments[0])
+            self.reply('option ' + self.arguments[0].lower() + ' is now ' + ('on' if target_person.option(self.arguments[0]) else 'off') + ' for ' + target_nick + ' by default (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
 
 class PasteMojira(BaseCommand):
     """print the title of a bug in Mojang's bug tracker"""

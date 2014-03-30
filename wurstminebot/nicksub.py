@@ -120,6 +120,11 @@ class BasePerson:
         except AttributeError:
             return False
     
+    def del_option(self, option_name):
+        opts = self.options
+        del opts[option_name.lower()]
+        self.options = opts
+    
     def display_name(self):
         return self.id if self.name is None else self.name
     
@@ -164,18 +169,18 @@ class BasePerson:
             return default
     
     def option(self, option_name):
-        default_true_options = ['chatsync_highlight'] # These options are on by default. All other options are off by default.
-        if str(option_name) in self.options:
-            return self.options[str(option_name)]
+        default_true_options = ['chatsync_highlight', 'inactivity_tweets'] # These options are on by default. All other options are off by default.
+        if option_name.lower() in self.options:
+            return self.options[option_name.lower()]
         else:
-            return str(option_name) in default_true_options
+            return option_name.lower() in default_true_options
     
     def option_is_default(self, option_name):
-        return str(option_name) not in self.options
+        return option_name.lower() not in self.options
     
     def set_option(self, option_name, value):
         opts = self.options
-        opts[option_name] = value
+        opts[option_name.lower()] = value
         self.options = opts
     
     def whitelisted(self):
@@ -444,8 +449,17 @@ class Dummy(BasePerson):
 
 def everyone():
     for person in config():
-        if id in person:
+        if 'id' in person:
             yield Person(person['id'])
+
+def exists(person_id):
+    """Return True if a person with the given Wurstmineberg ID exists."""
+    try:
+        config(person_id.lower())
+    except PersonNotFoundError:
+        return False
+    else:
+        return True
 
 def index(person, default=False):
     if isinstance(person, Person):
