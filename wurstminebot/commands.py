@@ -921,6 +921,8 @@ class People(BaseCommand):
                         return True
                     if len(self.arguments) > 3:
                         return False
+                    if self.arguments[2].lower() == 'reset':
+                        return True
                     if '@' not in self.arguments[2]:
                         return False
                     return True
@@ -983,6 +985,10 @@ class People(BaseCommand):
                             self.reply('no Gravatar address')
                     else:
                         old_gravatar = person.gravatar_email
+                        if self.arguments[2].lower() == 'reset':
+                            del person.gravatar_email
+                            self.reply('Gravatar address deleted, was ' + old_gravatar if old_gravatar else 'no Gravatar address to delete' + (' :V' if random.randrange(0, 2) else ''))
+                            return
                         person.gravatar_email = self.arguments[2]
                         self.reply('Gravatar address ' + ('changed, was ' + old_gravatar if old_gravatar else 'added'))
                 elif self.arguments[1].lower() == 'name':
