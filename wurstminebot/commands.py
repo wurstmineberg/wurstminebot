@@ -510,10 +510,10 @@ class Help(BaseCommand):
     
     def run(self):
         if len(self.arguments) == 0:
-            self.reply('Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.')
+            self.reply('Hello, I am ' + ('wurstminebot' if core.config('irc').get('nick', 'wurstminebot') == 'wurstminebot' else core.config('irc')['nick'] + ', a wurstminebot') + '. I sync messages between IRC and Minecraft, and respond to various commands.')
             self.reply('Execute “Help commands” for a list of commands, or “Help <command>” (replace <command> with a command name) for help on a specific command.', 'Execute "Help commands" for a list of commands, or "Help <command>" (replace <command> with a command name) for help on a specific command.')
-            help_text = 'To execute a command, send it to me in private chat (here) or address me in a channel (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
-            help_text_tellraw = 'You can execute a command by typing "!<command>..." in the in-game chat or an IRC channel. You can also send the command to me in a private IRC query (without the "!") or address me in a channel (like this: "wurstminebot: <command>...").'
+            help_text = 'To execute a command, send it to me in private chat (here) or address me in a channel (like this: “' + core.config('irc').get('nick', 'wurstminebot') + ': <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
+            help_text_tellraw = 'You can execute a command by typing "!<command>..." in the in-game chat or an IRC channel. You can also send the command to me in a private IRC query (without the "!") or address me in a channel (like this: "' + core.config('irc').get('nick', 'wurstminebot') + ': <command>...").'
             self.reply(help_text, help_text_tellraw)
         elif self.arguments[0].lower() == 'aliases':
             num_aliases = len(list(core.config('aliases').keys()))
