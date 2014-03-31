@@ -940,9 +940,11 @@ class People(BaseCommand):
                             r = int(self.arguments[2])
                         except:
                             return 'red part of color must be a number'
+                        try:
                             g = int(self.arguments[3])
                         except:
                             return 'green part of color must be a number'
+                        try:
                             b = int(self.arguments[4])
                         except:
                             return 'blue part of color must be a number'
