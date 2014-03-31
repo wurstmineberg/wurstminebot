@@ -116,7 +116,7 @@ class AliasCommand(BaseCommand):
             else:
                 raise ValueError('No such command') 
         elif alias_type == 'disable':
-            self.reply('This command is disabled.')
+            self.warning('This command is disabled.')
         elif alias_type == 'reply':
             self.reply(self.alias_dict['text'], self.alias_dict.get('tellraw_text'))
         elif alias_type == 'say':
@@ -237,7 +237,7 @@ class AchievementTweet(BaseCommand):
                 try:
                     core.parse_timedelta(self.arguments[1])
                 except:
-                    return False
+                    return '<time> must be a time interval, like 2h16m30s'
         return True
     
     def permission_level(self):
@@ -273,7 +273,7 @@ class Alias(BaseCommand):
         if len(self.arguments) == 0:
             return False
         if not re.match('[A-Za-z]+$', self.arguments[0]):
-            return False
+            return '<alias_name> may only consist of Latin letters'
         return True
     
     def permission_level(self):
@@ -324,8 +324,10 @@ class Cloud(BaseCommand):
             try:
                 int(self.arguments[1])
             except ValueError:
-                traceback.print_exc()
-                return False
+                core.debug_print('Exception in Cloud command <damage> argument parsing:')
+                if core.config('debug', False) or core.state.get('is_daemon', False):
+                    traceback.print_exc(file=sys.stdout)
+                return '<damage> must be a number'
         return True
     
     def run(self):
@@ -401,7 +403,7 @@ class DeathGames(BaseCommand):
             try:
                 nicksub.Person(self.arguments[1], context=self.context)
             except:
-                return False
+                return '<attacker> must be a person'
         if len(self.arguments) == 3:
             try:
                 nicksub.Person(self.arguments[2])
@@ -409,7 +411,7 @@ class DeathGames(BaseCommand):
                 try:
                     nicksub.Person(self.arguments[2], context=self.context)
                 except:
-                    return False
+                    return '<target> must be a person'
         return True
     
     def permission_level(self):
@@ -451,7 +453,7 @@ class DeathTweet(BaseCommand):
                 try:
                     core.parse_timedelta(self.arguments[1])
                 except:
-                    return False
+                    return '<time> must be a time interval, like 2h16m30s'
         return True
     
     def permission_level(self):
@@ -478,6 +480,11 @@ class DeathTweet(BaseCommand):
 
 class FixStatus(BaseCommand):
     """update the server status on the website and in the channel topic"""
+    
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
     
     def run(self):
         core.update_all(force=True)
@@ -548,17 +555,17 @@ class Invite(BaseCommand):
         if len(self.arguments) not in range(2, 4):
             return False
         if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
-            return False # <unique_id> is not a valid Wurstmineberg ID, must be alphanumeric, 2 to 15 characters, and start with a letter
+            return '<unique_id> must be a valid Wurstmineberg ID: alphanumeric, 2 to 15 characters, and start with a letter'
         try:
             nicksub.Person(self.arguments[0], strict=False)
         except:
             pass # person with this ID does not exist
         else:
-            return False # person with this ID already exists
+            return 'a person with this Wurstmineberg ID already exists'
         if not re.match(minecraft.regexes.player, self.arguments[1]):
-            return False # <minecraft_name> is not a valid Minecraft nickname
+            return '<minecraft_name> is not a valid Minecraft nickname'
         if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
-            return False # <twitter_username> is invalid, see https://support.twitter.com/articles/101299
+            return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
     def permission_level(self):
@@ -584,7 +591,7 @@ class Join(BaseCommand):
         if len(self.arguments) != 1:
             return False
         if not self.arguments[0].startswith('#'):
-            return False
+            return '<channel> is not a valid IRC channel name'
         return True
     
     def permission_level(self):
@@ -608,18 +615,17 @@ class LastSeen(BaseCommand):
     def parse_args(self):
         if len(self.arguments) != 1:
             return False
+        if nicksub.exists(self.arguments[0]):
+            return True
         try:
-            person = nicksub.Person(self.arguments[0])
+            person = nicksub.Person(self.arguments[0], context=self.context)
         except nicksub.PersonNotFoundError:
             try:
-                person = nicksub.Person(self.arguments[0], context=self.context)
+                person = nicksub.Person(self.arguments[0], context='minecraft')
             except nicksub.PersonNotFoundError:
-                try:
-                    person = nicksub.Person(self.arguments[0], context='minecraft')
-                except nicksub.PersonNotFoundError:
-                    return False
+                return '<player> must be a person'
         if person.minecraft is None:
-            return False
+            return '<player> does not have a Minecraft nickname'
         return True
     
     def run(self):
@@ -726,6 +732,12 @@ class Leak(BaseCommand):
     def parse_args(self):
         if len(self.arguments) not in range(0, 2):
             return False
+        if len(self.arguments) > 0:
+            try:
+                if int(self.arguments[0]) < 1:
+                    return '<line_count> must be at least 1'
+            except ValueError:
+                return '<line_count> must be a positive integer'
         return True
     
     def permission_level(self):
@@ -793,11 +805,11 @@ class Option(BaseCommand):
         if len(self.arguments) not in range(1, 4):
             return False
         if not re.match('[a-z_]+$', self.arguments[0].lower()):
-            return False # option names only contain letters and underscores
+            return 'option names only contain letters and underscores'
         if len(self.arguments) >= 2 and self.arguments[1].lower() not in ('\\delete', '\\reset', 'true', 'false', 'yes', 'no', 'on', 'off', 'reset', 'delete', 'show'):
             return False
         if len(self.arguments) >= 3 and not nicksub.exists(self.arguments[2]):
-            return False # <person> must be an existing Wurstmineberg ID
+            return '<person> must be an existing Wurstmineberg ID'
         return True
     
     def permission_level(self):
@@ -845,12 +857,12 @@ class PasteMojira(BaseCommand):
                 try:
                     int(arguments[0])
                 except ValueError:
-                    return False
+                    return 'no valid <url> or <issue_id> specified'
         if len(arguments) == 2:
             try:
                 int(arguments[1])
             except ValueError:
-                return False
+                return '<issue_id> must be a positive integer'
         return True
     
     def run(self):
@@ -892,7 +904,7 @@ class PasteTweet(BaseCommand):
             try:
                 int(arguments[0])
             except ValueError:
-                return False
+                return 'no valid <url> or <status_id> specified'
         return True
     
     def run(self):
@@ -914,7 +926,7 @@ class People(BaseCommand):
             try:
                 nicksub.Person(self.arguments[0])
             except nicksub.PersonNotFoundError:
-                return False
+                return '<person> must be an existing Wurstmineberg ID'
             if len(self.arguments) >= 2:
                 if self.arguments[1].lower() == 'favcolor':
                     if len(self.arguments) == 2:
@@ -922,36 +934,39 @@ class People(BaseCommand):
                     if len(self.arguments) == 3:
                         if re.match('#?([0-9A-Fa-f]{3}){1,2}$', self.arguments[2]):
                             return True
-                        return False
+                        return '<value> must be a color in hex format: #RRGGBB or #RGB'
                     if len(self.arguments) == 5:
                         try:
                             r = int(self.arguments[2])
+                        except:
+                            return 'red part of color must be a number'
                             g = int(self.arguments[3])
+                        except:
+                            return 'green part of color must be a number'
                             b = int(self.arguments[4])
                         except:
-                            return False
-                        else:
-                            if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255:
-                                return True
-                            return False
-                    return False
+                            return 'blue part of color must be a number'
+                        if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255:
+                            return True
+                        return 'all color components must be between 0 and 255'
+                    return '<value> must be a color in hex format: #RRGGBB or #RGB; or in decimal format: <red> <green> <blue>'
                 if self.arguments[1].lower() == 'gravatar':
                     if len(self.arguments) == 2:
                         return True
                     if len(self.arguments) > 3:
-                        return False
+                        return '<value> must be an e-mail address, no spaces allowed'
                     if self.arguments[2].lower() in ['delete', 'reset']:
                         return True
                     if '@' not in self.arguments[2]:
-                        return False
+                        return '<value> must be an e-mail address'
                     return True
                 if self.arguments[1].lower() in ['description', 'name', 'wiki']:
                     return True
                 if self.arguments[1].lower() in ['reddit', 'twitter', 'website']:
                     if len(self.arguments) > 3:
-                        return False
+                        return 'no spaces allowed in <value>'
                     return True
-                return False
+                return 'no such <attribute>'
         return True
     
     def permission_level(self):
@@ -1107,7 +1122,9 @@ class Raw(BaseCommand):
     usage = '<raw_message>...'
     
     def parse_args(self):
-        return len(self.arguments) > 0
+        if len(self.arguments) == 0:
+            return False
+        return True
     
     def permission_level(self):
         return 4
@@ -1168,7 +1185,7 @@ class Retweet(BaseCommand):
             try:
                 int(self.arguments[0])
             except ValueError:
-                return False
+                return 'no valid <url> or <status_id> specified'
         return True
     
     def permission_level(self):
@@ -1221,6 +1238,11 @@ class Retweet(BaseCommand):
 
 class Status(BaseCommand):
     """print some server status"""
+    
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
     
     def run(self):
         import requests
@@ -1316,6 +1338,11 @@ class Stop(BaseCommand):
 class Time(BaseCommand):
     """reply with the current time"""
     
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
     def run(self):
         from wurstminebot import loops
         loops.tell_time(func=self.reply)
@@ -1323,7 +1350,7 @@ class Time(BaseCommand):
 class Topic(BaseCommand):
     """change the main channel's topic"""
     
-    usage = '<topic>...'
+    usage = '[<topic>...]'
     
     def permission_level(self):
         return 4
@@ -1383,6 +1410,9 @@ class Update(BaseCommand):
             if self.arguments[0].lower() == 'snapshot':
                 if len(self.arguments) > 2:
                     return False
+                if len(self.arguments) == 2:
+                    if not re.match('[a-z]', self.arguments[1].lower()):
+                        return '<snapshot_id> must be a single Latin letter'
             elif len(self.arguments) != 1:
                 return False
         return True
@@ -1394,7 +1424,7 @@ class Update(BaseCommand):
         if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
             if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
                 core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1] if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
+                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
             elif self.arguments[0] == 'release': # !update release
                 core.update_topic(special_status='The server is being updated, wait a sec.')
                 version, is_snapshot, version_text = minecraft.update(snapshot=False, reply=self.reply)
@@ -1423,6 +1453,11 @@ class Update(BaseCommand):
 class Version(BaseCommand):
     """reply with the current version of wurstminebot and init-minecraft"""
     
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
     def run(self):
         self.reply('I am wurstminebot version ' + core.__version__ + ', running on init-minecraft version ' + minecraft.__version__)
 
@@ -1435,11 +1470,11 @@ class Whitelist(BaseCommand):
         if len(self.arguments) not in range(2, 4):
             return False
         if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
-            return False # <unique_id> is not a valid Wurstmineberg ID, must be alphanumeric, 2 to 15 characters, and start with a letter
+            return '<unique_id> must be a valid Wurstmineberg ID: alphanumeric, 2 to 15 characters, and start with a letter'
         if not re.match(minecraft.regexes.player, self.arguments[1]):
-            return False # <minecraft_name> is not a valid Minecraft nickname
+            return False '<minecraft_name> is not a valid Minecraft nickname'
         if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
-            return False # <twitter_username> is invalid, see https://support.twitter.com/articles/101299
+            return False '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
     def permission_level(self):
@@ -1492,8 +1527,12 @@ def run(command_name, sender, context, channel=None):
         command_name = command_name[0]
         BaseCommand(args=[], sender=sender, context=context, channel=channel).warning(core.ErrorMessage.unknown(command_name))
         return False
-    if not command.parse_args():
+    parse_result = command.parse_args()
+    if parse_result is False:
         command.warning('Usage: ' + command.name + ('' if command.usage is None else ' ' + command.usage))
+        return False
+    elif parse_result is not True:
+        command.warning(str(parse_result))
         return False
     sender_permission_level = 0
     if isinstance(sender, nicksub.Person):
