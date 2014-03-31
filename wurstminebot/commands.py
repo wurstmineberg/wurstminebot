@@ -811,7 +811,7 @@ class Option(BaseCommand):
         if len(self.arguments) == 1 or self.arguments[1].lower() == 'show':
             flag = target_person.option(self.arguments[0])
             is_default = target_person.option_is_default(self.arguments[0])
-            self.reply('option ' + self.arguments[0].lower() + ' is ' + ('on' if flag else 'off') + ' for ' + target_nick + (' by default' if is_default else '))
+            self.reply('option ' + self.arguments[0].lower() + ' is ' + ('on' if flag else 'off') + ' for ' + target_nick + (' by default' if is_default else ''))
         elif self.arguments[1].lower in ('on', 'true', 'yes'):
             previous_value = target_person.option(self.arguments[0])
             previous_value_is_default = target_person.option_is_default(self.arguments[0])
