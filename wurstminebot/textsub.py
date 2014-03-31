@@ -72,6 +72,17 @@ class ConcatenatedText(Text):
             ret += tellraw_section
         return ret
 
+class ContextualText(Text):
+    def __init__(self, default, **kwargs):
+        self.default = default
+        self.contexts = kwargs
+    
+    def to_string(self, context=None, char_limit=float('inf')):
+        return self.contexts.get(context, self.default).to_string(context=context, char_limit=char_limit)
+    
+    def to_tellraw(self, default_color=None):
+        return self.contexts.get('minecraft', self.default).to_string(context='minecraft', char_limit=char_limit)
+
 class LiteralText(Text):
     def __init__(self, from_string):
         self.string = from_string
