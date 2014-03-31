@@ -1472,9 +1472,9 @@ class Whitelist(BaseCommand):
         if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
             return '<unique_id> must be a valid Wurstmineberg ID: alphanumeric, 2 to 15 characters, and start with a letter'
         if not re.match(minecraft.regexes.player, self.arguments[1]):
-            return False '<minecraft_name> is not a valid Minecraft nickname'
+            return '<minecraft_name> is not a valid Minecraft nickname'
         if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
-            return False '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
+            return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
     def permission_level(self):
