@@ -101,6 +101,7 @@ def bot():
     return ret
 
 def join(sender, headers, message):
+    core.debug_print('[irc] ' + sender + ' joined ' + headers[0])
     if len(headers):
         chan = headers[0]
     elif message is not None and len(message):
@@ -125,6 +126,7 @@ def join(sender, headers, message):
             ], player=person.minecraft)
 
 def nick(sender, headers, message):
+    core.debug_print('[irc] ' + sender + ' is now known as ' + message)
     if message is None or len(message) == 0:
         return
     for person in nicksub.everyone():
@@ -145,6 +147,7 @@ def nick(sender, headers, message):
             ], player=person.minecraft)
 
 def part(sender, headers, message):
+    core.debug_print('[irc] ' + sender + ' left ' + headers[0])
     chans = headers[0].split(',')
     if len(chans) == 0:
         return

@@ -1529,6 +1529,7 @@ def run(command_name, sender, context, channel=None):
         command_name = command_name[0]
         BaseCommand(args=[], sender=sender, context=context, channel=channel).warning(core.ErrorMessage.unknown(command_name))
         return False
+    core.debug_print('[command] ' + command.name + ' ' + ' '.join(command.arguments))
     parse_result = command.parse_args()
     if parse_result is False:
         command.warning('Usage: ' + command.name + ('' if command.usage is None else ' ' + command.usage))

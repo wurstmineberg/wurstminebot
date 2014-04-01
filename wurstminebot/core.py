@@ -194,7 +194,7 @@ def debug_print(msg):
     if state.get('is_daemon', False) or config('debug', False):
         if state.get('is_daemon', False):
             sys.stdout = open('/opt/wurstmineberg/log/wurstminebot.log', 'a')
-        print('DEBUG] ' + msg)
+        print('DEBUG] ' + datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ' ' + msg)
 
 def minecraft_wiki_lookup(article, reply=None):
     if reply is None:
