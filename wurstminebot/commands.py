@@ -824,12 +824,12 @@ class Option(BaseCommand):
             flag = target_person.option(self.arguments[0])
             is_default = target_person.option_is_default(self.arguments[0])
             self.reply('option ' + self.arguments[0].lower() + ' is ' + ('on' if flag else 'off') + ' for ' + target_nick + (' by default' if is_default else ''))
-        elif self.arguments[1].lower in ('on', 'true', 'yes'):
+        elif self.arguments[1].lower() in ('on', 'true', 'yes'):
             previous_value = target_person.option(self.arguments[0])
             previous_value_is_default = target_person.option_is_default(self.arguments[0])
             target_person.set_option(self.arguments[0], True)
             self.reply('option ' + self.arguments[0].lower() + ' is now on for ' + target_nick + ' (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
-        elif self.arguments[1].lower in ('false', 'no', 'off'):
+        elif self.arguments[1].lower() in ('false', 'no', 'off'):
             previous_value = target_person.option(self.arguments[0])
             previous_value_is_default = target_person.option_is_default(self.arguments[0])
             target_person.set_option(self.arguments[0], False)

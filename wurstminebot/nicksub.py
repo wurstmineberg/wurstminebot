@@ -122,7 +122,10 @@ class BasePerson:
     
     def del_option(self, option_name):
         opts = self.options
-        del opts[option_name.lower()]
+        try:
+            del opts[option_name.lower()]
+        except KeyError:
+            pass # no option to delete
         self.options = opts
     
     def display_name(self):
