@@ -1,5 +1,5 @@
--e git://github.com/fenhl/Python-IRC-Bot-Framework.git#egg=Python-IRC-Bot-Framework
 TwitterAPI>=2.1.9
+-e git://github.com/alexex/alebot.git#egg=alebot
 -e git://github.com/wurstmineberg/minecraft-api.git#egg=api
 docopt>=0.6.1
 -e git://github.com/wurstmineberg/init-minecraft.git#egg=minecraft

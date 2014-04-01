@@ -10,7 +10,7 @@ import random
 import re
 import traceback
 
-def endMOTD(sender, headers, message):
+def chans():
     irc_config = core.config('irc')
     chans = set(irc_config.get('channels', []))
     if 'main_channel' in irc_config:
@@ -19,7 +19,11 @@ def endMOTD(sender, headers, message):
         chans.add(irc_config['dev_channel'])
     if 'live_channel' in irc_config:
         chans.add(irc_config['live_channel'])
-    for chan in chans:
+    return chans
+
+def endMOTD(sender, headers, message):
+    irc_config = core.config('irc')
+    for chan in chans():
         try:
             core.state['bot'].joinchan(chan)
         except:
@@ -89,16 +93,26 @@ def action(sender, headers, message):
             traceback.print_exc(file=sys.stdout)
 
 def bot():
-    import ircbotframe
-    ret = ircbotframe.ircBot(core.config('irc')['server'], core.config('irc').get('port', 6667), core.config('irc')['nick'], core.config('irc')['nick'], password=core.config('irc').get('password'), ssl=core.config('irc').get('ssl', False))
-    ret.log_own_messages = False
-    ret.bind('376', endMOTD)
-    ret.bind('482', error_not_chan_op)
-    ret.bind('ACTION', action)
-    ret.bind('JOIN', join)
-    ret.bind('PART', part)
-    ret.bind('PRIVMSG', privmsg)
-    return ret
+    import alebot
+    bot = alebot.Alebot()
+    bot.config = {
+        'channels': list(channels()),
+        'ident': core.config('irc').get('ident', 'wurstminebot'),
+        'nick': core.config('irc').get('nick', 'wurstminebot'),
+        'port': core.config('irc').get('port', 6667),
+        'realname': core.config('irc').get('realName', 'wurstminebot'),
+        'server': core.config('irc')['server']
+    }
+    #password = core.config('irc').get('password')
+    #ssl = core.config('irc').get('ssl', False)
+    #bot.log_own_messages = False
+    #bot.bind('376', endMOTD)
+    #bot.bind('482', error_not_chan_op)
+    #bot.bind('ACTION', action)
+    #bot.bind('JOIN', join)
+    #bot.bind('PART', part)
+    #bot.bind('PRIVMSG', privmsg)
+    return bot
 
 def join(sender, headers, message):
     core.debug_print('[irc] ' + sender + ' joined ' + headers[0])

@@ -6,8 +6,8 @@ Requirements
 ============
 
 *   [Python](http://python.org/) 3.2
-*   [Python-IRC-Bot-Framework](https://github.com/fenhl/Python-IRC-Bot-Framework)
 *   [TwitterAPI](https://github.com/geduldig/TwitterAPI) 2.1 (for Tweet command and other Twitter funcionality)
+*   [alebot](https://github.com/alexex/alebot)
 *   [docopt](http://docopt.org/)
 *   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.14
 *   [minecraft-api](https://github.com/wurstmineberg/minecraft-api) 1.1 (required for Cloud command only)
