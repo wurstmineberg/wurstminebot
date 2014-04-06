@@ -411,7 +411,7 @@ def run():
         sys.exit(1)
     else:
         state['bot'] = irc.bot()
-        state['bot'].debugging(config('debug'))
+        #state['bot'].debugging(config('debug'))
         try:
             state['bot'].run()
         except Exception:
