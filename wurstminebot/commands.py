@@ -187,10 +187,6 @@ class AliasCommand(BaseCommand):
                             'value': self.sender.nick('minecraft') + ': '
                         },
                         'color': 'gold',
-                        'hoverEvent': {
-                            'action': 'show_text',
-                            'value': self.sender.irc_nick(respect_highlight_option=False) + ' in ' + self.channel
-                        },
                         'text': self.sender.nick('minecraft')
                     },
                     {
