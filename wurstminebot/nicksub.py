@@ -121,6 +121,14 @@ class BasePerson(textsub.Text):
         except AttributeError:
             return False
     
+    def del_option(self, option_name):
+        opts = self.options
+        try:
+            del opts[option_name.lower()]
+        except KeyError:
+            pass # no option to delete
+        self.options = opts
+    
     def display_name(self):
         return self.id if self.name is None else self.name
     
@@ -165,18 +173,18 @@ class BasePerson(textsub.Text):
             return default
     
     def option(self, option_name):
-        default_true_options = ['chatsync_highlight'] # These options are on by default. All other options are off by default.
-        if str(option_name) in self.options:
-            return self.options[str(option_name)]
+        default_true_options = ['chatsync_highlight', 'inactivity_tweets'] # These options are on by default. All other options are off by default.
+        if option_name.lower() in self.options:
+            return self.options[option_name.lower()]
         else:
-            return str(option_name) in default_true_options
+            return option_name.lower() in default_true_options
     
     def option_is_default(self, option_name):
-        return str(option_name) not in self.options
+        return option_name.lower() not in self.options
     
     def set_option(self, option_name, value):
         opts = self.options
-        opts[option_name] = value
+        opts[option_name.lower()] = value
         self.options = opts
     
     def to_string(self, context=None, char_limit=float('inf')):
@@ -251,6 +259,38 @@ class Person(BasePerson):
         update_config(self.id, ['description'], delete=True)
     
     @property
+    def fav_color(self):
+        color = config(self.id).get('favColor')
+        if color:
+            return color.get('red', 0), color.get('green', 0), color.get('blue', 0)
+        else:
+            return None
+    
+    @fav_color.setter
+    def fav_color(self, value):
+        update_config(self.id, ['favColor'], value={
+            'red': value[0],
+            'green': value[1],
+            'blue': value[2]
+        })
+    
+    @fav_color.deleter
+    def fav_color(self):
+        update_config(self.id, ['favColor'], value=None, delete=False)
+    
+    @property
+    def gravatar_email(self):
+        return config(self.id).get('gravatar')
+    
+    @gravatar_email.setter
+    def gravatar_email(self, value):
+        update_config(self.id, ['gravatar'], value=value)
+    
+    @gravatar_email.deleter
+    def gravatar_email(self):
+        update_config(self.id, ['gravatar'], delete=True)
+    
+    @property
     def irc_nicks(self):
         return config(self.id).get('irc', {}).get('nicks', [])
     
@@ -280,7 +320,10 @@ class Person(BasePerson):
     
     @name.setter
     def name(self, value):
-        update_config(self.id, ['name'], value=value)
+        if value == self.id:
+            update_config(self.id, ['name'], delete=True)
+        else:
+            update_config(self.id, ['name'], value=value)
     
     @name.deleter
     def name(self):
@@ -438,8 +481,17 @@ class Dummy(BasePerson):
 
 def everyone():
     for person in config():
-        if id in person:
+        if 'id' in person:
             yield Person(person['id'])
+
+def exists(person_id):
+    """Return True if a person with the given Wurstmineberg ID exists."""
+    try:
+        config(person_id.lower())
+    except PersonNotFoundError:
+        return False
+    else:
+        return True
 
 def index(person, default=False):
     if isinstance(person, Person):

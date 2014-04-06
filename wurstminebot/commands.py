@@ -2,6 +2,7 @@ import sys
 
 from wurstminebot import core
 from datetime import datetime
+import inspect
 import minecraft
 from wurstminebot import nicksub
 import os.path
@@ -11,6 +12,7 @@ import subprocess
 import threading
 from datetime import timedelta
 from datetime import timezone
+import urllib.parse
 
 class BaseCommand:
     """base class for other commands, not a real command"""
@@ -114,7 +116,7 @@ class AliasCommand(BaseCommand):
             else:
                 raise ValueError('No such command') 
         elif alias_type == 'disable':
-            self.reply('This command is disabled.')
+            self.warning('This command is disabled.')
         elif alias_type == 'reply':
             self.reply(self.alias_dict['text'], self.alias_dict.get('tellraw_text'))
         elif alias_type == 'say':
@@ -125,25 +127,38 @@ class AliasCommand(BaseCommand):
                 if isinstance(tellraw_text, str):
                     tellraw_text = [
                         {
-                            'text': tellraw_text,
-                            'color': 'aqua'
+                            'color': 'aqua',
+                            'text': tellraw_text
                         }
                     ]
                 if isinstance(tellraw_text, dict):
                     tellraw_text = [tellraw_text]
                 minecraft.tellraw([
                     {
-                        'text': '<' + (self.sender.nick('minecraft')) + '>',
-                        'color': 'aqua',
-                        'hoverEvent': {
-                            'action': 'show_text',
-                            'value': (self.sender.irc_nick(respect_highlight_option=False)) + ' in ' + self.channel
-                        },
                         'clickEvent': {
                             'action': 'suggest_command',
-                            'value': (self.sender.nick('minecraft')) + ': '
-                        }
+                            'value': self.sender.nick('minecraft') + ': '
+                        },
+                        'color': 'aqua',
+                        'text': '<' + self.sender.nick('minecraft') + '>'
+                    }
+                ] + ([] if self.addressing is None else [
+                    {
+                        'text': ' '
                     },
+                    {
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': self.addressing.nick('minecraft') + ': '
+                        },
+                        'color': 'gold',
+                        'text': self.addressing.nick('minecraft')
+                    },
+                    {
+                        'color': 'gold',
+                        'text': ':'
+                    }
+                ]) + [
                     {
                         'text': ' '
                     }
@@ -155,28 +170,49 @@ class AliasCommand(BaseCommand):
                 if isinstance(tellraw_text, str):
                     tellraw_text = [
                         {
-                            'text': tellraw_text,
-                            'color': 'aqua'
+                            'color': 'gold',
+                            'text': tellraw_text
                         }
                     ]
                 if isinstance(tellraw_text, dict):
                     tellraw_text = [tellraw_text]
                 minecraft.tellraw([
                     {
-                        'text': self.sender.nick('minecraft'),
-                        'color': 'gold'
+                        'color': 'gold',
+                        'text': '<'
                     },
                     {
-                        'text': ': ',
-                        'color': 'gold'
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': self.sender.nick('minecraft') + ': '
+                        },
+                        'color': 'gold',
+                        'text': self.sender.nick('minecraft')
+                    },
+                    {
+                        'color': 'gold',
+                        'text': '> '
                     }
-                ] + tellraw_text)
+                ] + ([] if self.addressing is None else [
+                    {
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': self.addressing.nick('minecraft') + ': '
+                        },
+                        'color': 'gold',
+                        'text': self.addressing.nick('minecraft')
+                    },
+                    {
+                        'color': 'gold',
+                        'text': ':'
+                    }
+                ]) + tellraw_text)
             if self.context == 'irc' and self.channel is not None:
-                core.state['bot'].say(self.channel, self.sender.irc_nick(respect_highlight_option=False) + ': ' + self.alias_dict['text'])
+                core.state['bot'].say(self.channel, '<' + self.sender.irc_nick(respect_highlight_option=False) + '> ' + ('' if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False) + ': ') + self.alias_dict['text'])
             elif self.context == 'irc' and self.sender.irc_nick(fallback=None) is not None:
                 core.state['bot'].say(self.sender.irc_nick(respect_highlight_option=False), self.alias_dict['text'])
             elif self.context == 'minecraft' and 'main_channel' in core.config('irc'):
-                core.state['bot'].say(core.config('irc')['main_channel'], '<' + self.sender.irc_nick() + '> ' + self.alias_dict['text'])
+                core.state['bot'].say(core.config('irc')['main_channel'], '<' + self.sender.irc_nick() + '> ' + ('' if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False) + ': ') + self.alias_dict['text'])
         else:
             raise ValueError('No such alias type')
 
@@ -197,7 +233,7 @@ class AchievementTweet(BaseCommand):
                 try:
                     core.parse_timedelta(self.arguments[1])
                 except:
-                    return False
+                    return '<time> must be a time interval, like 2h16m30s'
         return True
     
     def permission_level(self):
@@ -233,7 +269,7 @@ class Alias(BaseCommand):
         if len(self.arguments) == 0:
             return False
         if not re.match('[A-Za-z]+$', self.arguments[0]):
-            return False
+            return '<alias_name> may only consist of Latin letters'
         return True
     
     def permission_level(self):
@@ -284,8 +320,10 @@ class Cloud(BaseCommand):
             try:
                 int(self.arguments[1])
             except ValueError:
-                traceback.print_exc()
-                return False
+                core.debug_print('Exception in Cloud command <damage> argument parsing:')
+                if core.config('debug', False) or core.state.get('is_daemon', False):
+                    traceback.print_exc(file=sys.stdout)
+                return '<damage> must be a number'
         return True
     
     def run(self):
@@ -361,7 +399,7 @@ class DeathGames(BaseCommand):
             try:
                 nicksub.Person(self.arguments[1], context=self.context)
             except:
-                return False
+                return '<attacker> must be a person'
         if len(self.arguments) == 3:
             try:
                 nicksub.Person(self.arguments[2])
@@ -369,7 +407,7 @@ class DeathGames(BaseCommand):
                 try:
                     nicksub.Person(self.arguments[2], context=self.context)
                 except:
-                    return False
+                    return '<target> must be a person'
         return True
     
     def permission_level(self):
@@ -411,7 +449,7 @@ class DeathTweet(BaseCommand):
                 try:
                     core.parse_timedelta(self.arguments[1])
                 except:
-                    return False
+                    return '<time> must be a time interval, like 2h16m30s'
         return True
     
     def permission_level(self):
@@ -439,6 +477,11 @@ class DeathTweet(BaseCommand):
 class FixStatus(BaseCommand):
     """update the server status on the website and in the channel topic"""
     
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
     def run(self):
         core.update_all(force=True)
 
@@ -463,10 +506,10 @@ class Help(BaseCommand):
     
     def run(self):
         if len(self.arguments) == 0:
-            self.reply('Hello, I am wurstminebot. I sync messages between IRC and Minecraft, and respond to various commands.')
-            self.reply('Execute “help commands” for a list of commands, or “help <command>” (replace <command> with a command name) for help on a specific command.', 'Execute "help commands" for a list of commands, or "help <command>" (replace <command> with a command name) for help on a specific command.')
-            help_text = 'To execute a command, send it to me in private chat (here) or address me in a channel (like this: “wurstminebot: <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
-            help_text_tellraw = 'You can execute a command by typing "!<command>..." in the in-game chat or an IRC channel. You can also send the command to me in a private IRC query (without the "!") or address me in a channel (like this: "wurstminebot: <command>...").'
+            self.reply('Hello, I am ' + ('wurstminebot' if core.config('irc').get('nick', 'wurstminebot') == 'wurstminebot' else core.config('irc')['nick'] + ', a wurstminebot') + '. I sync messages between IRC and Minecraft, and respond to various commands.')
+            self.reply('Execute “Help commands” for a list of commands, or “Help <command>” (replace <command> with a command name) for help on a specific command.', 'Execute "Help commands" for a list of commands, or "Help <command>" (replace <command> with a command name) for help on a specific command.')
+            help_text = 'To execute a command, send it to me in private chat (here) or address me in a channel (like this: “' + core.config('irc').get('nick', 'wurstminebot') + ': <command>...”). You can also execute commands in a channel or in Minecraft like this: “!<command>...”.'
+            help_text_tellraw = 'You can execute a command by typing "!<command>..." in the in-game chat or an IRC channel. You can also send the command to me in a private IRC query (without the "!") or address me in a channel (like this: "' + core.config('irc').get('nick', 'wurstminebot') + ': <command>...").'
             self.reply(help_text, help_text_tellraw)
         elif self.arguments[0].lower() == 'aliases':
             num_aliases = len(list(core.config('aliases').keys()))
@@ -474,7 +517,7 @@ class Help(BaseCommand):
                 help_text = 'Currently defined aliases: ' + ', '.join(sorted(list(core.config('aliases').keys()))) + '. For more information, execute'
             else:
                 help_text = 'No aliases are currently defined. For more information, execute'
-            self.reply(help_text + ' “help alias”.', help_text + ' "help alias".')
+            self.reply(help_text + ' “Help alias”.', help_text + ' "Help alias".')
         elif self.arguments[0].lower() == 'commands':
             num_aliases = len(list(core.config('aliases').keys()))
             self.reply('Available commands: ' + ', '.join(sorted([command_class.__name__ for command_class in classes])) + (', and ' + str(num_aliases) + ' aliases.' if num_aliases > 0 else '.'))
@@ -485,9 +528,9 @@ class Help(BaseCommand):
             elif alias_dict.get('type') == 'disable':
                 self.reply(self.arguments[0].lower() + ' is disabled.')
             elif alias_dict.get('type') == 'reply':
-                self.reply(self.arguments[0].lower() + ' is an echo alias.')
+                self.reply(self.arguments[0].lower() + ' is an echo alias. Execute it to see what the reply is.')
             elif alias_dict.get('type') == 'say':
-                self.reply(self.arguments[0].lower() + ' is an alias.')
+                self.reply(self.arguments[0].lower() + ' is an alias. Execute it to see what it stands for.')
             else:
                 self.reply(self.arguments[0] + ' is a broken alias.')
         else:
@@ -499,6 +542,42 @@ class Help(BaseCommand):
             else:
                 self.reply(core.ErrorMessage.unknown(self.arguments[0]))
 
+class Invite(BaseCommand):
+    """invite a new player"""
+    
+    usage = '<unique_id> <minecraft_name> [<twitter_username>]'
+    
+    def parse_args(self):
+        if len(self.arguments) not in range(2, 4):
+            return False
+        if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
+            return '<unique_id> must be a valid Wurstmineberg ID: alphanumeric, 2 to 15 characters, and start with a letter'
+        try:
+            nicksub.Person(self.arguments[0], strict=False)
+        except:
+            pass # person with this ID does not exist
+        else:
+            return 'a person with this Wurstmineberg ID already exists'
+        if not re.match(minecraft.regexes.player, self.arguments[1]):
+            return '<minecraft_name> is not a valid Minecraft nickname'
+        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+            return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
+        return True
+    
+    def permission_level(self):
+        return 3
+    
+    def run(self):
+        if len(self.arguments) == 3 and self.arguments[2] is not None and len(self.arguments[2]):
+            screen_name = self.arguments[2][1:] if self.arguments[2].startswith('@') else self.arguments[2]
+        else:
+            screen_name = None
+        minecraft.whitelist_add(self.arguments[0].lower(), minecraft_nick=self.arguments[1], people_file=core.config('paths').get('people'), person_status='invited', invited_by=self.sender)
+        self.reply('A new person with id ' + self.arguments[0].lower() + ' is now invited. The !Whitelist command must be run by a bot op.')
+        if screen_name is not None:
+            core.set_twitter(nicksub.Person(self.arguments[0]), screen_name)
+            self.reply('@' + core.config('twitter')['screen_name'] + ' is now following @' + screen_name)
+
 class Join(BaseCommand):
     """make the bot join a channel"""
     
@@ -508,7 +587,7 @@ class Join(BaseCommand):
         if len(self.arguments) != 1:
             return False
         if not self.arguments[0].startswith('#'):
-            return False
+            return '<channel> is not a valid IRC channel name'
         return True
     
     def permission_level(self):
@@ -532,18 +611,17 @@ class LastSeen(BaseCommand):
     def parse_args(self):
         if len(self.arguments) != 1:
             return False
+        if nicksub.exists(self.arguments[0]):
+            return True
         try:
-            person = nicksub.Person(self.arguments[0])
+            person = nicksub.Person(self.arguments[0], context=self.context)
         except nicksub.PersonNotFoundError:
             try:
-                person = nicksub.Person(self.arguments[0], context=self.context)
+                person = nicksub.Person(self.arguments[0], context='minecraft')
             except nicksub.PersonNotFoundError:
-                try:
-                    person = nicksub.Person(self.arguments[0], context='minecraft')
-                except nicksub.PersonNotFoundError:
-                    return False
+                return '<player> must be a person'
         if person.minecraft is None:
-            return False
+            return '<player> does not have a Minecraft nickname'
         return True
     
     def run(self):
@@ -650,6 +728,12 @@ class Leak(BaseCommand):
     def parse_args(self):
         if len(self.arguments) not in range(0, 2):
             return False
+        if len(self.arguments) > 0:
+            try:
+                if int(self.arguments[0]) < 1:
+                    return '<line_count> must be at least 1'
+            except ValueError:
+                return '<line_count> must be a positive integer'
         return True
     
     def permission_level(self):
@@ -711,27 +795,46 @@ class MinecraftWiki(BaseCommand):
 class Option(BaseCommand):
     """change your options"""
     
-    usage = '<option> [on | off]'
+    usage = '<option> [(on | off | reset | show) [<person>]]'
     
     def parse_args(self):
-        if len(self.arguments) not in range(1, 3):
+        if len(self.arguments) not in range(1, 4):
             return False
-        if len(self.arguments) == 2 and self.arguments[1].lower() not in ('true', 'false', 'yes', 'no', 'on', 'off'):
+        if not re.match('[a-z_]+$', self.arguments[0].lower()):
+            return 'option names only contain letters and underscores'
+        if len(self.arguments) >= 2 and self.arguments[1].lower() not in ('\\delete', '\\reset', 'true', 'false', 'yes', 'no', 'on', 'off', 'reset', 'delete', 'show'):
             return False
+        if len(self.arguments) >= 3 and not nicksub.exists(self.arguments[2]):
+            return '<person> must be an existing Wurstmineberg ID'
         return True
     
     def permission_level(self):
+        if len(self.arguments) >= 3 and self.arguments[1].lower() != 'show' and nicksub.Person(self.arguments[2]) != self.sender:
+            return 4
         return 1
     
     def run(self):
-        if len(self.arguments) == 1:
-            flag = self.sender.option(self.arguments[0])
-            is_default = self.sender.option_is_default(self.arguments[0])
-            self.reply('option ' + self.arguments[0] + ' is ' + ('on' if flag else 'off') + ' ' + ('by default' if is_default else 'for you'))
+        target_person = nicksub.Person(self.arguments[2]) if len(self.arguments) >= 3 else self.sender
+        target_nick = 'you' if target_person == (self.addressing or self.sender) else target_person.nick(self.context)
+        if len(self.arguments) == 1 or self.arguments[1].lower() == 'show':
+            flag = target_person.option(self.arguments[0])
+            is_default = target_person.option_is_default(self.arguments[0])
+            self.reply('option ' + self.arguments[0].lower() + ' is ' + ('on' if flag else 'off') + ' for ' + target_nick + (' by default' if is_default else ''))
+        elif self.arguments[1].lower() in ('on', 'true', 'yes'):
+            previous_value = target_person.option(self.arguments[0])
+            previous_value_is_default = target_person.option_is_default(self.arguments[0])
+            target_person.set_option(self.arguments[0], True)
+            self.reply('option ' + self.arguments[0].lower() + ' is now on for ' + target_nick + ' (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
+        elif self.arguments[1].lower() in ('false', 'no', 'off'):
+            previous_value = target_person.option(self.arguments[0])
+            previous_value_is_default = target_person.option_is_default(self.arguments[0])
+            target_person.set_option(self.arguments[0], False)
+            self.reply('option ' + self.arguments[0].lower() + ' is now off for ' + target_nick + ' (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
         else:
-            flag = self.arguments[1].lower() in ('true', 'yes', 'on')
-            self.sender.set_option(self.arguments[0], flag)
-            self.reply('option ' + self.arguments[0] + ' is now ' + ('on' if flag else 'off') + ' for you')
+            previous_value = target_person.option(self.arguments[0])
+            previous_value_is_default = target_person.option_is_default(self.arguments[0])
+            target_person.del_option(self.arguments[0])
+            self.reply('option ' + self.arguments[0].lower() + ' is now ' + ('on' if target_person.option(self.arguments[0]) else 'off') + ' for ' + target_nick + ' by default (was ' + ('on' if previous_value else 'off') + (' by default' if previous_value_is_default else '') + ')')
 
 class PasteMojira(BaseCommand):
     """print the title of a bug in Mojang's bug tracker"""
@@ -750,12 +853,12 @@ class PasteMojira(BaseCommand):
                 try:
                     int(arguments[0])
                 except ValueError:
-                    return False
+                    return 'no valid <url> or <issue_id> specified'
         if len(arguments) == 2:
             try:
                 int(arguments[1])
             except ValueError:
-                return False
+                return '<issue_id> must be a positive integer'
         return True
     
     def run(self):
@@ -797,7 +900,7 @@ class PasteTweet(BaseCommand):
             try:
                 int(arguments[0])
             except ValueError:
-                return False
+                return 'no valid <url> or <status_id> specified'
         return True
     
     def run(self):
@@ -812,22 +915,56 @@ class PasteTweet(BaseCommand):
 class People(BaseCommand):
     """people.json management"""
     
-    usage = '[<person> [<attribute> [<value>]]]'
+    usage = '[<person> [<attribute> [<value>...]]]'
     
     def parse_args(self):
         if len(self.arguments) >= 1:
             try:
                 nicksub.Person(self.arguments[0])
             except nicksub.PersonNotFoundError:
-                return False
+                return '<person> must be an existing Wurstmineberg ID'
             if len(self.arguments) >= 2:
+                if self.arguments[1].lower() == 'favcolor':
+                    if len(self.arguments) == 2:
+                        return True
+                    if len(self.arguments) == 3:
+                        if re.match('#?([0-9A-Fa-f]{3}){1,2}$', self.arguments[2]):
+                            return True
+                        return '<value> must be a color in hex format: #RRGGBB or #RGB'
+                    if len(self.arguments) == 5:
+                        try:
+                            r = int(self.arguments[2])
+                        except:
+                            return 'red part of color must be a number'
+                        try:
+                            g = int(self.arguments[3])
+                        except:
+                            return 'green part of color must be a number'
+                        try:
+                            b = int(self.arguments[4])
+                        except:
+                            return 'blue part of color must be a number'
+                        if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255:
+                            return True
+                        return 'all color components must be between 0 and 255'
+                    return '<value> must be a color in hex format: #RRGGBB or #RGB; or in decimal format: <red> <green> <blue>'
+                if self.arguments[1].lower() == 'gravatar':
+                    if len(self.arguments) == 2:
+                        return True
+                    if len(self.arguments) > 3:
+                        return '<value> must be an e-mail address, no spaces allowed'
+                    if self.arguments[2].lower() in ['delete', 'reset']:
+                        return True
+                    if '@' not in self.arguments[2]:
+                        return '<value> must be an e-mail address'
+                    return True
                 if self.arguments[1].lower() in ['description', 'name', 'wiki']:
                     return True
                 if self.arguments[1].lower() in ['reddit', 'twitter', 'website']:
                     if len(self.arguments) > 3:
-                        return False
+                        return 'no spaces allowed in <value>'
                     return True
-                return False
+                return 'no such <attribute>'
         return True
     
     def permission_level(self):
@@ -847,8 +984,45 @@ class People(BaseCommand):
                         else:
                             self.reply('no description')
                     else:
+                        old_description = person.description
                         person.description = ' '.join(self.arguments[2:])
-                        self.reply('description updated')
+                        self.reply('description ' + ('updated, was “' + old_description + '”' if old_description else 'added'))
+                elif self.arguments[1].lower() == 'favcolor':
+                    if len(self.arguments) == 2:
+                        if person.fav_color:
+                            self.reply('#%02x%02x%02x' % person.fav_color)
+                    else:
+                        if len(self.arguments) == 3:
+                            match = re.match('#?([0-9A-Fa-f]{3}){1,2}$', self.arguments[2])
+                            if len(match.group(1)) == 3:
+                                r = int(match.group(1)[0], 16) * 0x11
+                                g = int(match.group(1)[1], 16) * 0x11
+                                b = int(match.group(1)[2], 16) * 0x11
+                            else:
+                                r = int(match.group(1)[:2], 16)
+                                g = int(match.group(1)[2:4], 16)
+                                b = int(match.group(1)[4:], 16)
+                        else:
+                            r = int(self.arguments[2])
+                            g = int(self.arguments[3])
+                            b = int(self.arguments[4])
+                        old_color = person.fav_color
+                        person.fav_color = r, g, b
+                        self.reply('favorite color ' + ('changed, was #%02x%02x%02x' % old_color if old_color else 'added'))
+                elif self.arguments[1].lower() == 'gravatar':
+                    if len(self.arguments) == 2:
+                        if person.gravatar_email:
+                            self.reply(person.gravatar_email)
+                        else:
+                            self.reply('no Gravatar address')
+                    else:
+                        old_gravatar = person.gravatar_email
+                        if self.arguments[2].lower() in ['delete', 'reset']:
+                            del person.gravatar_email
+                            self.reply('Gravatar address deleted, was ' + old_gravatar if old_gravatar else 'no Gravatar address to delete' + (' :V' if random.randrange(0, 2) else ''))
+                            return
+                        person.gravatar_email = self.arguments[2]
+                        self.reply('Gravatar address ' + ('changed, was ' + old_gravatar if old_gravatar else 'added'))
                 elif self.arguments[1].lower() == 'name':
                     if len(self.arguments) == 2:
                         if person.name:
@@ -856,9 +1030,9 @@ class People(BaseCommand):
                         else:
                             self.reply('no name, using id: ' + person.id)
                     else:
-                        had_name = person.name is not None
+                        old_name = person.name
                         person.name = ' '.join(self.arguments[2:])
-                        self.reply('name ' + ('changed' if had_name else 'added'))
+                        self.reply('name ' + ('changed, was “' + old_name + '”' if old_name else 'added'))
                 elif self.arguments[1].lower() == 'reddit':
                     if len(self.arguments) == 2:
                         if person.reddit:
@@ -866,10 +1040,10 @@ class People(BaseCommand):
                         else:
                             self.reply('no reddit nick')
                     else:
-                        had_reddit_nick = person.reddit is not None
+                        old_reddit_nick = person.reddit
                         reddit_nick = self.arguments[2][3:] if self.arguments[2].startswith('/u/') else self.arguments[2]
                         person.reddit = reddit_nick
-                        self.reply('reddit nick ' + ('changed' if had_reddit_nick else 'added'))
+                        self.reply('reddit nick ' + ('changed, was /u/' + old_reddit_nick if old_reddit_nick else 'added'))
                 elif self.arguments[1].lower() == 'twitter':
                     if len(self.arguments) == 2:
                         if person.twitter:
@@ -887,9 +1061,9 @@ class People(BaseCommand):
                         else:
                             self.reply('no website')
                     else:
-                        had_website = person.website is not None
+                        old_website = person.website
                         person.website = self.arguments[2]
-                        self.reply('website ' + ('changed' if had_website else 'added'))
+                        self.reply('website ' + ('changed, was ' + old_website if old_website else 'added'))
                 elif self.arguments[1].lower() == 'wiki':
                     if len(self.arguments) == 2:
                         if person.wiki:
@@ -897,9 +1071,13 @@ class People(BaseCommand):
                         else:
                             self.reply('no wiki account')
                     else:
-                        had_wiki = person.wiki is not None
-                        person.wiki = self.arguments[2]
-                        self.reply('wiki account ' + ('changed' if had_wiki else 'added'))
+                        old_wiki = person.wiki
+                        new_wiki = self.arguments[2]
+                        if new_wiki.startswith('User:') or new_wiki.startswith('user:'):
+                            new_wiki = new_wiki[5:]
+                        new_wiki = new_wiki[0].upper() + new_wiki[1:]
+                        person.wiki = new_wiki
+                        self.reply('wiki account ' + ('changed, was “' + old_wiki + '”' if old_wiki else 'added'))
             else:
                 if 'name' in person:
                     self.reply('person with id ' + arguments[0] + ' and name ' + person['name'])
@@ -942,7 +1120,9 @@ class Raw(BaseCommand):
     usage = '<raw_message>...'
     
     def parse_args(self):
-        return len(self.arguments) > 0
+        if len(self.arguments) == 0:
+            return False
+        return True
     
     def permission_level(self):
         return 4
@@ -988,35 +1168,143 @@ class Restart(BaseCommand):
                 self.reply('Could not restart the server!')
             core.update_topic()
 
+class Retweet(BaseCommand):
+    """retweet a tweet with the bot's twitter account"""
+    
+    usage = '(<url> | <status_id>) [nopaste]'
+    
+    def parse_args(self):
+        if len(self.arguments) != 1:
+            if len(self.arguments) != 2:
+                return False
+            if self.arguments[1].lower() != 'nopaste':
+                return False
+        if not re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/[0-9]+', self.arguments[0]):
+            try:
+                int(self.arguments[0])
+            except ValueError:
+                return 'no valid <url> or <status_id> specified'
+        return True
+    
+    def permission_level(self):
+        return 4
+    
+    def run(self):
+        import TwitterAPI
+        if len(self.arguments) > 1:
+            paste = self.arguments[1].lower() != 'nopaste'
+        else:
+            paste = True
+        match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', self.arguments[0])
+        twid = int(match.group(1) if match else self.arguments[0])
+        r = core.twitter.request('statuses/retweet/:' + twid)
+        if isinstance(r, TwitterAPI.TwitterResponse):
+            j = r.response.json()
+        else:
+            j = r.json()
+        if r.status_code == 200:
+            twid = j['id']
+        else:
+            first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
+            raise core.TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code, errors=j.get('errors', []))
+        url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
+        if paste:
+            if self.context == 'minecraft':
+                minecraft.tellraw({
+                    'text': '',
+                    'extra': [
+                        {
+                            'text': url,
+                            'color': 'gold',
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': url
+                            }
+                        }
+                    ]
+                })
+            else:
+                minecraft.tellraw(core.paste_tweet(twid, tellraw=True, link=True))
+            if self.channel is not None:
+                core.state['bot'].say(self.channel, url)
+            irc_config = core.config('irc')
+            if 'main_channel' in irc_config and self.channel != irc_config['main_channel']:
+                for line in core.paste_tweet(twid, link=True).splitlines():
+                    core.state['bot'].say(irc_config['main_channel'], line)
+        else:
+            self.reply(url)
+
 class Status(BaseCommand):
     """print some server status"""
     
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
     def run(self):
+        import requests
         if minecraft.status():
             if self.context != 'minecraft':
-                players = minecraft.online_players()
+                players = nicksub.sorted_people(nicksub.person_or_dummy(minecraft_nick, context='minecraft') for minecraft_nick in minecraft.online_players())
                 if len(players):
-                    self.reply('Online players: ' + ', '.join(nicksub.sub(nick, 'minecraft', self.context) for nick in players))
+                    self.reply('Online players: ' + ', '.join(person.nick(self.context) for person in players))
                 else:
                     self.reply('The server is currently empty.')
             version = minecraft.version()
             if version is None:
                 self.reply('unknown Minecraft version')
             else:
-                self.reply('Minecraft version ' + version, {
-                    'text': 'Minecraft version ',
-                    'extra': [
-                        {
-                            'text': version,
-                            'clickEvent': {
-                                'action': 'open_url',
-                                'value': 'http://minecraft.gamepedia.com/Version_history' + ('/Development_versions#' if 'pre' in version or version[2:3] == 'w' else '#') + version
-                            }
-                        }
-                    ]
-                })
+                version_url = minecraft.wiki_version_link(version)
+                self.reply('Minecraft version ' + version + ' [' + version_url + ']', [
+                    {
+                        'color': 'gold',
+                        'text': 'Minecraft version '
+                    },
+                    {
+                        'clickEvent': {
+                            'action': 'open_url',
+                            'value': version_url
+                        },
+                        'color': 'gold',
+                        'text': version
+                    }
+                ])
         else:
             self.reply('The server is currently offline.')
+        response = requests.get('http://status.mojang.com/check')
+        for item in response.json():
+            for key, value in item.items():
+                if value != 'green':
+                    self.reply('Mojang service ' + key + ' has status ' + json.dumps(value), [
+                        {
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': 'http://status.mojang.com/check'
+                            },
+                            'color': 'gold',
+                            'text': 'Mojang service'
+                        },
+                        {
+                            'text': ' '
+                        },
+                        {
+                            'clickEvent': {
+                                'action': 'open_url',
+                                'value': key
+                            },
+                            'color': 'gold',
+                            'text': key
+                        },
+                        {
+                            'color': 'gold',
+                            'text': ' has status '
+                        },
+                        {
+                            'color': value if value in ('yellow', 'red') else 'gold',
+                            'text': json.dumps(value)
+                        }
+                    ])
 
 class Stop(BaseCommand):
     """stop the Minecraft server or the bot"""
@@ -1048,6 +1336,11 @@ class Stop(BaseCommand):
 class Time(BaseCommand):
     """reply with the current time"""
     
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
     def run(self):
         from wurstminebot import loops
         loops.tell_time(func=self.reply)
@@ -1055,7 +1348,7 @@ class Time(BaseCommand):
 class Topic(BaseCommand):
     """change the main channel's topic"""
     
-    usage = '<topic>...'
+    usage = '[<topic>...]'
     
     def permission_level(self):
         return 4
@@ -1081,7 +1374,7 @@ class Tweet(BaseCommand):
     def run(self):
         status = nicksub.textsub(' '.join(self.arguments), self.context, 'twitter')
         twid = core.tweet(status)
-        url = 'https://twitter.com/wurstmineberg/status/' + str(twid)
+        url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
         if self.context == 'minecraft':
             minecraft.tellraw({
                 'text': '',
@@ -1115,6 +1408,9 @@ class Update(BaseCommand):
             if self.arguments[0].lower() == 'snapshot':
                 if len(self.arguments) > 2:
                     return False
+                if len(self.arguments) == 2:
+                    if not re.match('[a-z]', self.arguments[1].lower()):
+                        return '<snapshot_id> must be a single Latin letter'
             elif len(self.arguments) != 1:
                 return False
         return True
@@ -1126,7 +1422,7 @@ class Update(BaseCommand):
         if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
             if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
                 core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1] if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
+                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
             elif self.arguments[0] == 'release': # !update release
                 core.update_topic(special_status='The server is being updated, wait a sec.')
                 version, is_snapshot, version_text = minecraft.update(snapshot=False, reply=self.reply)
@@ -1155,6 +1451,11 @@ class Update(BaseCommand):
 class Version(BaseCommand):
     """reply with the current version of wurstminebot and init-minecraft"""
     
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
     def run(self):
         self.reply('I am wurstminebot version ' + core.__version__ + ', running on init-minecraft version ' + minecraft.__version__)
 
@@ -1166,8 +1467,12 @@ class Whitelist(BaseCommand):
     def parse_args(self):
         if len(self.arguments) not in range(2, 4):
             return False
-        if not re.match('[a-z][0-9a-z]+', self.arguments[0]):
-            return False
+        if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
+            return '<unique_id> must be a valid Wurstmineberg ID: alphanumeric, 2 to 15 characters, and start with a letter'
+        if not re.match(minecraft.regexes.player, self.arguments[1]):
+            return '<minecraft_name> is not a valid Minecraft nickname'
+        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+            return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
     def permission_level(self):
@@ -1179,7 +1484,7 @@ class Whitelist(BaseCommand):
                 screen_name = self.arguments[2][1:] if self.arguments[2].startswith('@') else self.arguments[2]
             else:
                 screen_name = None
-            minecraft.whitelist_add(self.arguments[0], self.arguments[1])
+            minecraft.whitelist_add(self.arguments[0], self.arguments[1], people_file=core.config('paths').get('people'))
         except ValueError:
             self.warning('id ' + self.arguments[0] + ' already exists')
         else:
@@ -1220,8 +1525,13 @@ def run(command_name, sender, context, channel=None):
         command_name = command_name[0]
         BaseCommand(args=[], sender=sender, context=context, channel=channel).warning(core.ErrorMessage.unknown(command_name))
         return False
-    if not command.parse_args():
+    core.debug_print('[command] ' + command.name + ' ' + ' '.join(command.arguments))
+    parse_result = command.parse_args()
+    if parse_result is False:
         command.warning('Usage: ' + command.name + ('' if command.usage is None else ' ' + command.usage))
+        return False
+    elif parse_result is not True:
+        command.warning(str(parse_result))
         return False
     sender_permission_level = 0
     if isinstance(sender, nicksub.Person):
@@ -1239,32 +1549,4 @@ def run(command_name, sender, context, channel=None):
     command.run()
     return True
 
-classes = [
-    AchievementTweet,
-    Alias,
-    Cloud,
-    Command,
-    DeathGames,
-    DeathTweet,
-    FixStatus,
-    Help,
-    Join,
-    LastSeen,
-    Leak,
-    MinecraftWiki,
-    Option,
-    PasteMojira,
-    PasteTweet,
-    People,
-    Quit,
-    Raw,
-    Restart,
-    Status,
-    Stop,
-    Time,
-    Topic,
-    Tweet,
-    Update,
-    Version,
-    Whitelist
-]
+classes = [command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand']

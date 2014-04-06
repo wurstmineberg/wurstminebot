@@ -199,12 +199,13 @@ class InputLoop(threading.Thread):
                                         index += weight
                                 else:
                                     welcome_message = (0, 0) # The “um… sup?” welcome message
+                        core.debug_print('[join] ' + ('@unknown' if person is None else person.id) + ' ' + repr(welcome_message))
                         if welcome_message == (0, 0):
                             minecraft.tellraw({
                                 'text': 'Hello ' + player + '. Um... sup?',
                                 'color': 'gray'
                             }, player)
-                        if welcome_message == (0, 1):
+                        elif welcome_message == (0, 1):
                             minecraft.tellraw([
                                 {
                                     'text': 'Hello ' + player + ". You still don't have a description for ",

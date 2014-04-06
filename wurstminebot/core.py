@@ -24,9 +24,9 @@ class ErrorMessage:
     @staticmethod
     def unknown(command=None):
         if command is None or command == '':
-            return 'Unknown command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
+            return 'Unknown command. Execute “Help commands” for a list of commands, or “Help aliases” for a list of aliases.'
         else:
-            return '“' + str(command) + '” is not a command. Execute “help commands” for a list of commands, or “help aliases” for a list of aliases.'
+            return '“' + str(command) + '” is not a command. Execute “Help commands” for a list of commands, or “Help aliases” for a list of aliases.'
     
     @staticmethod
     def permission(level=0):
@@ -194,7 +194,7 @@ def debug_print(msg):
     if state.get('is_daemon', False) or config('debug', False):
         if state.get('is_daemon', False):
             sys.stdout = open('/opt/wurstmineberg/log/wurstminebot.log', 'a')
-        print('DEBUG] ' + msg)
+        print('DEBUG] ' + datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ' ' + msg)
 
 def minecraft_wiki_lookup(article, reply=None):
     if reply is None:
