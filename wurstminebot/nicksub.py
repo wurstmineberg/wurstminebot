@@ -307,7 +307,10 @@ class Person(BasePerson):
     
     @name.setter
     def name(self, value):
-        update_config(self.id, ['name'], value=value)
+        if value == self.id:
+            update_config(self.id, ['name'], delete=True)
+        else:
+            update_config(self.id, ['name'], value=value)
     
     @name.deleter
     def name(self):

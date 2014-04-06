@@ -187,10 +187,6 @@ class AliasCommand(BaseCommand):
                             'value': self.sender.nick('minecraft') + ': '
                         },
                         'color': 'gold',
-                        'hoverEvent': {
-                            'action': 'show_text',
-                            'value': self.sender.irc_nick(respect_highlight_option=False) + ' in ' + self.channel
-                        },
                         'text': self.sender.nick('minecraft')
                     },
                     {
@@ -1250,9 +1246,9 @@ class Status(BaseCommand):
         import requests
         if minecraft.status():
             if self.context != 'minecraft':
-                players = minecraft.online_players()
+                players = nicksub.sorted_people(nicksub.person_or_dummy(minecraft_nick, context='minecraft') for minecraft_nick in minecraft.online_players())
                 if len(players):
-                    self.reply('Online players: ' + ', '.join(nicksub.sub(nick, 'minecraft', self.context) for nick in players))
+                    self.reply('Online players: ' + ', '.join(person.nick(self.context) for person in players))
                 else:
                     self.reply('The server is currently empty.')
             version = minecraft.version()
