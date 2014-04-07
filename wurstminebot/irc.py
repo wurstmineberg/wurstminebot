@@ -10,7 +10,7 @@ import random
 import re
 import traceback
 
-def chans():
+def channels():
     irc_config = core.config('irc')
     chans = set(irc_config.get('channels', []))
     if 'main_channel' in irc_config:
@@ -23,7 +23,7 @@ def chans():
 
 def endMOTD(sender, headers, message):
     irc_config = core.config('irc')
-    for chan in chans():
+    for chan in channels():
         try:
             core.state['bot'].joinchan(chan)
         except:
