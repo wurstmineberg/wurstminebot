@@ -85,7 +85,7 @@ def action(sender, headers, message):
         raise
     except:
         core.debug_print('Exception in ACTION:')
-        if core.config('debug', False) or core.state('is_daemon', False):
+        if core.config('debug', False) or core.state.get('is_daemon', False):
             traceback.print_exc(file=sys.stdout)
 
 def bot():
@@ -101,68 +101,95 @@ def bot():
     return ret
 
 def join(sender, headers, message):
-    core.debug_print('[irc] ' + sender + ' joined ' + headers[0])
-    if len(headers):
-        chan = headers[0]
-    elif message is not None and len(message):
-        chan = message
-    else:
-        return
-    for person in nicksub.everyone():
-        if person.minecraft is not None and person.option('sync_join_part'):
-            minecraft.tellraw([
-                {
-                    'text': sender,
-                    'color': 'yellow',
-                    'clickEvent': {
-                        'action': 'suggest_command',
-                        'value': sender + ': '
+    try:
+        core.debug_print('[irc] ' + sender + ' joined ' + headers[0])
+        if len(headers):
+            chan = headers[0]
+        elif message is not None and len(message):
+            chan = message
+        else:
+            return
+        for person in nicksub.everyone():
+            if person.minecraft is not None and person.option('sync_join_part'):
+                minecraft.tellraw([
+                    {
+                        'text': sender,
+                        'color': 'yellow',
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': sender + ': '
+                        }
+                    },
+                    {
+                        'text': ' joined ' + chan,
+                        'color': 'yellow'
                     }
-                },
-                {
-                    'text': ' joined ' + chan,
-                    'color': 'yellow'
-                }
-            ], player=person.minecraft)
+                ], player=person.minecraft)
+    except SystemExit:
+        core.debug_print('Exit in JOIN')
+        core.cleanup()
+        raise
+    except:
+        core.debug_print('Exception in JOIN:')
+        if core.config('debug', False) or core.state.get('is_daemon', False):
+            traceback.print_exc(file=sys.stdout)
 
 def nick(sender, headers, message):
-    core.debug_print('[irc] ' + sender + ' is now known as ' + message)
-    if message is None or len(message) == 0:
-        return
-    for person in nicksub.everyone():
-        if person.minecraft is not None and person.option('sync_nick_changes'):
-            minecraft.tellraw([
-                {
-                    'text': sender + ' is now known as ',
-                    'color': 'yellow'
-                },
-                {
-                    'text': message,
-                    'color': 'yellow',
-                    'clickEvent': {
-                        'action': 'suggest_command',
-                        'value': message + ': '
+    try:
+        core.debug_print('[irc] ' + sender + ' is now known as ' + message)
+        if message is None or len(message) == 0:
+            return
+        for person in nicksub.everyone():
+            if person.minecraft is not None and person.option('sync_nick_changes'):
+                minecraft.tellraw([
+                    {
+                        'text': sender + ' is now known as ',
+                        'color': 'yellow'
+                    },
+                    {
+                        'text': message,
+                        'color': 'yellow',
+                        'clickEvent': {
+                            'action': 'suggest_command',
+                            'value': message + ': '
+                        }
                     }
-                }
-            ], player=person.minecraft)
+                ], player=person.minecraft)
+    except SystemExit:
+        core.debug_print('Exit in NICK')
+        core.cleanup()
+        raise
+    except:
+        core.debug_print('Exception in NICK:')
+        if core.config('debug', False) or core.state.get('is_daemon', False):
+            traceback.print_exc(file=sys.stdout)
 
 def part(sender, headers, message):
-    core.debug_print('[irc] ' + sender + ' left ' + headers[0])
-    chans = headers[0].split(',')
-    if len(chans) == 0:
-        return
-    elif len(chans) == 1:
-        chans = chans[0]
-    elif len(chans) == 2:
-        chans = chans[0] + ' and ' + chans[1]
-    else:
-        chans = ', '.join(chans[:-1]) + ', and ' + chans[-1]
-    for person in nicksub.everyone():
-        if person.minecraft is not None and person.option('sync_join_part'):
-            minecraft.tellraw({
-                'text': sender + ' left ' + chans,
-                'color': 'yellow'
-            }, player=person.minecraft)
+    try:
+        core.debug_print('[irc] ' + sender + ' left ' + headers[0])
+        chans = headers[0].split(',')
+        if len(chans) == 0:
+            return
+        elif len(chans) == 1:
+            chans = chans[0]
+        elif len(chans) == 2:
+            chans = chans[0] + ' and ' + chans[1]
+        else:
+            chans = ', '.join(chans[:-1]) + ', and ' + chans[-1]
+        for person in nicksub.everyone():
+            if person.minecraft is not None and person.option('sync_join_part'):
+                minecraft.tellraw({
+                    'text': sender + ' left ' + chans,
+                    'color': 'yellow'
+                }, player=person.minecraft)
+    except SystemExit:
+        core.debug_print('Exit in PART')
+        core.cleanup()
+        raise
+    except:
+        core.debug_print('Exception in PART:')
+        if core.config('debug', False) or core.state.get('is_daemon', False):
+            traceback.print_exc(file=sys.stdout)
 
 def privmsg(sender, headers, message):
     irc_config = core.config('irc')
