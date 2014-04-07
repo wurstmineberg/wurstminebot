@@ -226,7 +226,7 @@ def minecraft_wiki_lookup(article, reply=None):
             reply('Article http://minecraft.gamepedia.com/' + article, {
                 'clickEvent': {
                     'action': 'open_url',
-                    'value': article
+                    'value': 'http://minecraft.gamepedia.com/' + article
                 },
                 'color': 'gold',
                 'text': 'Article'
