@@ -3,6 +3,7 @@ import sys
 from wurstminebot import core
 from datetime import datetime
 import inspect
+import json
 import minecraft
 from wurstminebot import nicksub
 import os.path
