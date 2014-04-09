@@ -3,6 +3,7 @@ import sys
 from wurstminebot import core
 from datetime import datetime
 import inspect
+import json
 import minecraft
 from wurstminebot import nicksub
 import os.path
@@ -964,7 +965,7 @@ class People(BaseCommand):
                     if len(self.arguments) > 3:
                         return 'no spaces allowed in <value>'
                     return True
-                return 'no such <attribute>'
+                return '<attribute> must be description, favcolor, gravatar, name, reddit, twitter, website, or wiki'
         return True
     
     def permission_level(self):
