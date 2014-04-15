@@ -413,10 +413,10 @@ def run():
         state['bot'] = irc.bot()
         #state['bot'].debugging(config('debug'))
         try:
-            state['bot'].run()
+            state['bot'].connect()
         except Exception:
             cleanup()
-            debug_print('Exception in bot.run:')
+            debug_print('Exception in bot.connect:')
             if config('debug', False) or state.get('is_daemon', False):
                 traceback.print_exc(file=sys.stdout)
             sys.exit(1)
