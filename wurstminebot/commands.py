@@ -1198,7 +1198,7 @@ class Retweet(BaseCommand):
             paste = True
         match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', self.arguments[0])
         twid = int(match.group(1) if match else self.arguments[0])
-        r = core.twitter.request('statuses/retweet/:' + twid)
+        r = core.twitter.request('statuses/retweet/:' + str(twid))
         if isinstance(r, TwitterAPI.TwitterResponse):
             j = r.response.json()
         else:
