@@ -199,12 +199,12 @@ class InputLoop(threading.Thread):
                                         index += weight
                                 else:
                                     welcome_message = (0, 0) # The “um… sup?” welcome message
-                        core.debug_print('[join] ' + ('@unknown' if person is None else person.id) + ' ' + repr(welcome_message))
                         if welcome_message == (0, 0):
                             minecraft.tellraw({
                                 'text': 'Hello ' + player + '. Um... sup?',
                                 'color': 'gray'
                             }, player)
+                            welcome_message_stub = 'Um... sup?'
                         elif welcome_message == (0, 1):
                             minecraft.tellraw([
                                 {
@@ -240,21 +240,26 @@ class InputLoop(threading.Thread):
                                     'color': 'gray'
                                 }
                             ], player)
+                            welcome_message_stub = "You still don't have a description […]"
                         elif welcome_message == (0, 2):
                             minecraft.tellraw({
                                 'text': 'Hello ' + player + '. Welcome to the server!',
                                 'color': 'gray'
                             }, player)
+                            welcome_message_stub = 'Welcome to the server!'
                         elif welcome_message == (0, 3):
                             minecraft.tellraw({
                                 'color': 'gray',
                                 'text': 'Hello ' + player + '. Do I know you?'
                             }, player)
+                            welcome_message_stub = 'Do I know you?'
                         elif welcome_message[0] == 1:
+                            welcome_message_string = core.config('comment_lines')['server_join'][welcome_message[1]]
                             minecraft.tellraw({
-                                'text': 'Hello ' + player + '. ' + core.config('comment_lines')['server_join'][welcome_message[1]],
+                                'text': 'Hello ' + player + '. ' + welcome_message_string,
                                 'color': 'gray'
                             }, player)
+                            welcome_message_stub = welcome_message_string[:80] + ' […]' if len(welcome_message_string) > 80 else welcome_message_string
                         elif welcome_message[0] == 2:
                             message_dict = core.config('advanced_comment_lines')['server_join'][welcome_message[1]]
                             message_list = message_dict['text']
@@ -268,11 +273,17 @@ class InputLoop(threading.Thread):
                                     'color': 'gray'
                                 }
                             ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
+                            if len(message_list) and 'text' in message_list[0]:
+                                welcome_message_stub = (message_list[0]['text'][:80] if len(message_list[0]['text']) > 80 else message_list[0]['text']) + (' […]' if len(message_list[0]['text']) > 80 or len(message_list) > 1 else '')
+                            else:
+                                welcome_message_stub = '[…]'
                         else:
                             minecraft.tellraw({
                                 'text': 'Hello ' + player + '. How did you do that?',
                                 'color': 'gray'
                             }, player)
+                            welcome_message_stub = 'How did you do that?'
+                    core.debug_print('[join] ' + ('@unknown' if person is None else person.id) + ' ' + repr(welcome_message) + ' ' + welcome_message_stub)
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config and irc_config.get('player_list', 'announce') == 'announce':
                         core.state['bot'].say(irc_config['main_channel'], (player if person is None else person.irc_nick()) + ' ' + ('joined' if joined else 'left') + ' the game')
