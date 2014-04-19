@@ -1400,6 +1400,11 @@ class Tweet(BaseCommand):
             for line in core.paste_tweet(twid, link=True).splitlines():
                 core.state['bot'].say(irc_config['main_channel'], line)
 
+class UltraSoftcore(BaseCommand):
+    """set up a game of Ultra Softcore"""
+    
+    usage = '[prepare [[<date>] <time>] | stop | restart]'
+
 class Update(BaseCommand):
     """update Minecraft"""
     
