@@ -13,6 +13,7 @@ import subprocess
 import threading
 from datetime import timedelta
 from datetime import timezone
+import traceback
 import urllib.parse
 
 class BaseCommand:
