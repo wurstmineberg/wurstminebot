@@ -995,12 +995,13 @@ class People(BaseCommand):
                             self.reply('#%02x%02x%02x' % person.fav_color)
                     else:
                         if len(self.arguments) == 3:
-                            match = re.match('#?([0-9A-Fa-f]{3}){1,2}$', self.arguments[2])
-                            if len(match.group(1)) == 3:
+                            match = re.match('#?([0-9A-Fa-f]{3})$', self.arguments[2])
+                            if match:
                                 r = int(match.group(1)[0], 16) * 0x11
                                 g = int(match.group(1)[1], 16) * 0x11
                                 b = int(match.group(1)[2], 16) * 0x11
                             else:
+                                match = re.match('#?([0-9A-Fa-f]{6})$', self.arguments[2])
                                 r = int(match.group(1)[:2], 16)
                                 g = int(match.group(1)[2:4], 16)
                                 b = int(match.group(1)[4:], 16)
