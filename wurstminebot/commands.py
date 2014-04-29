@@ -421,17 +421,17 @@ class DeathGames(BaseCommand):
             try:
                 attacker = nicksub.Person(self.arguments[1])
             except nicksub.PersonNotFoundError:
-                attacker = nicksub.Person(self.arguments[1], context=context)
+                attacker = nicksub.Person(self.arguments[1], context=self.context)
             try:
                 target = nicksub.Person(self.arguments[2])
             except nicksub.PersonNotFoundError:
-                target = nicksub.Person(self.arguments[2], context=context)
+                target = nicksub.Person(self.arguments[2], context=self.context)
         else:
             attacker = self.sender
             try:
                 target = nicksub.Person(self.arguments[1])
             except nicksub.PersonNotFoundError:
-                target = nicksub.Person(self.arguments[1], context=context)
+                target = nicksub.Person(self.arguments[1], context=self.context)
         core.death_games_log(attacker, target, success)
 
 class DeathTweet(BaseCommand):
