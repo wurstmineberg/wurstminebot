@@ -1465,16 +1465,19 @@ class Version(BaseCommand):
 class Whitelist(BaseCommand):
     """add someone to the whitelist"""
     
-    usage = '<unique_id> <minecraft_name> [<twitter_username>]'
+    usage = '<unique_id> [<minecraft_name> [<twitter_username>]]'
     
     def parse_args(self):
-        if len(self.arguments) not in range(2, 4):
+        if len(self.arguments) not in range(1, 4):
             return False
         if not re.match('[a-z][0-9a-z]{1,15}$', self.arguments[0].lower()):
             return '<unique_id> must be a valid Wurstmineberg ID: alphanumeric, 2 to 15 characters, and start with a letter'
-        if not re.match(minecraft.regexes.player, self.arguments[1]):
+        if len(self.arguments) < 2:
+            if (not nicksub.exists(self.arguments[0])) or nicksub.Person(self.arguments[0]).minecraft == None:
+                return '<minecraft_name> is required because no Minecraft UUID is known for this person yet'
+        elif not re.match(minecraft.regexes.player, self.arguments[1]):
             return '<minecraft_name> is not a valid Minecraft nickname'
-        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+        if len(self.arguments) > 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
             return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
@@ -1482,16 +1485,17 @@ class Whitelist(BaseCommand):
         return 4
     
     def run(self):
+        minecraft_nick = self.arguments[1] if len(self.arguments) > 1 else nicksub.Person(self.arguments[0]).minecraft
         try:
             if len(self.arguments) == 3 and self.arguments[2] is not None and len(self.arguments[2]):
                 screen_name = self.arguments[2][1:] if self.arguments[2].startswith('@') else self.arguments[2]
             else:
                 screen_name = None
-            minecraft.whitelist_add(self.arguments[0], self.arguments[1], people_file=core.config('paths').get('people'))
+            minecraft.whitelist_add(self.arguments[0], minecraft_nick, people_file=core.config('paths').get('people'))
         except ValueError:
             self.warning('id ' + self.arguments[0] + ' already exists')
         else:
-            self.reply(self.arguments[1] + ' is now whitelisted')
+            self.reply(minecraft_nick + ' is now whitelisted')
             if screen_name is not None:
                 core.set_twitter(nicksub.Person(self.arguments[0]), screen_name)
                 self.reply('@' + core.config('twitter')['screen_name'] + ' is now following @' + screen_name)
