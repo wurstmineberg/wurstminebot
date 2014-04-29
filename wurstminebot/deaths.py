@@ -234,8 +234,8 @@ class Death:
         else:
             raise ValueError('Log line is not a death')
     
-    def irc_message(self, tweet_info=None):
-        victim_irc = self.person.irc_nick()
+    def irc_message(self, tweet_info=None, respect_highlight_option=True):
+        victim_irc = self.person.irc_nick(respect_highlight_option=respect_highlight_option)
         return victim_irc + ' ' + nicksub.textsub(self.partial_message, 'minecraft', 'irc', strict=True) + ('' if tweet_info is None else ' [' + str(tweet_info) + ']')
     
     def log(self, file_obj=None):

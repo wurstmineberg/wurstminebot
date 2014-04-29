@@ -377,7 +377,7 @@ class InputLoop(threading.Thread):
                         })
                 else:
                     twid = 'deathtweets are disabled'
-                core.debug_print('[death] ' + death.irc_message(tweet_info=twid))
+                core.debug_print('[death] ' + death.irc_message(tweet_info=twid, respect_highlight_option=False))
                 irc_config = core.config('irc')
                 if 'main_channel' in irc_config and core.state.get('bot'):
                     core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
