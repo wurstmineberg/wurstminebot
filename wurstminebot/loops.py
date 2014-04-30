@@ -231,7 +231,7 @@ class InputLoop(threading.Thread):
                                     'text': 'Write one today',
                                     'clickEvent': {
                                         'action': 'suggest_command',
-                                        'value': '!people ' + person.id + ' description '
+                                        'value': '!People ' + person.id + ' description '
                                     },
                                     'color': 'gray'
                                 },
