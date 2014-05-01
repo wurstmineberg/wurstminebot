@@ -5,6 +5,7 @@ from wurstminebot import core
 from datetime import datetime
 from wurstminebot import deaths
 import json
+import lazyjson
 import minecraft
 from wurstminebot import nicksub
 import os.path
@@ -264,13 +265,20 @@ class InputLoop(threading.Thread):
                             message_dict = core.config('advanced_comment_lines')['server_join'][welcome_message[1]]
                             message_list = message_dict['text']
                             if isinstance(message_list, str):
-                                message_list = [{'text': message_list, 'color': 'gray'}]
-                            elif isinstance(message_list, dict):
+                                message_list = [{'text': message_list, 'color': message_dict.get('commentColor', message_dict.get('color', 'gray'))}]
+                            elif isinstance(message_list, dict) or isinstance(message_list, lazyjson.Dict):
                                 message_list = [message_list]
-                            minecraft.tellraw(([
+                            prefix_list = []
+                            if 'prefix' in message_dict:
+                                prefix_list = message_dict['prefix']
+                                if isinstance(prefix_list, str):
+                                    prefix_list = [{'text': prefix_list, 'color': message_dict.get('prefixColor', message_dict.get('color', 'gray'))}]
+                                elif isinstance(prefix_list, dict) or isinstance(prefix_list, lazyjson.Dict):
+                                    prefix_list = [prefix_list]
+                            minecraft.tellraw(prefix_list + ([
                                 {
                                     'text': 'Hello ' + player + '. ',
-                                    'color': 'gray'
+                                    'color': message_dict.get('helloColor', message_dict.get('color', 'gray'))
                                 }
                             ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
                             if len(message_list) and 'text' in message_list[0]:
