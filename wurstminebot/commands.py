@@ -1405,11 +1405,23 @@ class Tweet(BaseCommand):
 class UltraSoftcore(BaseCommand):
     """set up a game of Ultra Softcore"""
     
-    usage = '[prepare [[<date>] <time>] | stop | restart]'
+    usage = '[prepare [[<date>] <time>] | stop | restart | end]'
+    
+    def default_subcommand(self): # the subcommand to use when !UltraSoftcore is called without arguments
+        usc_config = core.config('usc')
+        if usc_config.get('state') is None:
+            return 'prepare'
+        elif usc_config.get('state') == 'prepare':
+            return 'stop'
+        elif usc_config.get('state') == 'stop':
+            return 'restart'
+        elif usc_config.get('state') == 'restart':
+            return 'end'
+        else:
+            return None
     
     def parse_args(self):
-        default_subcommand = 'prepare' # the subcommand to use when !UltraSoftcore is called without arguments
-        subcommand = self.arguments[0].lower() if len(self.arguments) else default_subcommand
+        subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
         if subcommand == 'prepare':
             if len(self.arguments) == 1:
                 return True
@@ -1433,6 +1445,10 @@ class UltraSoftcore(BaseCommand):
             if len(self.arguments) == 1:
                 return True
             return False
+        elif subcommand == 'end':
+            if len(self.arguments) == 1:
+                return True
+            return False
         elif len(self.arguments):
             return False
         else:
@@ -1442,7 +1458,31 @@ class UltraSoftcore(BaseCommand):
         return 4
     
     def run(self):
-        pass #TODO
+        subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
+        if subcommand == 'prepare':
+            core.update_config(['usc', 'state'], 'prepare')
+            #TODO if a datetime is specified, announce on twitter
+            #TODO add notice to main channel topic
+            #TODO stop the server
+            #TODO delete any existing USC world
+            #TODO switch to the USC server.properties
+            #TODO start the server
+        elif subcommand == 'stop':
+            core.update_config(['usc', 'state'], 'stop')
+            #TODO stop the server
+            #TODO zip the US world
+            #TODO link to the zip file (reply to main channel if executed from in-game)
+        elif subcommand == 'restart':
+            core.update_config(['usc', 'state'], 'restart')
+            #TODO unzip the world
+            #TODO start the server
+            #TODO notify IRC (and Twitter?) that the lobby is now open
+        elif subcommand == 'end':
+            core.update_config(['usc', 'completedSeasons'], core.config('usc').get('completedSeasons', 0) + 1)
+            core.update_config(['usc', 'state'], None)
+            #TODO stop the server
+            #TODO switch to the default server.properties
+            #TODO start the server
 
 class Update(BaseCommand):
     """update Minecraft"""
