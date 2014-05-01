@@ -126,6 +126,10 @@ def config(key=None, default_value=None):
         },
         'twitter': {
             'screen_name': 'wurstmineberg'
+        },
+        'usc': {
+            'completedSeasons': 0,
+            'state': None
         }
     }
     try:
