@@ -83,6 +83,10 @@ def config(key=None, default_value=None):
             'ping': {
                 'text': 'pong',
                 'type': 'reply'
+            },
+            'usc': {
+                'command_name': 'UltraSoftcore',
+                'type': 'command'
             }
         },
         'advanced_comment_lines': {
