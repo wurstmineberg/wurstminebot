@@ -540,6 +540,7 @@ class Help(BaseCommand):
                 if command_class.__name__.lower() == self.arguments[0].lower():
                     self.reply(command_class.__name__ + ': ' + command_class.__doc__)
                     self.reply('Usage: ' + command_class.__name__ + ('' if command_class.usage is None else (' ' + command_class.usage)))
+                    self.reply('More info: http://wiki.wurstmineberg.de/Commands#' + command_class.__name__, {'text': 'More info', 'clickEvent': {'action': 'open_url', 'value': 'http://wiki.wurstmineberg.de/Commands#' + command_class.__name__}})
                     break
             else:
                 self.reply(core.ErrorMessage.unknown(self.arguments[0]))
