@@ -1423,7 +1423,7 @@ class UltraSoftcore(BaseCommand):
     def parse_args(self):
         subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
         if subcommand == 'prepare':
-            if len(self.arguments) == 1:
+            if len(self.arguments) <= 1:
                 return True
             elif len(self.arguments) == 2:
                 usc_date = date.today().strftime('%Y-%m-%d')
@@ -1438,15 +1438,15 @@ class UltraSoftcore(BaseCommand):
             if datetime.strptime(usc_date + ' ' + usc_time, '%Y-%m-%d %H:%M:%S') < datetime.utcnow():
                 return 'the announced date and time is in the past'
         elif subcommand == 'restart':
-            if len(self.arguments) == 1:
+            if len(self.arguments) <= 1:
                 return True
             return False
         elif subcommand == 'stop':
-            if len(self.arguments) == 1:
+            if len(self.arguments) <= 1:
                 return True
             return False
         elif subcommand == 'end':
-            if len(self.arguments) == 1:
+            if len(self.arguments) <= 1:
                 return True
             return False
         elif len(self.arguments):
