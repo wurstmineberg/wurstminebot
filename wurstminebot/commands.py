@@ -660,9 +660,8 @@ class LastSeen(BaseCommand):
                 lastseen = None
                 if 'logs' in core.config('paths') and os.path.exists(os.path.join(core.config('paths')['logs'], 'logins.log')):
                     lastseen = minecraft.last_seen(person, logins_log=os.path.join(core.config('paths')['logs'], 'logins.log'))
-                    if lastseen is None:
-                        lastseen = minecraft.last_seen(person.minecraft, logins_log=os.path.join(core.config('paths')['logs'], 'logins.log'))
                 if lastseen is None:
+                    self.reply('let me check the logs…', 'checking the logs...')
                     lastseen = minecraft.last_seen(person.minecraft)
                 if lastseen is None:
                     self.reply('I have not seen ' + player + ' on the server yet.')
