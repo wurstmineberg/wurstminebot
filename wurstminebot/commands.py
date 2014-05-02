@@ -1083,10 +1083,14 @@ class People(BaseCommand):
                         person.wiki = new_wiki
                         self.reply('wiki account ' + ('changed, was “' + old_wiki + '”' if old_wiki else 'added'))
             else:
-                if 'name' in person:
-                    self.reply('person with id ' + arguments[0] + ' and name ' + person['name'])
-                else:
-                    self.reply('person with id ' + arguments[0] + ' and no name (id will be used as name)')
+                self.reply('person with id ' + person.id + ' and ' + ('no name (id will be used as name)' if person.name is None else 'name ' + person.name) + ' http://wurstmineberg.de/people/' + person.id, {
+                    'clickEvent': {
+                        'action': 'open_url',
+                        'value': 'http://wurstmineberg.de/people/' + person.id
+                    },
+                    'color': 'gold',
+                    'text': 'person with id ' + person.id + ' and ' + ('no name (id will be used as name)' if person.name is None else 'name ' + person.name)
+                })
         else:
             self.reply('http://wurstmineberg.de/people', {
                 'text': 'http://wurstmineberg.de/people',
