@@ -660,9 +660,8 @@ class LastSeen(BaseCommand):
                 lastseen = None
                 if 'logs' in core.config('paths') and os.path.exists(os.path.join(core.config('paths')['logs'], 'logins.log')):
                     lastseen = minecraft.last_seen(person, logins_log=os.path.join(core.config('paths')['logs'], 'logins.log'))
-                    if lastseen is None:
-                        lastseen = minecraft.last_seen(person.minecraft, logins_log=os.path.join(core.config('paths')['logs'], 'logins.log'))
                 if lastseen is None:
+                    self.reply('let me check the logs…', 'checking the logs...')
                     lastseen = minecraft.last_seen(person.minecraft)
                 if lastseen is None:
                     self.reply('I have not seen ' + player + ' on the server yet.')
@@ -1083,10 +1082,14 @@ class People(BaseCommand):
                         person.wiki = new_wiki
                         self.reply('wiki account ' + ('changed, was “' + old_wiki + '”' if old_wiki else 'added'))
             else:
-                if 'name' in person:
-                    self.reply('person with id ' + arguments[0] + ' and name ' + person['name'])
-                else:
-                    self.reply('person with id ' + arguments[0] + ' and no name (id will be used as name)')
+                self.reply('person with id ' + person.id + ' and ' + ('no name (id will be used as name)' if person.name is None else 'name ' + person.name) + ' http://wurstmineberg.de/people/' + person.id, {
+                    'clickEvent': {
+                        'action': 'open_url',
+                        'value': 'http://wurstmineberg.de/people/' + person.id
+                    },
+                    'color': 'gold',
+                    'text': 'person with id ' + person.id + ' and ' + ('no name (id will be used as name)' if person.name is None else 'name ' + person.name)
+                })
         else:
             self.reply('http://wurstmineberg.de/people', {
                 'text': 'http://wurstmineberg.de/people',
