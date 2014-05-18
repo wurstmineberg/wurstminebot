@@ -1465,8 +1465,8 @@ class UltraSoftcore(BaseCommand):
         if subcommand == 'prepare':
             core.update_config(['usc', 'state'], 'prepare')
             #TODO if a datetime is specified, announce on twitter
-            #TODO add notice to main channel topic
-            #TODO stop the server
+            core.update_topic(special_status='The server is down for USC preparations.')
+            minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             #TODO delete any existing USC world
             #TODO switch to the USC server.properties
             #TODO start the server
