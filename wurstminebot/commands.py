@@ -563,7 +563,7 @@ class Invite(BaseCommand):
             return 'a person with this Wurstmineberg ID already exists'
         if not re.match(minecraft.regexes.player, self.arguments[1]):
             return '<minecraft_name> is not a valid Minecraft nickname'
-        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+        if len(self.arguments) > 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
             return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
