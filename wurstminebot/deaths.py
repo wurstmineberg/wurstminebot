@@ -155,7 +155,7 @@ messages = [
     },
     {
         'id': 'lava-by',
-        'regex': 'tried to swim in lava while trying to escape (.+)'
+        'regex': 'tried to swim in lava to escape (.+)'
     },
     {
         'id': 'lava',
