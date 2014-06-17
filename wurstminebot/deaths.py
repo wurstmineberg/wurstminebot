@@ -14,7 +14,7 @@ messages = [
         'regex': 'was pricked to death'
     },
     {
-        'id': 'cactus-escape',
+        'id': 'cactusEscape',
         'regex': 'walked into a cactus whilst trying to escape (.+)'
     },
     {
@@ -26,7 +26,7 @@ messages = [
         'regex': 'drowned'
     },
     {
-        'id': 'drowned-escape',
+        'id': 'drownedEscape',
         'regex': 'drowned whilst trying to escape (.+)'
     },
     {
@@ -34,23 +34,23 @@ messages = [
         'regex': 'blew up'
     },
     {
-        'id': 'explosion-creeper',
+        'id': 'explosionCreeper',
         'regex': 'was blown up by Creeper'
     },
     {
-        'id': 'explosion-by',
+        'id': 'explosionBy',
         'regex': 'was blown up by (.+)'
     },
     {
-        'id': 'hitground',
+        'id': 'hitGround',
         'regex': 'hit the ground too hard'
     },
     {
-        'id': 'high-void',
+        'id': 'highVoid',
         'regex': 'fell from a high place and fell out of the world'
     },
     {
-        'id': 'high-finished-player',
+        'id': 'highFinishedPlayer',
         'regex': 'fell from a high place and got finished off by (' + minecraft.regexes.player + ')'
     },
     {
@@ -58,47 +58,47 @@ messages = [
         'regex': 'fell from a high place'
     },
     {
-        'id': 'high-ladder',
+        'id': 'highLadder',
         'regex': 'fell off a ladder'
     },
     {
-        'id': 'high-vines',
+        'id': 'highVines',
         'regex': 'fell off some vines'
     },
     {
-        'id': 'high-water',
+        'id': 'highWater',
         'regex': 'fell out of the water'
     },
     {
-        'id': 'hitground-fire',
+        'id': 'hitGroundFire',
         'regex': 'fell into a patch of fire'
     },
     {
-        'id': 'hitground-cactus',
+        'id': 'hitGroundCactus',
         'regex': 'fell into a patch of cacti'
     },
     {
-        'id': 'doomedtofall',
+        'id': 'doomedToFall',
         'regex': 'was doomed to fall'
     },
     {
-        'id': 'doomedtofall-player-using',
+        'id': 'doomedToFallPlayerUsing',
         'regex': 'was doomed to fall by (' + minecraft.regexes.player + ') using \\[(.+)\\]'
     },
     {
-        'id': 'doomedtofall-by',
+        'id': 'doomedToFallBy',
         'regex': 'was doomed to fall by (.+)'
     },
     {
-        'id': 'arrow-high-vines',
+        'id': 'arrowHighVines',
         'regex': 'was shot off some vines by (.+)'
     },
     {
-        'id': 'arrow-high-ladder',
+        'id': 'arrowHighLadder',
         'regex': 'was shot off a ladder by (.+)'
     },
     {
-        'id': 'explosion-high',
+        'id': 'explosionHigh',
         'regex': 'was blown from a high place by (.+)'
     },
     {
@@ -110,27 +110,27 @@ messages = [
         'regex': 'burned to death'
     },
     {
-        'id': 'burn-by',
+        'id': 'burnBy',
         'regex': 'was burnt to a crisp whilst fighting (.+)'
     },
     {
-        'id': 'fire-by',
+        'id': 'fireBy',
         'regex': 'walked into a fire whilst fighting (.+)'
     },
     {
-        'id': 'slain-player-using',
+        'id': 'slainPlayerUsing',
         'regex': 'was slain by (' + minecraft.regexes.player + ') using \\[(.+)\\]'
     },
     {
-        'id': 'slain-using',
+        'id': 'slainUsing',
         'regex': 'was slain by (.+) using \\[(.+)\\]'
     },
     {
-        'id': 'slain-silverfish',
+        'id': 'slainSilverfish',
         'regex': 'was slain by Silverfish'
     },
     {
-        'id': 'slain-zombie',
+        'id': 'slainZombie',
         'regex': 'was slain by Zombie'
     },
     {
@@ -138,11 +138,11 @@ messages = [
         'regex': 'was slain by (.+)'
     },
     {
-        'id': 'shot-player-using',
+        'id': 'shotPlayerUsing',
         'regex': 'was shot by (' + minecraft.regexes.player + ') using \\[(.+)\\]'
     },
     {
-        'id': 'shot-player',
+        'id': 'shotPlayer',
         'regex': 'was shot by (' + minecraft.regexes.player + ')'
     },
     {
@@ -154,7 +154,7 @@ messages = [
         'regex': 'was fireballed by (.+)'
     },
     {
-        'id': 'lava-by',
+        'id': 'lavaBy',
         'regex': 'tried to swim in lava to escape (.+)'
     },
     {
@@ -166,19 +166,19 @@ messages = [
         'regex': 'died'
     },
     {
-        'id': 'finished-player-using',
+        'id': 'finishedPlayerUsing',
         'regex': 'got finished off by (' + minecraft.regexes.player + ') using \\[(.+)\\]'
     },
     {
-        'id': 'finished-using',
+        'id': 'finishedUsing',
         'regex': 'got finished off by (.+) using \\[(.+)\\]'
     },
     {
-        'id': 'magic-player',
+        'id': 'magicPlayer',
         'regex': 'was killed by (' + minecraft.regexes.player + ') using magic'
     },
     {
-        'id': 'magic-by',
+        'id': 'magicBy',
         'regex': 'was killed by (.+) using magic'
     },
     {
@@ -194,11 +194,11 @@ messages = [
         'regex': 'suffocated in a wall'
     },
     {
-        'id': 'generic-by',
+        'id': 'genericBy',
         'regex': 'was killed while trying to hurt (.+)'
     },
     {
-        'id': 'pummeled-by',
+        'id': 'pummeledBy',
         'regex': 'was pummeled by (.+)'
     },
     {
@@ -206,7 +206,7 @@ messages = [
         'regex': 'fell out of the world'
     },
     {
-        'id': 'void-by',
+        'id': 'voidBy',
         'regex': 'was knocked into the void by (.+)'
     },
     {
