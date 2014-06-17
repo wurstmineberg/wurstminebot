@@ -535,22 +535,34 @@ def tell_time(func=None, comment=False, restart=False):
             func('Dark outside, better play some Minecraft.')
         elif localnow.hour == 1:
             func("You better don't stay up all night again.")
+            if random.random() < 0.1:
+                time.sleep(random.randrange(30))
+                func('...lol, as if.')
         elif localnow.hour == 2:
-            func('Some late night mining always cheers me up.')
-            time.sleep(10)
-            func('...Or redstoning. Or building. Whatever floats your boat.')
+            activities = ['mining', 'redstoning', 'building', 'exploring', 'idling', 'farming', 'pvp']
+            random.shuffle(activities)
+            func('Some late night ' + activities[0] + ' always cheers me up.')
+            time.sleep(random.randrange(8, 15))
+            func('...Or ' + activities[1] + '. Or ' + activities[2] + '. Whatever floats your boat.')
         elif localnow.hour == 3:
-            func('Seems like you are having fun.')
-            mob = random.choice([None, 'zombie', 'Enderman'])
+            func(random.choice([
+                'Seems like you are having fun.',
+                "Seems like you're having fun."
+            ]))
+            mob = random.choice([None, None, 'zombie', 'zombie', 'zombie pigman', 'Enderman', 'villager', 'Testificate'])
             if mob is not None:
-                time.sleep(60)
+                time.sleep(random.randrange(45, 120))
                 func('I heard that ' + mob + " over there talk trash about you. Thought you'd wanna know...")
         elif localnow.hour == 4:
             func('Getting pretty late, huh?')
         elif localnow.hour == 5:
             warning('It is really getting late. You should go to sleep.')
         elif localnow.hour == 6:
-            func('Are you still going, just starting or asking yourself the same thing?')
+            func(random.choice([
+                'Are you still going, just starting or asking yourself the same thing?',
+                'Are you still going, just starting, or asking yourself the same thing?',
+                'So... good morning I guess?'
+            ]))
         elif localnow.hour == 11 and restart:
             players = set(minecraft.online_players())
             if len(players):
