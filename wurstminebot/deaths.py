@@ -218,13 +218,16 @@ messages = [
 class Death:
     def __init__(self, log_line, time=None):
         for death in messages:
-            match = re.match('(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death['regex'] + '$', log_line)
+            match = re.match('(' + minecraft.regexes.timestamp + '|' + minecraft.regexes.full_timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') ' + death['regex'] + '$', log_line)
             if not match:
                 continue
             # death
             self.id = death['id']
             if time is None:
-                self.timestamp = minecraft.regexes.strptime(date.today(), match.group(1)).astimezone(timezone.utc) # not guaranteed to be accurate
+                if match.group(1).startswith('['):
+                    self.timestamp = minecraft.regexes.strptime(date.today(), match.group(1)).astimezone(timezone.utc) # not guaranteed to be accurate
+                else:
+                    self.timestamp = datetime.strptime(match.group(1) + ' +0000', '%Y-%m-%d %H:%M:%S %z') #TODO fix timezone handling
             else:
                 self.timestamp = time
             self.person = nicksub.person_or_dummy(match.group(2), context='minecraft')

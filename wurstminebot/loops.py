@@ -27,18 +27,19 @@ class InputLoop(threading.Thread):
         try:
             # server log output processing
             core.debug_print('[logpipe] ' + log_line)
+            match_prefix = '(' + minecraft.regexes.timestamp + '|' + minecraft.regexes.full_timestamp + ') \\[Server thread/INFO\\]: '
             matches = {
-                'achievement': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$',
-                'action': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)',
-                'chat_message': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)',
-                'join_leave': '(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game'
+                'achievement': '(' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$',
+                'action': '\\* (' + minecraft.regexes.player + ') (.*)',
+                'chat_message': '<(' + minecraft.regexes.player + ')> (.*)',
+                'join_leave': '(' + minecraft.regexes.player + ') (left|joined) the game'
             }
             for match_type, match_string in matches.items():
-                match = re.match(match_string, log_line)
+                match = re.match(match_prefix + match_string, log_line)
                 if not match:
                     continue
                 if match_type == 'achievement':
-                    player, achievement = match.group(1, 2)
+                    player, achievement = match.group(2, 3)
                     person = nicksub.person_or_dummy(player, context='minecraft')
                     if core.state['achievement_tweets']:
                         twitter_nick = person.nick('twitter', twitter_at_prefix=True)
@@ -57,14 +58,14 @@ class InputLoop(threading.Thread):
                 elif match_type == 'action':
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
-                        player, message = match.group(1, 2)
+                        player, message = match.group(2, 3)
                         sender_person = nicksub.person_or_dummy(player, context='minecraft')
                         sender = sender_person.irc_nick()
                         subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
                         core.state['bot'].log(irc_config['main_channel'], 'ACTION', sender, [irc_config['main_channel']], subbed_message)
                         core.state['bot'].say(irc_config['main_channel'], '* ' + sender + ' ' + subbed_message)
                 elif match_type == 'chat_message':
-                    player, message = match.group(1, 2)
+                    player, message = match.group(2, 3)
                     sender_person = nicksub.person_or_dummy(player, context='minecraft')
                     if re.match('![A-Za-z]', message): # command
                         cmd = message[1:].split(' ')
@@ -156,7 +157,7 @@ class InputLoop(threading.Thread):
                             core.state['bot'].log(irc_config['main_channel'], 'PRIVMSG', sender, [irc_config['main_channel']], subbed_message)
                             core.state['bot'].say(irc_config['main_channel'], '<' + sender + '> ' + subbed_message)
                 elif match_type == 'join_leave':
-                    timestamp, player = match.group(1, 2)
+                    player = match.group(2)
                     try:
                         person = nicksub.Person(player, context='minecraft')
                     except nicksub.PersonNotFoundError:
