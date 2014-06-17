@@ -14,6 +14,7 @@ import re
 import socket
 import threading
 import time
+from datetime import timedelta
 from datetime import timezone
 import traceback
 
@@ -526,7 +527,7 @@ def tell_time(func=None, comment=False, restart=False):
             func('Daylight saving time is now in effect.')
         else:
             func('Daylight saving time is no longer in effect.')
-    func('The time is ' + localnow.strftime('%H:%M') + ' (' + utcnow.strftime('%H:%M') + ' UTC)')
+    func('The time is ' + utcnow.strftime('%H:%M') + ' UTC') + ('' if abs(localnow - utcnow) < timedelta(minutes=1) else ' (' + localnow.strftime('%H:%M') + ' local time)'))
     if comment:
         if dst != core.state['dst']:
             pass
