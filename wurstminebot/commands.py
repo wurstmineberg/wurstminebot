@@ -277,7 +277,9 @@ class Alias(BaseCommand):
     def permission_level(self):
         if len(self.arguments) == 1:
             return 4
-        if self.arguments[0] in core.config('aliases'):
+        if self.arguments[0].lower() in core.config('aliases'):
+            return 4
+        if self.arguments[0].lower() in [c.__name__.lower() for c in classes]:
             return 4
         return 0
     
