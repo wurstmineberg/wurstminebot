@@ -195,7 +195,7 @@ messages = [
     },
     {
         'id': 'genericBy',
-        'regex': 'was killed while trying to hurt (.+)'
+        'regex': 'was killed trying to hurt (.+)'
     },
     {
         'id': 'pummeledBy',
