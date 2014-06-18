@@ -9,6 +9,7 @@ from wurstminebot import nicksub
 import os.path
 import random
 import re
+import requests
 import subprocess
 import threading
 from datetime import timedelta
@@ -570,6 +571,9 @@ class Invite(BaseCommand):
         return True
     
     def permission_level(self):
+        response = requests.get('https://s3.amazonaws.com/MinecraftSkins/' + self.arguments[1] + '.png')
+        if response.status_code != 200:
+            return 4
         return 3
     
     def run(self):
