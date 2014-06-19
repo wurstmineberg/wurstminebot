@@ -1218,7 +1218,11 @@ class Retweet(BaseCommand):
         if r.status_code == 200:
             twid = j['id']
         else:
-            first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
+            first_error = j.get('errors', [])
+            if isinstance(first_error, list):
+                first_error = first_error[0] if len(first_error) else {}
+            if isinstance(first_error, str):
+                first_error = {'message': first_error}
             raise core.TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code, errors=j.get('errors', []))
         url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
         if paste:
