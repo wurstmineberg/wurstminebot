@@ -1151,7 +1151,7 @@ class Restart(BaseCommand):
     def parse_args(self):
         if len(self.arguments) == 0:
             return True
-        if len(self.arguments) == 1 and self.arguments[0] in ['bot', 'minecraft']:
+        if len(self.arguments) == 1 and self.arguments[0].lower() in ['bot', 'minecraft', 'server']:
             return True
         return False
     
@@ -1159,7 +1159,7 @@ class Restart(BaseCommand):
         return 4
     
     def run(self):
-        if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0] == 'bot'):
+        if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0].lower() == 'bot'):
             # restart the bot
             from wurstminebot import __main__
             minecraft.tellraw({
