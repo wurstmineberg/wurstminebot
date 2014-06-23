@@ -999,6 +999,8 @@ class People(BaseCommand):
                     if len(self.arguments) == 2:
                         if person.fav_color:
                             self.reply('#%02x%02x%02x' % person.fav_color)
+                        else:
+                            self.reply(person.display_name() + ' has no favorite color')
                     else:
                         if len(self.arguments) == 3:
                             match = re.match('#?([0-9A-Fa-f]{3})$', self.arguments[2])
