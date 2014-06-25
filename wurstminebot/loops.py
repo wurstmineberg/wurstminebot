@@ -14,6 +14,7 @@ import re
 import socket
 import threading
 import time
+from datetime import timedelta
 from datetime import timezone
 import traceback
 
@@ -27,18 +28,19 @@ class InputLoop(threading.Thread):
         try:
             # server log output processing
             core.debug_print('[logpipe] ' + log_line)
+            match_prefix = '(' + minecraft.regexes.timestamp + '|' + minecraft.regexes.full_timestamp + ') \\[Server thread/INFO\\]: '
             matches = {
-                'achievement': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$',
-                'action': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: \\* (' + minecraft.regexes.player + ') (.*)',
-                'chat_message': minecraft.regexes.timestamp + ' \\[Server thread/INFO\\]: <(' + minecraft.regexes.player + ')> (.*)',
-                'join_leave': '(' + minecraft.regexes.timestamp + ') \\[Server thread/INFO\\]: (' + minecraft.regexes.player + ') (left|joined) the game'
+                'achievement': '(' + minecraft.regexes.player + ') has just earned the achievement \\[(.+)\\]$',
+                'action': '\\* (' + minecraft.regexes.player + ') (.*)',
+                'chat_message': '<(' + minecraft.regexes.player + ')> (.*)',
+                'join_leave': '(' + minecraft.regexes.player + ') (left|joined) the game'
             }
             for match_type, match_string in matches.items():
-                match = re.match(match_string, log_line)
+                match = re.match(match_prefix + match_string, log_line)
                 if not match:
                     continue
                 if match_type == 'achievement':
-                    player, achievement = match.group(1, 2)
+                    player, achievement = match.group(2, 3)
                     person = nicksub.person_or_dummy(player, context='minecraft')
                     if core.state['achievement_tweets']:
                         twitter_nick = person.nick('twitter', twitter_at_prefix=True)
@@ -57,14 +59,14 @@ class InputLoop(threading.Thread):
                 elif match_type == 'action':
                     irc_config = core.config('irc')
                     if 'main_channel' in irc_config:
-                        player, message = match.group(1, 2)
+                        player, message = match.group(2, 3)
                         sender_person = nicksub.person_or_dummy(player, context='minecraft')
                         sender = sender_person.irc_nick()
                         subbed_message = nicksub.textsub(message, 'minecraft', 'irc')
                         core.state['bot'].log(irc_config['main_channel'], 'ACTION', sender, [irc_config['main_channel']], subbed_message)
                         core.state['bot'].say(irc_config['main_channel'], '* ' + sender + ' ' + subbed_message)
                 elif match_type == 'chat_message':
-                    player, message = match.group(1, 2)
+                    player, message = match.group(2, 3)
                     sender_person = nicksub.person_or_dummy(player, context='minecraft')
                     if re.match('![A-Za-z]', message): # command
                         cmd = message[1:].split(' ')
@@ -156,7 +158,7 @@ class InputLoop(threading.Thread):
                             core.state['bot'].log(irc_config['main_channel'], 'PRIVMSG', sender, [irc_config['main_channel']], subbed_message)
                             core.state['bot'].say(irc_config['main_channel'], '<' + sender + '> ' + subbed_message)
                 elif match_type == 'join_leave':
-                    timestamp, player = match.group(1, 2)
+                    player = match.group(2)
                     try:
                         person = nicksub.Person(player, context='minecraft')
                     except nicksub.PersonNotFoundError:
@@ -181,25 +183,22 @@ class InputLoop(threading.Thread):
                         elif new_player:
                             welcome_message = (0, 2) # The “welcome to the server” message
                         else:
-                            welcome_messages = dict(((1, index), 1.0) for index in range(len(core.config('comment_lines').get('server_join', []))))
-                            if person is None:
-                                welcome_message = (0, -1) # The “how did you do that?” fallback welcome message
-                            else:
-                                if person.description is None:
-                                    welcome_messages[0, 1] = 1.0 # The “you still don't have a description” welcome message
-                                for index, adv_welcome_msg in enumerate(core.config('advanced_comment_lines').get('server_join', [])):
-                                    if 'text' not in adv_welcome_msg:
-                                        continue
-                                    welcome_messages[2, index] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('player_weights', {}).get(player, adv_welcome_msg.get('player_weights', {}).get('@default', 1.0))
-                                random_index = random.uniform(0.0, sum(welcome_messages.values()))
-                                index = 0.0
-                                for welcome_message, weight in welcome_messages.items():
-                                    if random_index - index < weight:
-                                        break
-                                    else:
-                                        index += weight
+                            welcome_messages = {}
+                            if person.description is None:
+                                welcome_messages[0, 1] = 1.0 # The “you still don't have a description” welcome message
+                            for index, adv_welcome_msg in enumerate(core.config('commentLines').get('serverJoin', [])):
+                                if 'text' not in adv_welcome_msg:
+                                    continue
+                                welcome_messages[2, index] = adv_welcome_msg.get('weight', 1.0) * adv_welcome_msg.get('personWeights', {}).get(person.id, adv_welcome_msg.get('personWeights', {}).get('@default', 1.0))
+                            random_index = random.uniform(0.0, sum(welcome_messages.values()))
+                            index = 0.0
+                            for welcome_message, weight in welcome_messages.items():
+                                if random_index - index < weight:
+                                    break
                                 else:
-                                    welcome_message = (0, 0) # The “um… sup?” welcome message
+                                    index += weight
+                            else:
+                                welcome_message = (0, 0) # The “um… sup?” welcome message
                         if welcome_message == (0, 0):
                             minecraft.tellraw({
                                 'text': 'Hello ' + player + '. Um... sup?',
@@ -254,15 +253,8 @@ class InputLoop(threading.Thread):
                                 'text': 'Hello ' + player + '. Do I know you?'
                             }, player)
                             welcome_message_stub = 'Do I know you?'
-                        elif welcome_message[0] == 1:
-                            welcome_message_string = core.config('comment_lines')['server_join'][welcome_message[1]]
-                            minecraft.tellraw({
-                                'text': 'Hello ' + player + '. ' + welcome_message_string,
-                                'color': 'gray'
-                            }, player)
-                            welcome_message_stub = welcome_message_string[:80] + ' […]' if len(welcome_message_string) > 80 else welcome_message_string
-                        elif welcome_message[0] == 2:
-                            message_dict = core.config('advanced_comment_lines')['server_join'][welcome_message[1]]
+                        elif welcome_message[0] == 2: # regular comment lines (formerly known as advanced comment lines)
+                            message_dict = core.config('commentLines')['serverJoin'][welcome_message[1]]
                             message_list = message_dict['text']
                             if isinstance(message_list, str):
                                 message_list = [{'text': message_list, 'color': message_dict.get('commentColor', message_dict.get('color', 'gray'))}]
@@ -280,7 +272,7 @@ class InputLoop(threading.Thread):
                                     'text': 'Hello ' + player + '. ',
                                     'color': message_dict.get('helloColor', message_dict.get('color', 'gray'))
                                 }
-                            ] if message_dict.get('hello_prefix', True) else []) + message_list, player)
+                            ] if message_dict.get('helloPrefix', True) else []) + message_list, player)
                             if len(message_list) and 'text' in message_list[0]:
                                 welcome_message_stub = (message_list[0]['text'][:80] if len(message_list[0]['text']) > 80 else message_list[0]['text']) + (' […]' if len(message_list[0]['text']) > 80 or len(message_list) > 1 else '')
                             else:
@@ -307,7 +299,7 @@ class InputLoop(threading.Thread):
                 if core.state['death_tweets']:
                     if death.message() == core.state['last_death']:
                         comment = 'Again.' # This prevents botspam if the same player dies lots of times (more than twice) for the same reason.
-                    elif (death.id == 'slain-player-using' and death.groups[1] == 'Sword of Justice') or (death.id == 'shot-player-using' and death.groups[1] == 'Bow of Justice'): # Death Games success
+                    elif (death.id == 'slainPlayerUsing' and death.groups[1] == 'Sword of Justice') or (death.id == 'shotPlayerUsing' and death.groups[1] == 'Bow of Justice'): # Death Games success
                         comment = 'And loses a diamond http://wiki.wurstmineberg.de/Death_Games'
                         try:
                             attacker = nicksub.Person(death.groups[0], context='minecraft')
@@ -316,12 +308,12 @@ class InputLoop(threading.Thread):
                         else:
                             core.death_games_log(attacker, death.person, success=True)
                     else:
-                        death_comments = dict(((1, index), 1.0) for index in range(len(core.config('comment_lines').get('death', []))))
-                        for index, adv_death_comment in enumerate(core.config('advanced_comment_lines').get('death', [])):
+                        death_comments = {}
+                        for index, adv_death_comment in enumerate(core.config('commentLines').get('death', [])):
                             if 'text' not in adv_death_comment:
                                 continue
                             try:
-                                death_comments[2, index] = adv_death_comment.get('weight', 1.0) * adv_death_comment.get('player_weights', {}).get(death.player.id, adv_death_comment.get('player_weights', {}).get('@default', 1.0)) * adv_death_comment.get('type_weights', {}).get(death.id, adv_death_comment.get('type_weights', {}).get('@default', 1.0))
+                                death_comments[2, index] = adv_death_comment.get('weight', 1.0) * adv_death_comment.get('personWeights', {}).get(death.person.id, adv_death_comment.get('personWeights', {}).get('@default', 1.0)) * adv_death_comment.get('typeWeights', {}).get(death.id, adv_death_comment.get('typeWeights', {}).get('@default', 1.0))
                             except:
                                 continue
                         random_index = random.uniform(0.0, sum(death_comments.values()))
@@ -335,10 +327,8 @@ class InputLoop(threading.Thread):
                             comment_index = (0, 0)
                         if comment_index == (0, 0):
                             comment = 'Well done.'
-                        elif comment_index[0] == 1:
-                            comment = core.config('comment_lines')['death'][comment_index[1]]
                         elif comment_index[0] == 2:
-                            comment = core.config('advanced_comment_lines')['death'][comment_index[1]]['text']
+                            comment = core.config('commentLines')['death'][comment_index[1]]['text']
                         else:
                             comment = "I don't even."
                     core.state['last_death'] = death.message()
@@ -525,7 +515,7 @@ def tell_time(func=None, comment=False, restart=False):
             func('Daylight saving time is now in effect.')
         else:
             func('Daylight saving time is no longer in effect.')
-    func('The time is ' + localnow.strftime('%H:%M') + ' (' + utcnow.strftime('%H:%M') + ' UTC)')
+    func('The time is ' + utcnow.strftime('%H:%M') + ' UTC' + ('' if abs(localnow - utcnow) < timedelta(minutes=1) else ' (' + localnow.strftime('%H:%M') + ' local time)'))
     if comment:
         if dst != core.state['dst']:
             pass
@@ -533,22 +523,34 @@ def tell_time(func=None, comment=False, restart=False):
             func('Dark outside, better play some Minecraft.')
         elif localnow.hour == 1:
             func("You better don't stay up all night again.")
+            if random.random() < 0.1:
+                time.sleep(random.randrange(30))
+                func('...lol, as if.')
         elif localnow.hour == 2:
-            func('Some late night mining always cheers me up.')
-            time.sleep(10)
-            func('...Or redstoning. Or building. Whatever floats your boat.')
+            activities = ['mining', 'redstoning', 'building', 'exploring', 'idling', 'farming', 'pvp']
+            random.shuffle(activities)
+            func('Some late night ' + activities[0] + ' always cheers me up.')
+            time.sleep(random.randrange(8, 15))
+            func('...Or ' + activities[1] + '. Or ' + activities[2] + '. Whatever floats your boat.')
         elif localnow.hour == 3:
-            func('Seems like you are having fun.')
-            mob = random.choice([None, 'zombie', 'Enderman'])
+            func(random.choice([
+                'Seems like you are having fun.',
+                "Seems like you're having fun."
+            ]))
+            mob = random.choice([None, None, 'zombie', 'zombie', 'zombie pigman', 'Enderman', 'villager', 'Testificate'])
             if mob is not None:
-                time.sleep(60)
+                time.sleep(random.randrange(45, 120))
                 func('I heard that ' + mob + " over there talk trash about you. Thought you'd wanna know...")
         elif localnow.hour == 4:
             func('Getting pretty late, huh?')
         elif localnow.hour == 5:
             warning('It is really getting late. You should go to sleep.')
         elif localnow.hour == 6:
-            func('Are you still going, just starting or asking yourself the same thing?')
+            func(random.choice([
+                'Are you still going, just starting or asking yourself the same thing?',
+                'Are you still going, just starting, or asking yourself the same thing?',
+                'So... good morning I guess?'
+            ]))
         elif localnow.hour == 11 and restart:
             players = set(minecraft.online_players())
             if len(players):

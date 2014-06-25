@@ -9,6 +9,7 @@ from wurstminebot import nicksub
 import os.path
 import random
 import re
+import requests
 import subprocess
 import threading
 from datetime import timedelta
@@ -277,7 +278,9 @@ class Alias(BaseCommand):
     def permission_level(self):
         if len(self.arguments) == 1:
             return 4
-        if self.arguments[0] in core.config('aliases'):
+        if self.arguments[0].lower() in core.config('aliases'):
+            return 4
+        if self.arguments[0].lower() in [c.__name__.lower() for c in classes]:
             return 4
         return 0
     
@@ -563,11 +566,14 @@ class Invite(BaseCommand):
             return 'a person with this Wurstmineberg ID already exists'
         if not re.match(minecraft.regexes.player, self.arguments[1]):
             return '<minecraft_name> is not a valid Minecraft nickname'
-        if len(self.arguments) >= 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
+        if len(self.arguments) > 2 and not re.match('@?[A-Za-z0-9_]{1,15}$', self.arguments[2]):
             return '<twitter_username> is invalid, see https://support.twitter.com/articles/101299'
         return True
     
     def permission_level(self):
+        response = requests.get('https://s3.amazonaws.com/MinecraftSkins/' + self.arguments[1] + '.png')
+        if response.status_code != 200:
+            return 4
         return 3
     
     def run(self):
@@ -993,6 +999,8 @@ class People(BaseCommand):
                     if len(self.arguments) == 2:
                         if person.fav_color:
                             self.reply('#%02x%02x%02x' % person.fav_color)
+                        else:
+                            self.reply(person.display_name() + ' has no favorite color')
                     else:
                         if len(self.arguments) == 3:
                             match = re.match('#?([0-9A-Fa-f]{3})$', self.arguments[2])
@@ -1145,7 +1153,7 @@ class Restart(BaseCommand):
     def parse_args(self):
         if len(self.arguments) == 0:
             return True
-        if len(self.arguments) == 1 and self.arguments[0] in ['bot', 'minecraft']:
+        if len(self.arguments) == 1 and self.arguments[0].lower() in ['bot', 'minecraft', 'server']:
             return True
         return False
     
@@ -1153,7 +1161,7 @@ class Restart(BaseCommand):
         return 4
     
     def run(self):
-        if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0] == 'bot'):
+        if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0].lower() == 'bot'):
             # restart the bot
             from wurstminebot import __main__
             minecraft.tellraw({
@@ -1212,7 +1220,11 @@ class Retweet(BaseCommand):
         if r.status_code == 200:
             twid = j['id']
         else:
-            first_error = j.get('errors', [])[0] if len(j.get('errors', [])) else {}
+            first_error = j.get('errors', [])
+            if isinstance(first_error, list):
+                first_error = first_error[0] if len(first_error) else {}
+            if isinstance(first_error, str):
+                first_error = {'message': first_error}
             raise core.TwitterError(first_error.get('code', 0), message=first_error.get('message'), status_code=r.status_code, errors=j.get('errors', []))
         url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
         if paste:
