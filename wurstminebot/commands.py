@@ -1476,12 +1476,20 @@ class UltraSoftcore(BaseCommand):
         subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
         if subcommand == 'prepare':
             core.update_config(['usc', 'state'], 'prepare')
+            if self.sender.minecraft is None:
+                self.warning('could not op you. You will need in-game op for the preparations.')
+            else:
+                minecraft.command('op', self.sender.minecraft)
             #TODO if a datetime is specified, announce on twitter
             core.update_topic(special_status='The server is down for USC preparations.')
+            if os.path.exists('/etc/xdg/makeoverview/enable'):
+                os.remove('/etc/xdg/makeoverview/enable') # disable Overviewer
             minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             #TODO delete any existing USC world
-            #TODO switch to the USC server.properties
-            #TODO start the server
+            minecraft.enable_world('usc', reply=self.reply)
+            #TODO start the server, implement when Minecraft server supports custom world presets
+            self.reply('now create the USC world. Remember to set spawn to 0 64 0.')
+            self.reply("when you've uploaded the world, execute !UltraSoftcore restart")
         elif subcommand == 'stop':
             core.update_config(['usc', 'state'], 'stop')
             #TODO stop the server
@@ -1490,14 +1498,12 @@ class UltraSoftcore(BaseCommand):
         elif subcommand == 'restart':
             core.update_config(['usc', 'state'], 'restart')
             #TODO unzip the world
-            #TODO start the server
+            minecraft.start(reply=self.reply)
             #TODO notify IRC (and Twitter?) that the lobby is now open
         elif subcommand == 'end':
             core.update_config(['usc', 'completedSeasons'], core.config('usc').get('completedSeasons', 0) + 1)
             core.update_config(['usc', 'state'], None)
-            #TODO stop the server
-            #TODO switch to the default server.properties
-            #TODO start the server
+            minecraft.enable_world('wurstmineberg', reply=self.reply) #TODO replace with default world name
 
 class Update(BaseCommand):
     """update Minecraft"""
