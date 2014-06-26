@@ -1454,7 +1454,7 @@ class Update(BaseCommand):
     def run(self):
         version = minecraft.version()
         if version is not None:
-            path = os.path.join(config('paths')['backup'], 'pre-update', config('world') + '_' + re.sub('\\.', '_', version))
+            path = os.path.join(minecraft.config('paths')['backup'], 'pre-update', minecraft.config('world') + '_' + re.sub('\\.', '_', version))
             minecraft.backup(reply=self.reply, announce=True, path=path)
         if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
             if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
