@@ -9,7 +9,7 @@ Requirements
 *   [Python-IRC-Bot-Framework](https://github.com/fenhl/Python-IRC-Bot-Framework)
 *   [TwitterAPI](https://github.com/geduldig/TwitterAPI) 2.1 (for Tweet command and other Twitter funcionality)
 *   [docopt](http://docopt.org/)
-*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.15
+*   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.16
 *   [minecraft-api](https://github.com/wurstmineberg/minecraft-api) 1.1 (required for Cloud command only)
 *   [requests](http://www.python-requests.org/) 2.1
 
