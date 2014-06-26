@@ -1,6 +1,6 @@
 **wurstminebot** is an IRC bot for Minecraft. It was written for [Wurstmineberg](http://wurstmineberg.de/) and may require some tweaking to run on your server.
 
-This is `wurstminebot` version 3.6.5 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`__main__.py`](wurstminebot/__main__.py), as found in the docstring, as well as the commands, as explained in the `help` command.
+This is `wurstminebot` version 3.7.0 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`__main__.py`](wurstminebot/__main__.py), as found in the docstring, as well as the commands, as explained in the `help` command.
 
 Requirements
 ============
