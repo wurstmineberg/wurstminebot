@@ -313,6 +313,20 @@ class Alias(BaseCommand):
             else:
                 self.reply('Alias added.')
 
+class Backup(BaseCommand):
+    """perform a backup of the world directory"""
+    
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
+    def permission_level(self):
+        return 4
+    
+    def run(self):
+        minecraft.backup(reply=self.reply, announce=True)
+
 class Cloud(BaseCommand):
     """search for an item in the Cloud, our public item storage"""
     
