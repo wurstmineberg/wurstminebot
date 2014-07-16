@@ -1435,6 +1435,14 @@ class Update(BaseCommand):
     """update Minecraft"""
     
     usage = '[release | snapshot [<snapshot_id>] | <version>]'
+    muted_backup_messages = [
+        'Symlinking to httpdocs...'
+        'Done.'
+    ]
+    
+    def backup_reply(self, message):
+        if message not in self.muted_backup_messages:
+            self.reply(message)
     
     def parse_args(self):
         if len(self.arguments) > 0:
@@ -1452,23 +1460,32 @@ class Update(BaseCommand):
         return 4
     
     def run(self):
+        core.update_topic(special_status='The server is being updated, wait a sec.')
+        backup_thread = None
         version = minecraft.version()
         if version is not None:
             path = os.path.join(minecraft.config('paths')['backup'], 'pre-update', minecraft.config('world') + '_' + re.sub('\\.', '_', version))
-            minecraft.backup(reply=self.reply, announce=True, path=path)
+            backup_thread = threading.Thread(target=minecraft.backup, kwargs={'reply': self.backup_reply, 'announce': True, 'path': path})
+            backup_thread.start()
         if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
             if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
-                core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
+                update_iterator = minecraft.iter_update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
             elif self.arguments[0] == 'release': # !update release
-                core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(snapshot=False, reply=self.reply)
+                update_iterator = minecraft.iter_update(snapshot=False, reply=self.reply)
             else: # !update <version>
-                core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=self.arguments[0], snapshot=False, reply=self.reply)
+                update_iterator = minecraft.iter_update(version=self.arguments[0], snapshot=False, reply=self.reply)
         else: # !update [snapshot]
-            core.update_topic(special_status='The server is being updated, wait a sec.')
-            version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
+            update_iterator = minecraft.update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
+        version_dict = next(update_iterator)
+        version = version_dict['version']
+        snapshot = version_dict['is_snapshot']
+        version_text = version_dict['version_text']
+        self.reply('Downloading ' + version_text)
+        assert next(update_iterator) == 'Download finished. Stopping server...'
+        backup_thread.join()
+        self.reply('Backup and download finished. Stopping server...')
+        for message in update_iterator:
+            self.reply(message)
         try:
             twid = core.tweet('Server updated to ' + version_text + '! Wheee! See ' + minecraft.wiki_version_link(version) + ' for details.')
         except core.TwitterError:
@@ -1476,7 +1493,7 @@ class Update(BaseCommand):
         else:
             status_url = core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
             self.reply('…done [https://twitter.com/' + status_url + ']', {
-                'text': '…done',
+                'text': '...done',
                 'clickEvent': {
                     'action': 'open_url',
                     'value': 'https://twitter.com/' + status_url
