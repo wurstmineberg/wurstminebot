@@ -401,6 +401,10 @@ def paste_tweet(status, link=False, tellraw=False, multi_line='all'):
         return tweet_author + text
 
 def run():
+    try:
+        minecraft.status()
+    except KeyError:
+        sys.exit(minecraft.user_not_found_error)
     from wurstminebot import loops
     state['time_loop'] = loops.TimeLoop()
     state['time_loop'].start()
