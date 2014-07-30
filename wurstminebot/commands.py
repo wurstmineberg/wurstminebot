@@ -1469,13 +1469,13 @@ class Update(BaseCommand):
             backup_thread.start()
         if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
             if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
-                update_iterator = minecraft.iter_update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
+                update_iterator = minecraft.iter_update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             elif self.arguments[0] == 'release': # !update release
-                update_iterator = minecraft.iter_update(snapshot=False, reply=self.reply)
+                update_iterator = minecraft.iter_update(snapshot=False, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             else: # !update <version>
-                update_iterator = minecraft.iter_update(version=self.arguments[0], snapshot=False, reply=self.reply)
+                update_iterator = minecraft.iter_update(version=self.arguments[0], snapshot=False, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
         else: # !update [snapshot]
-            update_iterator = minecraft.update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
+            update_iterator = minecraft.iter_update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
         version_dict = next(update_iterator)
         version = version_dict['version']
         snapshot = version_dict['is_snapshot']
