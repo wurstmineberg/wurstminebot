@@ -227,7 +227,7 @@ class AchievementTweet(BaseCommand):
     def parse_args(self):
         if len(self.arguments) > 2:
             return False
-        elif len(self.arguments >= 1):
+        elif len(self.arguments) >= 1:
             if self.arguments[0] not in ('on', 'off'):
                 return False
             if len(self.arguments) == 2:
@@ -459,7 +459,7 @@ class DeathTweet(BaseCommand):
     def parse_args(self):
         if len(self.arguments) > 2:
             return False
-        elif len(self.arguments >= 1):
+        elif len(self.arguments) >= 1:
             if self.arguments[0] not in ('on', 'off'):
                 return False
             if len(self.arguments) == 2:
