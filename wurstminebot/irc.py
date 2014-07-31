@@ -131,7 +131,6 @@ def format_text(message):
                 except ValueError:
                     pass
 
-            print message[index]
             if has_fgcolor and message[index] == ',':
                 index += 1
                 try:
