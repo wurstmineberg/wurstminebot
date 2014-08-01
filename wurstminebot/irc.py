@@ -105,12 +105,6 @@ def format_text(message):
     italic = False
     underlined = False
 
-    def append_current_text():
-        if len(curmsg) >= 1:
-            messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
-                            bold, 'italic': italic, 'underlined': underlined, 'text': text, })
-            curmsg = ""
-
     index = 0
     textlen = len(message)
 
@@ -118,7 +112,10 @@ def format_text(message):
         char = message[index]
 
         if char == '\x03':
-            append_current_text()
+            if len(curmsg) >= 1:
+                messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
+                                bold, 'italic': italic, 'underlined': underlined, 'text': text, })
+                curmsg = ""
             index += 1
 
             has_fgcolor = False
@@ -161,22 +158,34 @@ def format_text(message):
                         pass
 
         elif char == '\x02':
-            append_current_text()
+            if len(curmsg) >= 1:
+                messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
+                                bold, 'italic': italic, 'underlined': underlined, 'text': text, })
+                curmsg = ""
             bold = not bold
 
         elif char == '\x1D':
-            append_current_text()
+            if len(curmsg) >= 1:
+                messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
+                                bold, 'italic': italic, 'underlined': underlined, 'text': text, })
+                curmsg = ""
             italic = not italic
 
         elif char == '\x1F':
-            append_current_text()
+        if len(curmsg) >= 1:
+                messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
+                                bold, 'italic': italic, 'underlined': underlined, 'text': text, })
+                curmsg = ""
             underlined = not underlined
 
         else:
             curmsg += char
             index += 1
 
-    append_current_text()
+    if len(curmsg) >= 1:
+        messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
+                        bold, 'italic': italic, 'underlined': underlined, 'text': text, })
+        curmsg = ""
     return messages
 
 
