@@ -172,7 +172,7 @@ def format_text(message):
             italic = not italic
 
         elif char == '\x1F':
-        if len(curmsg) >= 1:
+            if len(curmsg) >= 1:
                 messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
                                 bold, 'italic': italic, 'underlined': underlined, 'text': text, })
                 curmsg = ""
