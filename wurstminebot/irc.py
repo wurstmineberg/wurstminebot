@@ -92,7 +92,7 @@ def format_text(message):
         elif number == 15:
             return "gray"
         else:
-            return "aqua"
+            return "black"
 
     messages = []
     curmsg = ""
