@@ -163,6 +163,7 @@ def format_text(message):
                                 str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             bold = not bold
+            index += 1
 
         elif char == '\x1D':
             if len(curmsg) >= 1:
@@ -170,6 +171,7 @@ def format_text(message):
                                 str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             italic = not italic
+            index += 1
 
         elif char == '\x1F':
             if len(curmsg) >= 1:
@@ -177,6 +179,7 @@ def format_text(message):
                                 str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             underlined = not underlined
+            index += 1
 
         else:
             curmsg += char
