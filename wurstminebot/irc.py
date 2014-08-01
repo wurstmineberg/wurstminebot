@@ -88,9 +88,9 @@ def format_text(message):
         elif number == 13:
             return "light_purple"
         elif number == 14:
-            return "gray"
-        elif number == 15:
             return "dark_gray"
+        elif number == 15:
+            return "gray"
         else:
             return "aqua"
 
