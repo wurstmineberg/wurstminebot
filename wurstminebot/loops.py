@@ -425,7 +425,7 @@ class TimeLoop(threading.Thread):
                 time_until_hour -= 1
             if self.stopped:
                 break
-            tell_time(comment=True, restart=core.config('daily_restart', True))
+            tell_time(comment=True, restart=core.config('dailyRestart', True))
     
     def start(self):
         self.stopped = False
