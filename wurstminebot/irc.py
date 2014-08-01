@@ -97,9 +97,19 @@ def format_text(message):
     messages = []
     curmsg = ""
     fgcolor = 'aqua'
+
     # FIXME: We assume that the backgroundcolor is set with the attribute
     # "backgroundcolor". Please check.
     bgcolor = 'black'
+    bold = False
+    italic = False
+    underlined = False
+
+    def append_current_text():
+        if len(curmsg) >= 1:
+            messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
+                            bold, 'italic': italic, 'underlined': underlined, 'text': text, })
+            curmsg = ""
 
     index = 0
     textlen = len(message)
@@ -108,9 +118,7 @@ def format_text(message):
         char = message[index]
 
         if char == '\x03':
-            messages.append(
-                {'color': fgcolor, 'backgroundcolor': bgcolor, 'text': curmsg})
-            curmsg = ""
+            append_current_text()
             index += 1
 
             has_fgcolor = False
@@ -152,12 +160,23 @@ def format_text(message):
                     except (ValueError, IndexError):
                         pass
 
+        elif char == '\x02':
+            append_current_text()
+            bold = not bold
+
+        elif char == '\x1D':
+            append_current_text()
+            italic = not italic
+
+        elif char == '\x1F':
+            append_current_text()
+            underlined = not underlined
+
         else:
             curmsg += char
             index += 1
 
-    messages.append(
-        {'color': fgcolor, 'backgroundcolor': bgcolor, 'text': curmsg})
+    append_current_text()
     return messages
 
 
