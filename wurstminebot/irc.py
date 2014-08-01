@@ -92,11 +92,11 @@ def format_text(message):
         elif number == 15:
             return "gray"
         else:
-            return "black"
+            return "white"
 
     messages = []
     curmsg = ""
-    fgcolor = 'aqua'
+    fgcolor = 'white'
 
     # FIXME: We assume that the backgroundcolor is set with the attribute
     # "backgroundcolor". Please check.
