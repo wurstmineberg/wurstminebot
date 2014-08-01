@@ -107,13 +107,14 @@ def format_text(message):
     while index < textlen:
         char = message[index]
 
-        if char.encode('utf-8') == '\x03':
+        if char == '\x03':
             messages.append(
                 {'color': fgcolor, 'backgroundcolor': bgcolor, 'text': curmsg})
             curmsg = ""
             index += 1
 
             has_fgcolor = False
+            has_bgcolor = False
             fgcolor = 'aqua'
             bgcolor = 'black'
 
@@ -122,13 +123,15 @@ def format_text(message):
                 fgcolor = colorname(number)
                 has_fgcolor = True
                 index += 2
-            except ValueError:
+            except (ValueError, IndexError):
+                pass
+            if not has_fgcolor:
                 try:
                     number = int(message[index])
                     fgcolor = colorname(number)
                     has_fgcolor = True
                     index += 1
-                except ValueError:
+                except (ValueError, IndexError):
                     pass
 
             if has_fgcolor and message[index] == ',':
@@ -136,13 +139,17 @@ def format_text(message):
                 try:
                     number = int(message[index: index + 2])
                     bgcolor = colorname(number)
+                    has_bgcolor = True
                     index += 2
-                except ValueError:
+                except (ValueError, IndexError):
+                    pass
+                if not has_bgcolor:
                     try:
                         number = int(message[index])
                         bgcolor = colorname(number)
+                        has_bgcolor = True
                         index += 1
-                    except ValueError:
+                    except (ValueError, IndexError):
                         pass
 
         else:
