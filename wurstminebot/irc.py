@@ -114,7 +114,7 @@ def format_text(message):
         if char == '\x03':
             if len(curmsg) >= 1:
                 messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
-                                bold, 'italic': italic, 'underlined': underlined, 'text': curmsg})
+                                str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             index += 1
 
@@ -160,21 +160,21 @@ def format_text(message):
         elif char == '\x02':
             if len(curmsg) >= 1:
                 messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
-                                bold, 'italic': italic, 'underlined': underlined, 'text': curmsg})
+                                str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             bold = not bold
 
         elif char == '\x1D':
             if len(curmsg) >= 1:
                 messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
-                                bold, 'italic': italic, 'underlined': underlined, 'text': curmsg})
+                                str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             italic = not italic
 
         elif char == '\x1F':
             if len(curmsg) >= 1:
                 messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
-                                bold, 'italic': italic, 'underlined': underlined, 'text': curmsg})
+                                str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
                 curmsg = ""
             underlined = not underlined
 
@@ -184,7 +184,7 @@ def format_text(message):
 
     if len(curmsg) >= 1:
         messages.append({'color': fgcolor, 'backgroundcolor': bgcolor, 'bold':
-                        bold, 'italic': italic, 'underlined': underlined, 'text': curmsg})
+                         str(bold).lower(), 'italic': str(italic).lower(), 'underlined': str(underlined).lower(), 'text': curmsg})
         curmsg = ""
     return messages
 
