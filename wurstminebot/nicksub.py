@@ -576,7 +576,7 @@ def textsub(text, source, target, strict=False):
         else:
             return []
 
-    urlcharacters = "[0-9A-Za-z-._~:/?#\[\]@!$&\'()*+\,;=]"
+    urlcharacters = "[0-9A-Za-z-._~:/?#\[\]@!$&\'()*+\,;=%]"
     text = text[:]
     for id, nick in _nicksForContext(source):
         if Person(id).nick(target):
