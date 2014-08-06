@@ -41,6 +41,9 @@ def endMOTD(sender, headers, message):
         core.state['twitter_stream'] = loops.TwitterStream(core.twitter)
         core.state['twitter_stream'].start()
 
+def error_nick_in_use(sender, headers, message):
+    core.state['bot'].send('NICK ' + core.config('irc').get('altNick', core.config('irc')['nick'] + '_'))
+
 def error_not_chan_op(sender, headers, message):
     irc_config = core.config('irc')
     if 'nickserv_password' in irc_config:
@@ -254,6 +257,7 @@ def bot():
     ret = ircbotframe.ircBot(core.config('irc')['server'], core.config('irc').get('port', 6667), core.config('irc')['nick'], core.config('irc')['nick'], password=core.config('irc').get('password'), ssl=core.config('irc').get('ssl', False))
     ret.log_own_messages = False
     ret.bind('376', endMOTD)
+    ret.bind('433', error_nick_in_use)
     ret.bind('482', error_not_chan_op)
     ret.bind('ACTION', action)
     ret.bind('JOIN', join)
