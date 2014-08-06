@@ -789,6 +789,9 @@ class Leak(BaseCommand):
             twid = core.tweet(status)
         except core.TwitterError as e:
             self.warning('Error ' + str(e.status_code) + ': ' + str(e))
+            return
+        except AttributeError:
+            self.warning('Twitter is not configured.')
         else:
             tweet_url = 'https://twitter.com/' + core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
             minecraft.tellraw({
@@ -1406,7 +1409,11 @@ class Tweet(BaseCommand):
     
     def run(self):
         status = nicksub.textsub(' '.join(self.arguments), self.context, 'twitter')
-        twid = core.tweet(status)
+        try:
+            twid = core.tweet(status)
+        except AttributeError:
+            self.warning('Twitter is not configured.')
+            return
         url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
         if self.context == 'minecraft':
             minecraft.tellraw({
@@ -1493,7 +1500,7 @@ class Update(BaseCommand):
             self.reply(message)
         try:
             twid = core.tweet('Server updated to ' + version_text + '! Wheee! See ' + minecraft.wiki_version_link(version) + ' for details.')
-        except core.TwitterError:
+        except (core.TwitterError, AttributeError):
             self.reply('…done updating, but the announcement tweet failed.', '...done updating, but the announcement tweet failed.')
         else:
             status_url = core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
