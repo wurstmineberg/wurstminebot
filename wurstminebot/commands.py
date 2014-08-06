@@ -1435,10 +1435,12 @@ class Update(BaseCommand):
     """update Minecraft"""
     
     usage = '[release | snapshot [<snapshot_id>] | <version>]'
-    muted_backup_messages = [
-        'Symlinking to httpdocs...'
+    muted_backup_messages = {
+        'Minecraft is running... suspending saves',
+        'Minecraft is running... re-enabling saves',
+        'Symlinking to httpdocs...',
         'Done.'
-    ]
+    }
     
     def backup_reply(self, message):
         if message not in self.muted_backup_messages:
@@ -1463,7 +1465,7 @@ class Update(BaseCommand):
         core.update_topic(special_status='The server is being updated, wait a sec.')
         backup_thread = None
         version = minecraft.version()
-        if version is not None:
+        if version is not None and 'backup' in minecraft.config['paths']:
             path = os.path.join(minecraft.config('paths')['backup'], 'pre-update', minecraft.config('world') + '_' + re.sub('\\.', '_', version))
             backup_thread = threading.Thread(target=minecraft.backup, kwargs={'reply': self.backup_reply, 'announce': True, 'path': path})
             backup_thread.start()
@@ -1482,8 +1484,11 @@ class Update(BaseCommand):
         version_text = version_dict['version_text']
         self.reply('Downloading ' + version_text)
         assert next(update_iterator) == 'Download finished. Stopping server...'
-        backup_thread.join()
-        self.reply('Backup and download finished. Stopping server...')
+        if backup_thread is None:
+            self.reply('Download finished. Stopping server...')
+        else:
+            backup_thread.join()
+            self.reply('Backup and download finished. Stopping server...')
         for message in update_iterator:
             self.reply(message)
         try:
