@@ -1465,7 +1465,7 @@ class Update(BaseCommand):
         core.update_topic(special_status='The server is being updated, wait a sec.')
         backup_thread = None
         version = minecraft.version()
-        if version is not None and 'backup' in minecraft.config['paths']:
+        if version is not None and 'backup' in minecraft.config('paths'):
             path = os.path.join(minecraft.config('paths')['backup'], 'pre-update', minecraft.config('world') + '_' + re.sub('\\.', '_', version))
             backup_thread = threading.Thread(target=minecraft.backup, kwargs={'reply': self.backup_reply, 'announce': True, 'path': path})
             backup_thread.start()
