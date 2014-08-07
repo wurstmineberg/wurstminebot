@@ -49,6 +49,8 @@ class InputLoop(threading.Thread):
                             twid = core.tweet(status)
                         except core.TwitterError as e:
                             twid = 'error ' + str(e.status_code) + ': ' + str(e)
+                        except AttributeError:
+                            twid = 'Twitter is not configured'
                         else:
                             twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
                     else:
@@ -360,6 +362,22 @@ class InputLoop(threading.Thread):
                             },
                             {
                                 'text': '.',
+                                'color': 'gold'
+                            }
+                        ])
+                    except AttributeError:
+                        twid = 'Twitter is not configured'
+                        minecraft.tellraw([
+                            {
+                                'text': 'Your fail has ',
+                                'color': 'gold'
+                            },
+                            {
+                                'text': 'not',
+                                'color': 'red'
+                            },
+                            {
+                                'text': " been reported because I don't even Twitter.",
                                 'color': 'gold'
                             }
                         ])
