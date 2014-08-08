@@ -23,6 +23,7 @@ class BaseCommand(threading.Thread):
     usage = None
     
     def __init__(self, args, sender, context, channel=None, addressing=None):
+        super().__init__(name='wurstminebot command ' + self.__class__.__name__)
         self.addressing = addressing
         self.arguments = [str(arg) for arg in args]
         if isinstance(sender, str):
