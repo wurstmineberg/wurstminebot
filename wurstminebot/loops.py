@@ -401,8 +401,7 @@ class InputLoop(threading.Thread):
                     core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
         except SystemExit:
             core.debug_print('Exit in log input loop')
-            core.input_loop.stop()
-            core.time_loop.stop()
+            core.cleanup()
             raise
         except:
             core.debug_print('Exception in log input loop:')
