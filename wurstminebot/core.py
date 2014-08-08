@@ -51,7 +51,7 @@ class TwitterError(Exception):
     def __str__(self):
         return str(self.code) if self.message is None else str(self.message)
 
-def cleanup():
+def cleanup(*args, **kwargs):
     if state.get('input_loop') is not None:
         state['input_loop'].stop()
     state['input_loop'] = None
