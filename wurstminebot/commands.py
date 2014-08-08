@@ -1183,7 +1183,6 @@ class Restart(BaseCommand):
     def run(self):
         if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0].lower() == 'bot'):
             # restart the bot
-            from wurstminebot import __main__
             minecraft.tellraw({
                 'text': 'Restarting the bot...',
                 'color': 'red'
@@ -1196,12 +1195,16 @@ class Restart(BaseCommand):
             subprocess.Popen(['service', 'wurstminebot', 'restart'])
         else:
             # restart the Minecraft server
+            if not core.status['server_control_lock'].acquire():
+                self.warning('Server access is locked. Not restarting server.')
+                return
             core.update_topic(special_status='The server is restarting…')
             if minecraft.restart(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
                 self.reply('Server restarted.')
             else:
                 self.reply('Could not restart the server!')
             core.update_topic()
+            core.status['server_control_lock'].release()
 
 class Retweet(BaseCommand):
     """retweet a tweet with the bot's twitter account"""
@@ -1366,11 +1369,15 @@ class Stop(BaseCommand):
             # stop the bot
             return Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
         # stop the Minecraft server
+        if not core.status['server_control_lock'].acquire():
+            self.warning('Server access is locked. Not stopping server.')
+            return
         core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
         if minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
             self.reply('Server stopped.')
         else:
             self.warning('The server could not be stopped! D:')
+        core.status['server_control_lock'].release()
 
 class Time(BaseCommand):
     """reply with the current time"""
@@ -1472,6 +1479,9 @@ class Update(BaseCommand):
         return 4
     
     def run(self):
+        if not core.status['server_control_lock'].acquire():
+            self.warning('Server access is locked. Not stopping server.')
+            return
         core.update_topic(special_status='The server is being updated, wait a sec.')
         backup_thread = None
         version = minecraft.version()
@@ -1516,6 +1526,7 @@ class Update(BaseCommand):
                 'color': 'gold'
             })
         core.update_topic()
+        core.state['server_control_lock'].release()
 
 class Version(BaseCommand):
     """reply with the current version of wurstminebot and init-minecraft"""

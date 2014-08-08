@@ -527,6 +527,7 @@ state = {
     'last_death': '',
     'log_lock': threading.Lock(),
     'online_players': [],
+    'server_control_lock': threading.Lock(),
     'time_loop': None,
     'twitter_stream': None
 }
