@@ -17,7 +17,7 @@ from datetime import timezone
 import traceback
 import urllib.parse
 
-class BaseCommand:
+class BaseCommand(threading.Thread):
     """base class for other commands, not a real command"""
     
     usage = None
@@ -1588,7 +1588,18 @@ def parse(command, sender, context, channel=None):
     else:
         raise ValueError('No such command')
 
-def run(command_name, sender, context, channel=None):
+def run(command_name, sender, context, channel=None, wait=False):
+    """Runs a command.
+    
+    Required arguments:
+    command_name -- either a string containing the command name and arguments, or an array where the first item is the command name and the rest are arguments
+    sender -- a nicksub.Person or string representing the sender of the command. If it's a string, it will be converted into a nicksub.Dummy
+    context -- a string, 'minecraft' or 'irc', depending on where the command was sent from
+    
+    Optional arguments:
+    channel -- if sent from IRC, the channel to which the command was sent, or None (the default) if it was sent to query
+    wait -- whether or not the function call should block until the command has finished executing. Defaults to False
+    """
     try:
         command = parse(command=command_name, sender=sender, context=context, channel=channel)
     except ValueError:
@@ -1618,7 +1629,10 @@ def run(command_name, sender, context, channel=None):
     if sender_permission_level < command_permission_level:
         command.warning(core.ErrorMessage.permission(level=command_permission_level))
         return False
-    command.run()
+    if wait:
+        command.run()
+    else:
+        command.start()
     return True
 
 classes = [command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand']
