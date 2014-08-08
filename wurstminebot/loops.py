@@ -289,7 +289,7 @@ class InputLoop(threading.Thread):
                             welcome_message_stub = 'How did you do that?'
                         core.debug_print('[join] ' + ('@unknown' if person is None else person.id) + ' ' + repr(welcome_message) + ' ' + welcome_message_stub)
                     irc_config = core.config('irc')
-                    if 'main_channel' in irc_config and irc_config.get('player_list', 'announce') == 'announce':
+                    if 'main_channel' in irc_config and irc_config.get('playerList', 'announce') == 'announce':
                         core.state['bot'].say(irc_config['main_channel'], (player if person is None else person.irc_nick()) + ' ' + ('joined' if joined else 'left') + ' the game')
                     core.update_all()
                 break
