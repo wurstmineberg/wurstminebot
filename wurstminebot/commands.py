@@ -1480,7 +1480,7 @@ class Update(BaseCommand):
     
     def run(self):
         if not core.status['server_control_lock'].acquire():
-            self.warning('Server access is locked. Not stopping server.')
+            self.warning('Server access is locked. Not updating server.')
             return
         core.update_topic(special_status='The server is being updated, wait a sec.')
         backup_thread = None
