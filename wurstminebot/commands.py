@@ -936,6 +936,8 @@ class PasteTweet(BaseCommand):
             self.reply(core.paste_tweet(twid, link=link), core.paste_tweet(twid, link=link, tellraw=True))
         except core.TwitterError as e:
             self.warning('Error ' + str(e.status_code) + ': ' + str(e))
+        except AttributeError:
+            self.warning('Twitter is not configured')
 
 class People(BaseCommand):
     """people.json management"""

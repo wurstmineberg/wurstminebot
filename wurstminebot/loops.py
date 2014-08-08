@@ -144,6 +144,8 @@ class InputLoop(threading.Thread):
                             })
                             core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
                             core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
+                        except AttributeError:
+                            core.debug_print('Tried to paste a tweet from in-game chat, but Twitter is not configured')
                         except Exception as e:
                             minecraft.tellraw({
                                 'text': 'Error while pasting tweet: ' + str(e),

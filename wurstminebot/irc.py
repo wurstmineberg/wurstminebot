@@ -491,6 +491,8 @@ def privmsg(sender, headers, message):
                         core.state['bot'].say(headers[0], 'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e))
                         core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
                         core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
+                    except AttributeError:
+                        core.debug_print('Tried to paste a tweet from IRC, but Twitter is not configured')
                     except Exception as e:
                         core.state['bot'].say(headers[0], 'Error while pasting tweet: ' + str(e))
                         core.debug_print('Exception while pasting tweet:')
