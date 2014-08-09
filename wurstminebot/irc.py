@@ -411,7 +411,7 @@ def privmsg(sender, headers, message):
                         core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]) + ':')
                         if core.config('debug', False) or core.state.get('is_daemon', False):
                             traceback.print_exc(file=sys.stdout)
-            elif headers[0] == irc_config.get('main_channel'):
+            elif headers[0] == irc_config.get('main_channel') and core.config('usc').get('state') is None:
                 if re.match('https?://(mojang\\.atlassian\\.net|bugs\\.mojang\\.com)/browse/[A-Z]+-[0-9]+', message):
                     minecraft.tellraw([
                         {
