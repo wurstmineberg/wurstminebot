@@ -1531,10 +1531,12 @@ class UltraSoftcore(BaseCommand):
             #TODO unzip the world
             minecraft.start(reply=self.reply)
             #TODO notify IRC (and Twitter?) that the lobby is now open
+            core.update_topic(special_status='USC lobby is now open! Join to play or spectate.')
         elif subcommand == 'end':
             core.update_config(['usc', 'completedSeasons'], core.config('usc').get('completedSeasons', 0) + 1)
             core.update_config(['usc', 'state'], None)
             minecraft.enable_world('wurstmineberg', reply=self.reply) #TODO replace with default world name
+            core.update_topic(special_status=None)
 
 class Update(BaseCommand):
     """update Minecraft"""
