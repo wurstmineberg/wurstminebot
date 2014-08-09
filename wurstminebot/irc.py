@@ -41,16 +41,184 @@ def endMOTD(sender, headers, message):
         core.state['twitter_stream'] = loops.TwitterStream(core.twitter)
         core.state['twitter_stream'].start()
 
+def error_nick_in_use(sender, headers, message):
+    core.state['bot'].send('NICK ' + core.config('irc').get('altNick', core.config('irc')['nick'] + '_'))
+
 def error_not_chan_op(sender, headers, message):
     irc_config = core.config('irc')
     if 'nickserv_password' in irc_config:
-        core.state['bot'].say('NickServ', 'IDENTIFY ' + irc_config['nickserv_password'])
+        core.state['bot'].say(
+            'NickServ', 'IDENTIFY ' + irc_config['nickserv_password'])
     elif 'main_channel' in irc_config:
         core.state['bot'].say(irc_config['main_channel'], random.choice([
             'To change the topic, I need to be a channel operator.',
             'op me pls',
             'i can has op?'
         ]))
+
+def format_text(message):
+    def colorname(number):
+        if number == 0:
+            return 'white'
+        elif number == 1:
+            return 'black'
+        elif number == 2:
+            return 'dark_blue'
+        elif number == 3:
+            return 'dark_green'
+        elif number == 4:
+            return 'red'
+        elif number == 5: # actually brown but it's ok
+            return 'dark_red'
+        elif number == 6:
+            return 'dark_purple'
+        elif number == 7: # actually orange but looks similar
+            return 'gold'
+        elif number == 8:
+            return 'yellow'
+        elif number == 9:
+            return 'green'
+        elif number == 10:
+            return 'dark_aqua'
+        elif number == 11:
+            return 'aqua'
+        elif number == 12:
+            return 'blue'
+        elif number == 13:
+            return 'light_purple'
+        elif number == 14:
+            return 'dark_gray'
+        elif number == 15:
+            return 'gray'
+        else:
+            return 'white'
+    
+    messages = []
+    curmsg = ''
+    fgcolor = 'white'
+    
+    # FIXME: We assume that the backgroundcolor is set with the attribute
+    # "backgroundcolor". Please check.
+    bgcolor = 'black'
+    bold = False
+    italic = False
+    underlined = False
+    
+    index = 0
+    textlen = len(message)
+    
+    while index < textlen:
+        char = message[index]
+        
+        if char == '\x03':
+            if len(curmsg) >= 1:
+                messages.append({
+                    'color': fgcolor,
+                    'backgroundcolor': bgcolor,
+                    'bold': str(bold).lower(),
+                    'italic': str(italic).lower(),
+                    'underlined': str(underlined).lower(),
+                    'text': curmsg
+                })
+                curmsg = ''
+            index += 1
+            
+            has_fgcolor = False
+            has_bgcolor = False
+            fgcolor = 'aqua'
+            bgcolor = 'black'
+            
+            try:
+                number = int(message[index:index + 2])
+                fgcolor = colorname(number)
+                has_fgcolor = True
+                index += 2
+            except (ValueError, IndexError):
+                pass
+            if not has_fgcolor:
+                try:
+                    number = int(message[index])
+                    fgcolor = colorname(number)
+                    has_fgcolor = True
+                    index += 1
+                except (ValueError, IndexError):
+                    pass
+            
+            if has_fgcolor and message[index] == ',':
+                index += 1
+                try:
+                    number = int(message[index:index + 2])
+                    bgcolor = colorname(number)
+                    has_bgcolor = True
+                    index += 2
+                except (ValueError, IndexError):
+                    pass
+                if not has_bgcolor:
+                    try:
+                        number = int(message[index])
+                        bgcolor = colorname(number)
+                        has_bgcolor = True
+                        index += 1
+                    except (ValueError, IndexError):
+                        pass
+        
+        elif char == '\x02':
+            if len(curmsg) >= 1:
+                messages.append({
+                    'color': fgcolor,
+                    'backgroundcolor': bgcolor,
+                    'bold': str(bold).lower(),
+                    'italic': str(italic).lower(),
+                    'underlined': str(underlined).lower(),
+                    'text': curmsg
+                })
+                curmsg = ''
+            bold = not bold
+            index += 1
+        
+        elif char == '\x1D':
+            if len(curmsg) >= 1:
+                messages.append({
+                    'color': fgcolor,
+                    'backgroundcolor': bgcolor,
+                    'bold': str(bold).lower(),
+                    'italic': str(italic).lower(),
+                    'underlined': str(underlined).lower(),
+                    'text': curmsg
+                })
+                curmsg = ''
+            italic = not italic
+            index += 1
+        
+        elif char == '\x1F':
+            if len(curmsg) >= 1:
+                messages.append({
+                    'color': fgcolor,
+                    'backgroundcolor': bgcolor,
+                    'bold': str(bold).lower(),
+                    'italic': str(italic).lower(),
+                    'underlined': str(underlined).lower(),
+                    'text': curmsg
+                })
+                curmsg = ''
+            underlined = not underlined
+            index += 1
+        
+        else:
+            curmsg += char
+            index += 1
+    
+    if len(curmsg) >= 1:
+        messages.append({
+            'color': fgcolor,
+            'backgroundcolor': bgcolor,
+            'bold': str(bold).lower(),
+            'italic': str(italic).lower(),
+            'underlined': str(underlined).lower(),
+            'text': curmsg
+        })
+        curmsg = ''
+    return messages
 
 def action(sender, headers, message):
     try:
@@ -73,12 +241,8 @@ def action(sender, headers, message):
                 },
                 {
                     'text': ' '
-                },
-                {
-                    'text': nicksub.textsub(message, 'irc', 'minecraft'),
-                    'color': 'aqua'
                 }
-            ])
+            ] + format_text(nicksub.textsub(message, 'irc', 'minecraft')))
     except SystemExit:
         core.debug_print('Exit in ACTION')
         core.cleanup()
@@ -93,6 +257,7 @@ def bot():
     ret = ircbotframe.ircBot(core.config('irc')['server'], core.config('irc').get('port', 6667), core.config('irc')['nick'], core.config('irc')['nick'], password=core.config('irc').get('password'), ssl=core.config('irc').get('ssl', False))
     ret.log_own_messages = False
     ret.bind('376', endMOTD)
+    ret.bind('433', error_nick_in_use)
     ret.bind('482', error_not_chan_op)
     ret.bind('ACTION', action)
     ret.bind('JOIN', join)
@@ -193,10 +358,11 @@ def part(sender, headers, message):
 
 def privmsg(sender, headers, message):
     irc_config = core.config('irc')
+    
     def botsay(msg):
         for line in msg.splitlines():
             core.state['bot'].say(irc_config['main_channel'], line)
-
+    
     try:
         core.debug_print('[irc] <' + sender + '>' + (headers[0] if headers[0].startswith('#') else '') + ' ' + message)
         sender_person = nicksub.person_or_dummy(sender, context='irc')
@@ -204,7 +370,7 @@ def privmsg(sender, headers, message):
             if headers[0] == irc_config.get('dev_channel') and irc_config.get('dev_channel') != irc_config.get('main_channel'):
                 # sync commit messages from dev to main
                 core.state['bot'].say(irc_config.get('main_channel', '#wurstmineberg'), message)
-            return # ignore self otherwise
+            return  # ignore self otherwise
         if sender in irc_config.get('ignore', []):
             return
         if headers[0].startswith('#'):
@@ -232,7 +398,8 @@ def privmsg(sender, headers, message):
                     try:
                         commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
-                        core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]))
+                        core.debug_print(
+                            'Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]))
                         core.cleanup()
                         raise
                     except core.TwitterError as e:
@@ -324,6 +491,8 @@ def privmsg(sender, headers, message):
                         core.state['bot'].say(headers[0], 'Error ' + str(e.status_code) + ' while pasting tweet: ' + str(e))
                         core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
                         core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
+                    except AttributeError:
+                        core.debug_print('Tried to paste a tweet from IRC, but Twitter is not configured')
                     except Exception as e:
                         core.state['bot'].say(headers[0], 'Error while pasting tweet: ' + str(e))
                         core.debug_print('Exception while pasting tweet:')
@@ -380,12 +549,8 @@ def privmsg(sender, headers, message):
                                 },
                                 {
                                     'text': ' '
-                                },
-                                {
-                                    'text': nicksub.textsub(message, 'irc', 'minecraft'),
-                                    'color': 'aqua'
                                 }
-                            ]
+                            ] + format_text(nicksub.textsub(message, 'irc', 'minecraft'))
                         })
         else:
             cmd = message.split(' ')

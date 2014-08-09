@@ -59,9 +59,9 @@ def update_config(person_id, path, value=None, delete=False):
     set_config(full_config_dict)
 
 class PersonNotFoundError(Exception):
-    pass # raised when a Person object is created or reloaded with data not in the config
+    """raised when a Person object is created or reloaded with data not in the config"""
 
-def ircNicks(mode='all', include_ids=False):
+def irc_nicks(mode='all', include_ids=False):
     for person in config():
         if 'irc' in person and 'nicks' in person['irc'] and len(person['irc']['nicks']):
             if mode == 'all':
@@ -74,12 +74,12 @@ def ircNicks(mode='all', include_ids=False):
             else:
                 raise ValueError('unknown mode: ' + str(mode))
 
-def minecraftNicks(include_ids=False):
+def minecraft_nicks(include_ids=False):
     for person in config():
         if 'minecraft' in person:
             yield (person['id'], person['minecraft']) if include_ids else person['minecraft']
 
-def otherNicks(mode='all', include_ids=False):
+def other_nicks(mode='all', include_ids=False):
     for person in config():
         if 'nicks' in person and len(person['nicks']):
             if mode == 'all':
@@ -90,8 +90,8 @@ def otherNicks(mode='all', include_ids=False):
             else:
                 raise ValueError('unknown mode: ' + str(mode))
 
-def redditNicks(include_ids=False, format='plain'):
-    def _formatRedditNick(nick):
+def reddit_nicks(include_ids=False, format='plain'):
+    def _format_reddit_nick(nick):
         if format == 'plain':
             return nick
         elif format == 'prefix':
@@ -105,12 +105,13 @@ def redditNicks(include_ids=False, format='plain'):
     
     for person in config():
         if 'reddit' in person:
-            yield (person['id'], _formatRedditNick(person['reddit'])) if include_ids else _formatRedditNick(person['reddit'])
+            yield (person['id'], _format_reddit_nick(person['reddit'])) if include_ids else _format_reddit_nick(person['reddit'])
 
-def twitterNicks(include_ids=False, twitter_at_prefix=False):
+def twitter_nicks(include_ids=False, twitter_at_prefix=False):
     for person in config():
         if 'twitter' in person:
-            formatted_nick = ('@' + person['twitter']) if twitter_at_prefix else person['twitter']
+            formatted_nick = (
+                '@' + person['twitter']) if twitter_at_prefix else person['twitter']
             yield (person['id'], formatted_nick) if include_ids else formatted_nick
 
 class BasePerson:
@@ -125,7 +126,7 @@ class BasePerson:
         try:
             del opts[option_name.lower()]
         except KeyError:
-            pass # no option to delete
+            pass  # no option to delete
         self.options = opts
     
     def display_name(self):
@@ -172,7 +173,8 @@ class BasePerson:
             return default
     
     def option(self, option_name):
-        default_true_options = ['chatsync_highlight', 'inactivity_tweets'] # These options are on by default. All other options are off by default.
+        """"These options are on by default. All other options are off by default."""
+        default_true_options = ['chatsync_highlight', 'inactivity_tweets']
         if option_name.lower() in self.options:
             return self.options[option_name.lower()]
         else:
@@ -199,21 +201,21 @@ class Person(BasePerson):
                 self.id = self.id.lower()
             config(self.id) # raises PersonNotFoundError if the id is invalid
         elif context == 'irc':
-            for id, irc_nick in ircNicks(mode='all', include_ids=True):
+            for id, irc_nick in irc_nicks(mode='all', include_ids=True):
                 if irc_nick.lower() == id_or_nick.lower():
                     self.id = id
                     break
             else:
                 raise PersonNotFoundError('person with IRC nick ' + str(id_or_nick) + ' not found')
         elif context == 'minecraft':
-            for id, minecraft_nick in minecraftNicks(include_ids=True):
+            for id, minecraft_nick in minecraft_nicks(include_ids=True):
                 if minecraft_nick.lower() == id_or_nick.lower():
                     self.id = id
                     break
             else:
                 raise PersonNotFoundError()
         elif context == 'reddit':
-            for id, reddit_nick in redditNicks(include_ids=True, format='plain'):
+            for id, reddit_nick in reddit_nicks(include_ids=True, format='plain'):
                 if id_or_nick.startswith('/u/'):
                     id_or_nick = id_or_nick[len('/u/'):]
                 if reddit_nick.lower() == id_or_nick.lower():
@@ -222,7 +224,7 @@ class Person(BasePerson):
             else:
                 raise PersonNotFoundError('person with reddit nick ' + str(id_or_nick) + ' not found')
         elif context == 'twitter':
-            for id, twitter_nick in twitterNicks(include_ids=True, twitter_at_prefix=False):
+            for id, twitter_nick in twitter_nicks(include_ids=True, twitter_at_prefix=False):
                 if id_or_nick.startswith('@'):
                     id_or_nick = id_or_nick[len('@'):]
                 if twitter_nick.lower() == id_or_nick.lower():
@@ -488,8 +490,7 @@ def person_or_dummy(id_or_nick, context=None):
         return Dummy(id_or_nick, context=context)
 
 def sorted_people(*args, context=None):
-    """Returns a list of Person and Dummy objects based on the Person/Dummy objects and ids or (if context is specified) nicknames provided.
-    """
+    """Returns a list of Person and Dummy objects based on the Person/Dummy objects and ids or (if context is specified) nicknames provided."""
     people = []
     dummies = []
     if len(args) == 1 and not isinstance(args[0], str):
@@ -529,25 +530,26 @@ def sub(nick, source, target, strict=True, exit_on_fail=False, twitter_at_prefix
             return nick
 
 def textsub(text, source, target, strict=False):
-    def _nicksForContext(context):
+    def _nicks_for_context(context):
         if context == 'irc':
             mode = 'main' if strict else 'all'
-            return reversed(list(ircNicks(include_ids=True, mode=mode)))
+            return reversed(list(irc_nicks(include_ids=True, mode=mode)))
         elif context == 'minecraft':
-            return minecraftNicks(include_ids=True)
+            return minecraft_nicks(include_ids=True)
         elif context == 'reddit':
-            return redditNicks(include_ids=True)
+            return reddit_nicks(include_ids=True)
         elif context == 'twitter':
-            return twitterNicks(include_ids=True, twitter_at_prefix=True)
+            return twitter_nicks(include_ids=True, twitter_at_prefix=True)
         else:
             return []
     
+    url_characters = "[0-9A-Za-z-._~:/?#\[\]@!$&'()*+\,;=%]"
     text = text[:]
-    for id, nick in _nicksForContext(source):
-        if Person(id).nick(target):
-            text = re.sub('(?<![0-9A-Za-z@])(' + re.sub('\\|', '\\|', nick) + ')(?![0-9A-Za-z])', Person(id).nick(target, twitter_at_prefix=True), text, flags=re.IGNORECASE)
+    for person_id, nick in _nicks_for_context(source):
+        if Person(person_id).nick(target):
+            text = re.sub('(?<!' + url_characters + ')(' + re.sub('\\|', '\\|', nick) + ')(?!' + url_characters + ')', Person(person_id).nick(target, twitter_at_prefix=True), text, flags=re.IGNORECASE)
     if not strict:
-        for id, nick in otherNicks(include_ids=True, mode='all'):
-            if Person(id).nick(target):
-                text = re.sub('(?<![0-9A-Za-z@])(' + re.sub('\\|', '\\|', nick) + ')(?![0-9A-Za-z])', Person(id).nick(target, twitter_at_prefix=True), text, flags=re.IGNORECASE)
+        for person_id, nick in other_nicks(include_ids=True, mode='all'):
+            if Person(person_id).nick(target):
+                text = re.sub('(?<!' + url_characters + ')(' + re.sub('\\|', '\\|', nick) + ')(?!' + url_characters + ')', Person(person_id).nick(target, twitter_at_prefix=True), text, flags=re.IGNORECASE)
     return text

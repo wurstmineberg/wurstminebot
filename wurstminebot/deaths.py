@@ -1,4 +1,5 @@
 from datetime import date
+from datetime import datetime
 import minecraft
 from wurstminebot import nicksub
 import re
@@ -227,11 +228,11 @@ class Death:
                 if match.group(1).startswith('['):
                     self.timestamp = minecraft.regexes.strptime(date.today(), match.group(1)).astimezone(timezone.utc) # not guaranteed to be accurate
                 else:
-                    self.timestamp = datetime.strptime(match.group(1) + ' +0000', '%Y-%m-%d %H:%M:%S %z') #TODO fix timezone handling
+                    self.timestamp = datetime.strptime(match.group(1) + ' +0000', '%Y-%m-%d %H:%M:%S %z')
             else:
                 self.timestamp = time
             self.person = nicksub.person_or_dummy(match.group(2), context='minecraft')
-            self.partial_message = log_line[len('[00:00:00] [Server thread/INFO]: ' + self.person.nick('minecraft') + ' '):]
+            self.partial_message = log_line[len('1970-01-01 00:00:00 [Server thread/INFO]: ' + self.person.nick('minecraft') + ' '):]
             self.groups = match.groups()[2:]
             break
         else:

@@ -17,12 +17,13 @@ from datetime import timezone
 import traceback
 import urllib.parse
 
-class BaseCommand:
+class BaseCommand(threading.Thread):
     """base class for other commands, not a real command"""
     
     usage = None
     
     def __init__(self, args, sender, context, channel=None, addressing=None):
+        super().__init__(name='wurstminebot command ' + self.__class__.__name__)
         self.addressing = addressing
         self.arguments = [str(arg) for arg in args]
         if isinstance(sender, str):
@@ -227,7 +228,7 @@ class AchievementTweet(BaseCommand):
     def parse_args(self):
         if len(self.arguments) > 2:
             return False
-        elif len(self.arguments >= 1):
+        elif len(self.arguments) >= 1:
             if self.arguments[0] not in ('on', 'off'):
                 return False
             if len(self.arguments) == 2:
@@ -312,6 +313,20 @@ class Alias(BaseCommand):
                 self.reply('Alias edited.')
             else:
                 self.reply('Alias added.')
+
+class Backup(BaseCommand):
+    """perform a backup of the world directory"""
+    
+    def parse_args(self):
+        if len(self.arguments):
+            return False
+        return True
+    
+    def permission_level(self):
+        return 4
+    
+    def run(self):
+        minecraft.backup(reply=self.reply, announce=True)
 
 class Cloud(BaseCommand):
     """search for an item in the Cloud, our public item storage"""
@@ -445,7 +460,7 @@ class DeathTweet(BaseCommand):
     def parse_args(self):
         if len(self.arguments) > 2:
             return False
-        elif len(self.arguments >= 1):
+        elif len(self.arguments) >= 1:
             if self.arguments[0] not in ('on', 'off'):
                 return False
             if len(self.arguments) == 2:
@@ -775,6 +790,9 @@ class Leak(BaseCommand):
             twid = core.tweet(status)
         except core.TwitterError as e:
             self.warning('Error ' + str(e.status_code) + ': ' + str(e))
+            return
+        except AttributeError:
+            self.warning('Twitter is not configured.')
         else:
             tweet_url = 'https://twitter.com/' + core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
             minecraft.tellraw({
@@ -919,6 +937,8 @@ class PasteTweet(BaseCommand):
             self.reply(core.paste_tweet(twid, link=link), core.paste_tweet(twid, link=link, tellraw=True))
         except core.TwitterError as e:
             self.warning('Error ' + str(e.status_code) + ': ' + str(e))
+        except AttributeError:
+            self.warning('Twitter is not configured')
 
 class People(BaseCommand):
     """people.json management"""
@@ -1163,7 +1183,6 @@ class Restart(BaseCommand):
     def run(self):
         if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0].lower() == 'bot'):
             # restart the bot
-            from wurstminebot import __main__
             minecraft.tellraw({
                 'text': 'Restarting the bot...',
                 'color': 'red'
@@ -1176,12 +1195,16 @@ class Restart(BaseCommand):
             subprocess.Popen(['service', 'wurstminebot', 'restart'])
         else:
             # restart the Minecraft server
+            if not core.status['server_control_lock'].acquire():
+                self.warning('Server access is locked. Not restarting server.')
+                return
             core.update_topic(special_status='The server is restarting…')
             if minecraft.restart(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
                 self.reply('Server restarted.')
             else:
                 self.reply('Could not restart the server!')
             core.update_topic()
+            core.status['server_control_lock'].release()
 
 class Retweet(BaseCommand):
     """retweet a tweet with the bot's twitter account"""
@@ -1346,11 +1369,15 @@ class Stop(BaseCommand):
             # stop the bot
             return Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
         # stop the Minecraft server
+        if not core.status['server_control_lock'].acquire():
+            self.warning('Server access is locked. Not stopping server.')
+            return
         core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
         if minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
             self.reply('Server stopped.')
         else:
             self.warning('The server could not be stopped! D:')
+        core.status['server_control_lock'].release()
 
 class Time(BaseCommand):
     """reply with the current time"""
@@ -1392,7 +1419,11 @@ class Tweet(BaseCommand):
     
     def run(self):
         status = nicksub.textsub(' '.join(self.arguments), self.context, 'twitter')
-        twid = core.tweet(status)
+        try:
+            twid = core.tweet(status)
+        except AttributeError:
+            self.warning('Twitter is not configured.')
+            return
         url = 'https://twitter.com/' + core.config('twitter')['screen_name'] + '/status/' + str(twid)
         if self.context == 'minecraft':
             minecraft.tellraw({
@@ -1509,6 +1540,16 @@ class Update(BaseCommand):
     """update Minecraft"""
     
     usage = '[release | snapshot [<snapshot_id>] | <version>]'
+    muted_backup_messages = {
+        'Minecraft is running... suspending saves',
+        'Minecraft is running... re-enabling saves',
+        'Symlinking to httpdocs...',
+        'Done.'
+    }
+    
+    def backup_reply(self, message):
+        if message not in self.muted_backup_messages:
+            self.reply(message)
     
     def parse_args(self):
         if len(self.arguments) > 0:
@@ -1526,27 +1567,46 @@ class Update(BaseCommand):
         return 4
     
     def run(self):
+        if not core.status['server_control_lock'].acquire():
+            self.warning('Server access is locked. Not updating server.')
+            return
+        core.update_topic(special_status='The server is being updated, wait a sec.')
+        backup_thread = None
+        version = minecraft.version()
+        if version is not None and 'backup' in minecraft.config('paths'):
+            path = os.path.join(minecraft.config('paths')['backup'], 'pre-update', minecraft.config('world') + '_' + re.sub('\\.', '_', version))
+            backup_thread = threading.Thread(target=minecraft.backup, kwargs={'reply': self.backup_reply, 'announce': True, 'path': path})
+            backup_thread.start()
         if (len(self.arguments) == 1 and self.arguments[0].lower() != 'snapshot') or len(self.arguments) == 2:
             if self.arguments[0].lower() == 'snapshot': # !update snapshot <snapshot_id>
-                core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply)
+                update_iterator = minecraft.iter_update(version=(self.arguments[1].lower() if len(self.arguments) == 2 else 'a'), snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             elif self.arguments[0] == 'release': # !update release
-                core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(snapshot=False, reply=self.reply)
+                update_iterator = minecraft.iter_update(snapshot=False, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             else: # !update <version>
-                core.update_topic(special_status='The server is being updated, wait a sec.')
-                version, is_snapshot, version_text = minecraft.update(version=self.arguments[0], snapshot=False, reply=self.reply)
+                update_iterator = minecraft.iter_update(version=self.arguments[0], snapshot=False, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
         else: # !update [snapshot]
-            core.update_topic(special_status='The server is being updated, wait a sec.')
-            version, is_snapshot, version_text = minecraft.update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
+            update_iterator = minecraft.iter_update(snapshot=True, reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
+        version_dict = next(update_iterator)
+        version = version_dict['version']
+        snapshot = version_dict['is_snapshot']
+        version_text = version_dict['version_text']
+        self.reply('Downloading ' + version_text)
+        assert next(update_iterator) == 'Download finished. Stopping server...'
+        if backup_thread is None:
+            self.reply('Download finished. Stopping server...')
+        else:
+            backup_thread.join()
+            self.reply('Backup and download finished. Stopping server...')
+        for message in update_iterator:
+            self.reply(message)
         try:
             twid = core.tweet('Server updated to ' + version_text + '! Wheee! See ' + minecraft.wiki_version_link(version) + ' for details.')
-        except core.TwitterError:
+        except (core.TwitterError, AttributeError):
             self.reply('…done updating, but the announcement tweet failed.', '...done updating, but the announcement tweet failed.')
         else:
             status_url = core.config('twitter').get('screen_name', 'wurstmineberg') + '/status/' + str(twid)
             self.reply('…done [https://twitter.com/' + status_url + ']', {
-                'text': '…done',
+                'text': '...done',
                 'clickEvent': {
                     'action': 'open_url',
                     'value': 'https://twitter.com/' + status_url
@@ -1554,6 +1614,7 @@ class Update(BaseCommand):
                 'color': 'gold'
             })
         core.update_topic()
+        core.state['server_control_lock'].release()
 
 class Version(BaseCommand):
     """reply with the current version of wurstminebot and init-minecraft"""
@@ -1627,7 +1688,18 @@ def parse(command, sender, context, channel=None):
     else:
         raise ValueError('No such command')
 
-def run(command_name, sender, context, channel=None):
+def run(command_name, sender, context, channel=None, wait=False):
+    """Runs a command.
+    
+    Required arguments:
+    command_name -- either a string containing the command name and arguments, or an array where the first item is the command name and the rest are arguments
+    sender -- a nicksub.Person or string representing the sender of the command. If it's a string, it will be converted into a nicksub.Dummy
+    context -- a string, 'minecraft' or 'irc', depending on where the command was sent from
+    
+    Optional arguments:
+    channel -- if sent from IRC, the channel to which the command was sent, or None (the default) if it was sent to query
+    wait -- whether or not the function call should block until the command has finished executing. Defaults to False
+    """
     try:
         command = parse(command=command_name, sender=sender, context=context, channel=channel)
     except ValueError:
@@ -1657,7 +1729,10 @@ def run(command_name, sender, context, channel=None):
     if sender_permission_level < command_permission_level:
         command.warning(core.ErrorMessage.permission(level=command_permission_level))
         return False
-    command.run()
+    if wait:
+        command.run()
+    else:
+        command.start()
     return True
 
 classes = [command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand']

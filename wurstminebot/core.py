@@ -51,7 +51,7 @@ class TwitterError(Exception):
     def __str__(self):
         return str(self.code) if self.message is None else str(self.message)
 
-def cleanup():
+def cleanup(*args, **kwargs):
     if state.get('input_loop') is not None:
         state['input_loop'].stop()
     state['input_loop'] = None
@@ -409,6 +409,10 @@ def paste_tweet(status, link=False, tellraw=False, multi_line='all'):
         return tweet_author + text
 
 def run():
+    try:
+        minecraft.status()
+    except KeyError:
+        sys.exit(minecraft.user_not_found_error)
     from wurstminebot import loops
     state['time_loop'] = loops.TimeLoop()
     state['time_loop'].start()
@@ -504,7 +508,7 @@ def update_topic(force=False, special_status=None):
             threading.Timer(60, update_topic).start()
             if special_status is None:
                 return
-    if config('irc').get('player_list', 'announce') and special_status is None:
+    if config('irc').get('playerList', 'announce') and special_status is None:
         server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])) if config('irc').get('player_list', 'announce') == 'topic' and len(state['online_players']) else None
     else:
         server_status = special_status
@@ -531,6 +535,7 @@ state = {
     'last_death': '',
     'log_lock': threading.Lock(),
     'online_players': [],
+    'server_control_lock': threading.Lock(),
     'time_loop': None,
     'twitter_stream': None
 }

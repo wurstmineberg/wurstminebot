@@ -49,6 +49,8 @@ class InputLoop(threading.Thread):
                             twid = core.tweet(status)
                         except core.TwitterError as e:
                             twid = 'error ' + str(e.status_code) + ': ' + str(e)
+                        except AttributeError:
+                            twid = 'Twitter is not configured'
                         else:
                             twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
                     else:
@@ -142,6 +144,8 @@ class InputLoop(threading.Thread):
                             })
                             core.debug_print('TwitterError ' + str(e.status_code) + ' while pasting tweet:')
                             core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
+                        except AttributeError:
+                            core.debug_print('Tried to paste a tweet from in-game chat, but Twitter is not configured')
                         except Exception as e:
                             minecraft.tellraw({
                                 'text': 'Error while pasting tweet: ' + str(e),
@@ -285,7 +289,7 @@ class InputLoop(threading.Thread):
                             welcome_message_stub = 'How did you do that?'
                         core.debug_print('[join] ' + ('@unknown' if person is None else person.id) + ' ' + repr(welcome_message) + ' ' + welcome_message_stub)
                     irc_config = core.config('irc')
-                    if 'main_channel' in irc_config and irc_config.get('player_list', 'announce') == 'announce':
+                    if 'main_channel' in irc_config and irc_config.get('playerList', 'announce') == 'announce':
                         core.state['bot'].say(irc_config['main_channel'], (player if person is None else person.irc_nick()) + ' ' + ('joined' if joined else 'left') + ' the game')
                     core.update_all()
                 break
@@ -363,6 +367,22 @@ class InputLoop(threading.Thread):
                                 'color': 'gold'
                             }
                         ])
+                    except AttributeError:
+                        twid = 'Twitter is not configured'
+                        minecraft.tellraw([
+                            {
+                                'text': 'Your fail has ',
+                                'color': 'gold'
+                            },
+                            {
+                                'text': 'not',
+                                'color': 'red'
+                            },
+                            {
+                                'text': " been reported because I don't even Twitter.",
+                                'color': 'gold'
+                            }
+                        ])
                     else:
                         twid = 'https://twitter.com/wurstmineberg/status/' + str(twid)
                         minecraft.tellraw({
@@ -381,8 +401,7 @@ class InputLoop(threading.Thread):
                     core.state['bot'].say(irc_config['main_channel'], death.irc_message(tweet_info=twid))
         except SystemExit:
             core.debug_print('Exit in log input loop')
-            core.input_loop.stop()
-            core.time_loop.stop()
+            core.cleanup()
             raise
         except:
             core.debug_print('Exception in log input loop:')
@@ -425,7 +444,7 @@ class TimeLoop(threading.Thread):
                 time_until_hour -= 1
             if self.stopped:
                 break
-            tell_time(comment=True, restart=core.config('daily_restart', True))
+            tell_time(comment=True, restart=core.config('dailyRestart', True))
     
     def start(self):
         self.stopped = False
