@@ -492,8 +492,19 @@ def update_all(force=False):
     update_topic(force=force)
     threading.Timer(20, _try_update_status).start()
 
-def update_topic(force=False, special_status=None):
+def update_topic(force=None, special_status=object()):
+    """Update the IRC topic and optionally set the special status topic.
+    
+    Optional arguments:
+    force -- If true, and fetching the list of online players fails, an error message will be added to the topic instead. By default, this is true iff the special status topic is being set.
+    special_status -- A string that specifies the special status topic to set before updating the topic, or None to reset the special status topic. By default, the special status topic is left unchanged.
+    """
     from wurstminebot import irc
+    
+    if special_status is None or isinstance(special_status, str):
+        state['special_status'] = special_status
+    if force is None:
+        force = special_status is None or isinstance(special_status, str)
     main_channel = config('irc').get('main_channel')
     if main_channel is None:
         return
@@ -502,16 +513,16 @@ def update_topic(force=False, special_status=None):
     except Exception as e:
         if force:
             state['online_players'] = []
-            if special_status is None:
+            if state['special_status'] is None:
                 special_status = 'Error getting online players: ' + str(e)
         else:
             threading.Timer(60, update_topic).start()
-            if special_status is None:
+            if state['special_status'] is None:
                 return
-    if config('irc').get('playerList', 'announce') and special_status is None:
+    if config('irc').get('playerList', 'announce') == 'topic' and state['special_status'] is None:
         server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])) if config('irc').get('player_list', 'announce') == 'topic' and len(state['online_players']) else None
     else:
-        server_status = special_status
+        server_status = state['special_status']
     topic = config('irc').get('topic')
     if topic is None or topic == '':
         new_topic = server_status
@@ -536,6 +547,7 @@ state = {
     'log_lock': threading.Lock(),
     'online_players': [],
     'server_control_lock': threading.Lock(),
+    'special_status': None,
     'time_loop': None,
     'twitter_stream': None
 }

@@ -1203,7 +1203,7 @@ class Restart(BaseCommand):
                 self.reply('Server restarted.')
             else:
                 self.reply('Could not restart the server!')
-            core.update_topic()
+            core.update_topic(special_status=None)
             core.status['server_control_lock'].release()
 
 class Retweet(BaseCommand):
@@ -1615,7 +1615,7 @@ class Update(BaseCommand):
                 },
                 'color': 'gold'
             })
-        core.update_topic()
+        core.update_topic(special_status=None)
         core.state['server_control_lock'].release()
 
 class Version(BaseCommand):
