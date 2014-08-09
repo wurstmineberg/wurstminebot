@@ -1506,6 +1506,9 @@ class UltraSoftcore(BaseCommand):
     def run(self):
         subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
         if subcommand == 'prepare':
+            if not core.state['server_control_lock'].acquire():
+                self.warning('Server access is locked. Not preparing for USC.')
+                return
             core.update_config(['usc', 'state'], 'prepare')
             if self.sender.minecraft is None:
                 self.warning('could not op you. You will need in-game op for the preparations.')
@@ -1521,6 +1524,7 @@ class UltraSoftcore(BaseCommand):
             #TODO start the server, implement when Minecraft server supports custom world presets
             self.reply('now create the USC world. Remember to set spawn to 0 64 0.')
             self.reply("when you've uploaded the world, execute !UltraSoftcore restart")
+            core.state['server_control_lock'].release()
         elif subcommand == 'stop':
             core.update_config(['usc', 'state'], 'stop')
             #TODO stop the server
