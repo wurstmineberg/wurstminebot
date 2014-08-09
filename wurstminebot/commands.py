@@ -1531,11 +1531,15 @@ class UltraSoftcore(BaseCommand):
             #TODO zip the US world
             #TODO link to the zip file (reply to main channel if executed from in-game)
         elif subcommand == 'restart':
+            if not core.state['server_control_lock'].acquire():
+                self.warning('Server access is locked. Not restarting for USC.')
+                return
             core.update_config(['usc', 'state'], 'restart')
             #TODO unzip the world
             minecraft.start(reply=self.reply)
             #TODO notify IRC (and Twitter?) that the lobby is now open
             core.update_topic(special_status='USC lobby is now open! Join to play or spectate.')
+            core.state['server_control_lock'].release()
         elif subcommand == 'end':
             core.update_config(['usc', 'completedSeasons'], core.config('usc').get('completedSeasons', 0) + 1)
             core.update_config(['usc', 'state'], None)
