@@ -15,7 +15,6 @@ import threading
 from datetime import timedelta
 from datetime import timezone
 import traceback
-import urllib.parse
 
 class BaseCommand(threading.Thread):
     """base class for other commands, not a real command"""
