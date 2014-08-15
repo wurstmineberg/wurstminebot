@@ -10,6 +10,7 @@ import os
 import os.path
 import re
 import requests
+import subprocess
 import threading
 import time
 import traceback
@@ -249,7 +250,10 @@ def parse_version_string():
     path = __file__
     while os.path.islink(path):
         path = os.path.join(os.path.dirname(path), os.readlink(path))
-    path = os.path.dirname(os.path.dirname(path))
+    for _ in range(2): # go up two levels, from wurstminebot/wurstminebot/core.py to wurstminebot, where README.md is located
+        path = os.path.dirname(path)
+        while os.path.islink(path):
+            path = os.path.join(os.path.dirname(path), os.readlink(path))
     try:
         version = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=path).decode('utf-8').strip('\n')
         if version == 'master':
