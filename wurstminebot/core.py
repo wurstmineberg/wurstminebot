@@ -6,6 +6,7 @@ from datetime import datetime
 import json
 import minecraft
 from wurstminebot import nicksub
+import os
 import os.path
 import re
 import requests
@@ -245,11 +246,21 @@ def minecraft_wiki_lookup(article, reply=None):
         return 'Error ' + str(request.status_code)
 
 def parse_version_string():
+    path = __file__
+    while os.path.islink(path):
+        path = os.path.join(os.path.dirname(path), os.readlink(path))
+    path = os.path.dirname(os.path.dirname(path))
     try:
-        with open('/opt/hub/wurstmineberg/wurstminebot/README.md') as readme:
-            for line in readme.read().splitlines():
-                if line.startswith('This is `wurstminebot` version'):
-                    return line.split(' ')[4]
+        version = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=path).decode('utf-8').strip('\n')
+        if version == 'master':
+            try:
+                with open(os.path.join(path, 'README.md')) as readme:
+                    for line in readme.read().splitlines():
+                        if line.startswith('This is `wurstminebot` version'):
+                            return line.split(' ')[4]
+            except:
+                pass
+        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=path).decode('utf-8').strip('\n')
     except:
         pass
 
