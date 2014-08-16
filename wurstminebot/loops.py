@@ -589,5 +589,8 @@ def tell_time(func=None, comment=False, restart=False):
                 core.debug_print('daily server restart failed')
                 if 'main_channel' in irc_config:
                     core.state['bot'].say(irc_config['main_channel'], 'Please help! Something went wrong with the server restart!')
+            core.update_topic(special_status=None)
+            core.state['dst'] = dst
+            return
     core.update_topic()
     core.state['dst'] = dst
