@@ -1714,7 +1714,7 @@ def run(command_name, sender, context, channel=None, wait=False):
     except ValueError:
         if isinstance(command_name, str):
             command_name = command_name.split(' ')
-        command_name = command_name[0]
+        command_name = command_name[0].split('@')[0]
         BaseCommand(args=[], sender=sender, context=context, channel=channel).warning(core.ErrorMessage.unknown(command_name))
         return False
     core.debug_print('[command] ' + command.name + ' ' + ' '.join(command.arguments))
