@@ -1,8 +1,8 @@
 import sys
 
-from wurstminebot import core
 import json
 import re
+import wurstminebot.core
 
 CONFIG_FILE = '/opt/wurstmineberg/config/people.json'
 
@@ -155,7 +155,7 @@ class BasePerson:
                 raise AttributeError('Person has no IRC nicks')
             else:
                 return fallback
-        if respect_highlight_option and (core.config('usc').get('state') is not None or not self.option('chatsync_highlight')):
+        if respect_highlight_option and (wurstminebot.core.config('usc').get('state') is not None or not self.option('chatsync_highlight')):
             return nick[0] + '\u200c' + nick[1:]
         return nick
     
