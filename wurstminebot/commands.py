@@ -1194,7 +1194,7 @@ class Restart(BaseCommand):
             subprocess.Popen(['service', 'wurstminebot', 'restart'])
         else:
             # restart the Minecraft server
-            if not core.status['server_control_lock'].acquire():
+            if not core.state['server_control_lock'].acquire():
                 self.warning('Server access is locked. Not restarting server.')
                 return
             core.update_topic(special_status='The server is restarting…')
@@ -1203,7 +1203,7 @@ class Restart(BaseCommand):
             else:
                 self.reply('Could not restart the server!')
             core.update_topic(special_status=None)
-            core.status['server_control_lock'].release()
+            core.state['server_control_lock'].release()
 
 class Retweet(BaseCommand):
     """retweet a tweet with the bot's twitter account"""
@@ -1368,7 +1368,7 @@ class Stop(BaseCommand):
             # stop the bot
             return Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
         # stop the Minecraft server
-        if not core.status['server_control_lock'].acquire():
+        if not core.state['server_control_lock'].acquire():
             self.warning('Server access is locked. Not stopping server.')
             return
         core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
@@ -1376,7 +1376,7 @@ class Stop(BaseCommand):
             self.reply('Server stopped.')
         else:
             self.warning('The server could not be stopped! D:')
-        core.status['server_control_lock'].release()
+        core.state['server_control_lock'].release()
 
 class Time(BaseCommand):
     """reply with the current time"""
@@ -1576,7 +1576,7 @@ class Update(BaseCommand):
         return 4
     
     def run(self):
-        if not core.status['server_control_lock'].acquire():
+        if not core.state['server_control_lock'].acquire():
             self.warning('Server access is locked. Not updating server.')
             return
         core.update_topic(special_status='The server is being updated, wait a sec.')
