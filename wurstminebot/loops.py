@@ -72,27 +72,10 @@ class InputLoop(threading.Thread):
                     sender_person = nicksub.person_or_dummy(player, context='minecraft')
                     if re.match('![A-Za-z]', message): # command
                         cmd = message[1:].split(' ')
-                        try:
-                            commands.run(cmd, sender=sender_person, context='minecraft')
-                        except SystemExit:
+                        if commands.run(cmd, sender=sender_person, context='minecraft', return_exits=True):
                             core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat')
                             core.cleanup()
-                            raise
-                        except core.TwitterError as e:
-                            minecraft.tellraw({
-                                'text': 'Error ' + str(e.status_code) + ': ' + str(e),
-                                'color': 'red'
-                            }, str(player))
-                            core.debug_print('TwitterError ' + str(e.status_code) + ' in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat:')
-                            core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4, separators=(',', ': ')))
-                        except Exception as e:
-                            minecraft.tellraw({
-                                'text': 'Error: ' + str(e),
-                                'color': 'red'
-                            }, str(player))
-                            core.debug_print('Exception in ' + str(cmd[0]) + ' command from ' + str(player) + ' to in-game chat:')
-                            if core.config('debug', False):
-                                traceback.print_exc(file=sys.stdout)
+                            sys.exit()
                     elif re.match('https?://bugs\\.mojang\\.com/browse/[A-Z]+-[0-9]+', message): # Mojira ticket
                         irc_config = core.config('irc')
                         if 'main_channel' in irc_config:

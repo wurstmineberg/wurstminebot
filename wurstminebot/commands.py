@@ -2,6 +2,7 @@ import sys
 
 from wurstminebot import core
 from datetime import datetime
+import functools
 import inspect
 import json
 import minecraft
@@ -16,9 +17,27 @@ from datetime import timedelta
 from datetime import timezone
 import traceback
 
+def handle_exceptions(f):
+    @functools.wraps(f)
+    def ret(self):
+        try:
+            f(self)
+        except core.TwitterError as e:
+            self.warning('TwitterError {}: {}'.format(e.status_code, e))
+            core.debug_print('TwitterError {} in {} command from {} to {}:'.format(e.status_code, self.name, self.sender, self.channel or self.context))
+            core.debug_print(json.dumps(e.errors, sort_keys=True, indent=4))
+        except Exception as e:
+            self.warning('{}: {}'.format(e.__class__.__name__, e))
+            core.debug_print('Exception in {} command from {} to {}:'.format(self.name, self.sender, self.channel or self.context))
+            if core.config('debug', False):
+                traceback.print_exc(file=sys.stdout)
+    
+    return ret
+
 class BaseCommand(threading.Thread):
     """base class for other commands, not a real command"""
     
+    exits = False
     usage = None
     
     def __init__(self, args, sender, context, channel=None, addressing=None):
@@ -69,15 +88,33 @@ class BaseCommand(threading.Thread):
         else:
             for line in irc_reply.splitlines():
                 core.state['bot'].say(self.channel, (self.sender.irc_nick(respect_highlight_option=False) if self.addressing is None else self.addressing.irc_nick(respect_highlight_option=False)) + ': ' + line)
-
+    
+    @handle_exceptions
     def run(self):
         raise NotImplementedError('Implement run method of Command subclass')
-
+    
     def warning(self, warning_reply):
         self.reply(warning_reply, {
             'text': warning_reply,
             'color': 'red'
         })
+
+class ExitingCommand(BaseCommand):
+    _exits = False
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exit_event = threading.Event()
+    
+    @property
+    def exits(self):
+        self.exit_event.wait()
+        return self._exits
+    
+    @exits.setter
+    def exits(self, value):
+        self._exits = value
+        self.exit_event.set()
 
 class AliasCommand(BaseCommand):
     """base class for alias commands defined in config, not the Alias command itself"""
@@ -110,6 +147,7 @@ class AliasCommand(BaseCommand):
         else:
             raise ValueError('No such alias type')
     
+    @handle_exceptions
     def run(self):
         alias_type = self.alias_dict.get('type', 'say')
         if alias_type == 'command':
@@ -250,6 +288,7 @@ class AchievementTweet(BaseCommand):
         core.state['achievement_tweets'] = True
         self.reply('Achievement tweets are back on')
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments) == 0:
             self.reply('Achievement tweeting is currently ' + ('enabled' if core.state['achievement_tweets'] else 'disabled'))
@@ -284,6 +323,7 @@ class Alias(BaseCommand):
             return 4
         return 0
     
+    @handle_exceptions
     def run(self):
         aliases = core.config('aliases')
         alias = self.arguments[0].lower()
@@ -324,6 +364,7 @@ class Backup(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         minecraft.backup(reply=self.reply, announce=True)
 
@@ -345,6 +386,7 @@ class Cloud(BaseCommand):
                 return '<damage> must be a number'
         return True
     
+    @handle_exceptions
     def run(self):
         import api
         import bottle
@@ -398,6 +440,7 @@ class Command(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         for line in minecraft.command(self.arguments[0], self.arguments[1:]).splitlines():
             self.reply(line)
@@ -432,6 +475,7 @@ class DeathGames(BaseCommand):
     def permission_level(self):
         return 3
     
+    @handle_exceptions
     def run(self):
         success = self.arguments[0].lower() == 'win'
         if len(self.arguments) == 3:
@@ -480,6 +524,7 @@ class DeathTweet(BaseCommand):
         core.state['death_tweets'] = True
         self.reply('Death tweets are back on')
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments) == 0:
             self.reply('Deathtweeting is currently ' + ('enabled' if core.state['death_tweets'] else 'disabled'))
@@ -501,6 +546,7 @@ class FixStatus(BaseCommand):
             return False
         return True
     
+    @handle_exceptions
     def run(self):
         core.update_all(force=True)
 
@@ -523,6 +569,7 @@ class Help(BaseCommand):
         else:
             return super().reply(irc_reply, tellraw_reply)
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments) == 0:
             self.reply('Hello, I am ' + ('wurstminebot' if core.config('irc').get('nick', 'wurstminebot') == 'wurstminebot' else core.config('irc')['nick'] + ', a wurstminebot') + '. I sync messages between IRC and Minecraft, and respond to various commands.')
@@ -590,6 +637,7 @@ class Invite(BaseCommand):
             return 4
         return 3
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments) == 3 and self.arguments[2] is not None and len(self.arguments[2]):
             screen_name = self.arguments[2][1:] if self.arguments[2].startswith('@') else self.arguments[2]
@@ -616,6 +664,7 @@ class Join(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         chans = sorted(core.config('irc').get('channels', []))
         if str(self.arguments[0]) in chans:
@@ -647,6 +696,7 @@ class LastSeen(BaseCommand):
             return '<player> does not have a Minecraft nickname'
         return True
     
+    @handle_exceptions
     def run(self):
         player = self.arguments[0]
         try:
@@ -761,6 +811,7 @@ class Leak(BaseCommand):
     def permission_level(self):
         return 2
     
+    @handle_exceptions
     def run(self):
         irc_config = core.config('irc')
         if 'main_channel' not in irc_config:
@@ -814,6 +865,7 @@ class MinecraftWiki(BaseCommand):
             return False
         return True
     
+    @handle_exceptions
     def run(self):
         core.minecraft_wiki_lookup(article='_'.join(self.arguments), reply=self.reply)
 
@@ -838,6 +890,7 @@ class Option(BaseCommand):
             return 4
         return 1
     
+    @handle_exceptions
     def run(self):
         target_person = nicksub.Person(self.arguments[2]) if len(self.arguments) >= 3 else self.sender
         target_nick = 'you' if target_person == (self.addressing or self.sender) else target_person.nick(self.context)
@@ -886,6 +939,7 @@ class PasteMojira(BaseCommand):
                 return '<issue_id> must be a positive integer'
         return True
     
+    @handle_exceptions
     def run(self):
         link = True
         if len(self.arguments) > 1 and self.arguments[-1].lower() == 'nolink':
@@ -928,6 +982,7 @@ class PasteTweet(BaseCommand):
                 return 'no valid <url> or <status_id> specified'
         return True
     
+    @handle_exceptions
     def run(self):
         link = self.arguments[-1].lower() != 'nolink'
         match = re.match('https?://twitter\\.com/[0-9A-Z_a-z]+/status/([0-9]+)', self.arguments[0])
@@ -1000,6 +1055,7 @@ class People(BaseCommand):
                 return 4
         return 0
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments):
             person = nicksub.Person(self.arguments[0])
@@ -1127,7 +1183,7 @@ class People(BaseCommand):
                 }
             })
     
-class Quit(BaseCommand):
+class Quit(ExitingCommand):
     """stop the bot with a custom quit message"""
     
     usage = '[<quit_message>...]'
@@ -1135,6 +1191,7 @@ class Quit(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         quitMsg = ' '.join(self.arguments) if len(self.arguments) else None
         minecraft.tellraw({
@@ -1145,8 +1202,7 @@ class Quit(BaseCommand):
         if 'main_channel' in irc_config:
             core.state['bot'].say(irc_config['main_channel'], ('bye, ' + quitMsg) if quitMsg else random.choice(irc_config.get('quit_messages', ['bye'])))
         core.state['bot'].disconnect(quitMsg if quitMsg else 'bye')
-        core.cleanup()
-        sys.exit()
+        self.exits = True
 
 class Raw(BaseCommand):
     """send raw message to IRC"""
@@ -1161,6 +1217,7 @@ class Raw(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         core.state['bot'].send(' '.join(self.arguments))
 
@@ -1179,6 +1236,7 @@ class Restart(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0].lower() == 'bot'):
             # restart the bot
@@ -1226,6 +1284,7 @@ class Retweet(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         import TwitterAPI
         if len(self.arguments) > 1:
@@ -1283,6 +1342,7 @@ class Status(BaseCommand):
             return False
         return True
     
+    @handle_exceptions
     def run(self):
         import requests
         if minecraft.status():
@@ -1347,7 +1407,7 @@ class Status(BaseCommand):
                         }
                     ])
 
-class Stop(BaseCommand):
+class Stop(ExitingCommand):
     """stop the Minecraft server or the bot"""
     
     usage = '[minecraft | bot]'
@@ -1363,11 +1423,14 @@ class Stop(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         if len(self.arguments) == 0 or (len(self.arguments) == 1 and self.arguments[0] == 'bot'):
             # stop the bot
-            return Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
+            Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
+            self.exits = True
         # stop the Minecraft server
+        self.exits = False
         if not core.state['server_control_lock'].acquire():
             self.warning('Server access is locked. Not stopping server.')
             return
@@ -1386,6 +1449,7 @@ class Time(BaseCommand):
             return False
         return True
     
+    @handle_exceptions
     def run(self):
         from wurstminebot import loops
         loops.tell_time(func=self.reply)
@@ -1398,6 +1462,7 @@ class Topic(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         topic = None if len(self.arguments) == 0 else ' '.join(self.arguments)
         core.update_config(['irc', 'topic'], topic)
@@ -1416,6 +1481,7 @@ class Tweet(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         status = nicksub.textsub(' '.join(self.arguments), self.context, 'twitter')
         try:
@@ -1502,6 +1568,7 @@ class UltraSoftcore(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
         if subcommand == 'prepare':
@@ -1575,6 +1642,7 @@ class Update(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         if not core.state['server_control_lock'].acquire():
             self.warning('Server access is locked. Not updating server.')
@@ -1633,6 +1701,7 @@ class Version(BaseCommand):
             return False
         return True
     
+    @handle_exceptions
     def run(self):
         self.reply('I am wurstminebot version ' + core.__version__ + ', running on init-minecraft version ' + minecraft.__version__)
 
@@ -1658,6 +1727,7 @@ class Whitelist(BaseCommand):
     def permission_level(self):
         return 4
     
+    @handle_exceptions
     def run(self):
         minecraft_nick = self.arguments[1] if len(self.arguments) > 1 else nicksub.Person(self.arguments[0]).minecraft
         try:
@@ -1697,7 +1767,7 @@ def parse(command, sender, context, channel=None):
     else:
         raise ValueError('No such command')
 
-def run(command_name, sender, context, channel=None, wait=False):
+def run(command_name, sender, context, channel=None, wait=False, return_exits=False):
     """Runs a command.
     
     Required arguments:
@@ -1708,6 +1778,7 @@ def run(command_name, sender, context, channel=None, wait=False):
     Optional arguments:
     channel -- if sent from IRC, the channel to which the command was sent, or None (the default) if it was sent to query
     wait -- whether or not the function call should block until the command has finished executing. Defaults to False
+    return_exits -- if this is true (default False), the return value is whether the bot should shut down as a result of the command.
     """
     try:
         command = parse(command=command_name, sender=sender, context=context, channel=channel)
@@ -1742,6 +1813,8 @@ def run(command_name, sender, context, channel=None, wait=False):
         command.run()
     else:
         command.start()
-    return True
+    if return_exits and command.exits:
+        return True
+    return False
 
-classes = [command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name != 'AliasCommand']
+classes = [command_class for name, command_class in inspect.getmembers(sys.modules[__name__], inspect.isclass) if issubclass(command_class, BaseCommand) and name not in ['AliasCommand', 'ExitingCommand']]
