@@ -47,8 +47,7 @@ def error_nick_in_use(sender, headers, message):
 def error_not_chan_op(sender, headers, message):
     irc_config = core.config('irc')
     if 'nickserv_password' in irc_config:
-        core.state['bot'].say(
-            'NickServ', 'IDENTIFY ' + irc_config['nickserv_password'])
+        core.state['bot'].say('NickServ', 'IDENTIFY ' + irc_config['nickserv_password'])
     elif 'main_channel' in irc_config:
         core.state['bot'].say(irc_config['main_channel'], random.choice([
             'To change the topic, I need to be a channel operator.',
@@ -370,7 +369,7 @@ def privmsg(sender, headers, message):
             if headers[0] == irc_config.get('dev_channel') and irc_config.get('dev_channel') != irc_config.get('main_channel'):
                 # sync commit messages from dev to main
                 core.state['bot'].say(irc_config.get('main_channel', '#wurstmineberg'), message)
-            return  # ignore self otherwise
+            return # ignore self otherwise
         if sender in irc_config.get('ignore', []):
             return
         if headers[0].startswith('#'):
@@ -398,8 +397,7 @@ def privmsg(sender, headers, message):
                     try:
                         commands.run(cmd, sender=sender_person, context='irc', channel=headers[0])
                     except SystemExit:
-                        core.debug_print(
-                            'Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]))
+                        core.debug_print('Exit in ' + str(cmd[0]) + ' command from ' + str(sender) + ' to ' + str(headers[0]))
                         core.cleanup()
                         raise
                     except core.TwitterError as e:
