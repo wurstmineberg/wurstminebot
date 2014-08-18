@@ -23,6 +23,27 @@ class InputLoop(threading.Thread):
         super().__init__(name='wurstminebot InputLoop')
         self.stopped = False
     
+    def log_tail(self, timeout=0.5, error_timeout=10):
+        logpath = os.path.join(core.config('paths')['minecraft_server'], 'logs', 'latest.log')
+        try:
+            with open(logpath) as log:
+                lines_read = len(list(log.read().split('\n'))) - 1 # don't yield lines that already existed
+        except (IOError, OSError):
+            lines_read = 0
+        while not self.stopped:
+            time.sleep(timeout)
+            try:
+                with open(logpath) as log:
+                    lines = log.read().split('\n')
+                    if len(lines) <= lines_read: # log has restarted
+                        lines_read = 0
+                    for line in lines[lines_read:-1]:
+                        lines_read += 1
+                        yield line
+            except (IOError, OSError):
+                core.debug_print('Log does not exist, retrying in {} seconds'.format(error_timeout))
+                time.sleep(error_timeout)
+    
     @staticmethod
     def process_log_line(log_line):
         try:
@@ -392,7 +413,7 @@ class InputLoop(threading.Thread):
                 traceback.print_exc(file=sys.stdout)
     
     def run(self):
-        for log_line in log_tail():
+        for log_line in self.log_tail():
             if self.stopped or 'bot' not in core.state or not core.state['bot'].keepGoing:
                 break
             InputLoop.process_log_line(log_line)
@@ -462,27 +483,6 @@ class TwitterStream(threading.Thread):
     
     def stop(self):
         self.stopped = True
-
-def log_tail(timeout=0.5):
-    logpath = os.path.join(core.config('paths')['minecraft_server'], 'logs', 'latest.log')
-    try:
-        with open(logpath) as log:
-            lines_read = len(list(log.read().split('\n'))) - 1 # don't yield lines that already existed
-    except (IOError, OSError):
-        lines_read = 0
-    while True:
-        time.sleep(timeout)
-        try:
-            with open(logpath) as log:
-                lines = log.read().split('\n')
-                if len(lines) <= lines_read: # log has restarted
-                    lines_read = 0
-                for line in lines[lines_read:-1]:
-                    lines_read += 1
-                    yield line
-        except (IOError, OSError):
-            core.debug_print('Log does not exist, retrying in 10 seconds')
-            time.sleep(10)
 
 def tell_time(func=None, comment=False, restart=False):
     if func is None:
