@@ -1,5 +1,6 @@
 import sys
 
+from wurstminebot import core
 import json
 import re
 
