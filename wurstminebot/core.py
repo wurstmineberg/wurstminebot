@@ -247,7 +247,7 @@ def minecraft_wiki_lookup(article, reply=None):
         return 'Error ' + str(request.status_code)
 
 def parse_version_string():
-    path = __file__
+    path = os.path.abspath(__file__)
     while os.path.islink(path):
         path = os.path.join(os.path.dirname(path), os.readlink(path))
     for _ in range(2): # go up two levels, from wurstminebot/wurstminebot/core.py to wurstminebot, where README.md is located
