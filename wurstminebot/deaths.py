@@ -213,6 +213,10 @@ messages = [
     {
         'id': 'wither',
         'regex': 'withered away'
+    },
+    {
+        'id': 'lightning',
+        'regex': 'was struck by lightning'
     }
 ] # http://minecraft.gamepedia.com/Server#Death_messages
 
