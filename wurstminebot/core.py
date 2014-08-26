@@ -535,16 +535,14 @@ def update_topic(force=None, special_status=object()):
             if state['special_status'] is None:
                 return
     if config('irc').get('playerList', 'announce') == 'topic' and state['special_status'] is None:
-        server_status = ('Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])) if config('irc').get('player_list', 'announce') == 'topic' and len(state['online_players']) else None
+        server_status = 'Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])
     else:
         server_status = state['special_status']
     topic = config('irc').get('topic')
-    if topic is None or topic == '':
-        new_topic = server_status
-    elif server_status is None or server_status == '':
-        new_topic = topic
-    else:
+    if topic and server_status:
         new_topic = topic + ' | ' + server_status
+    else:
+        new_topic = (topic or '') + (server_status or '')
     irc.set_topic(main_channel, new_topic, force=force)
 
 __version__ = str(parse_version_string())
