@@ -54,18 +54,10 @@ class TwitterError(Exception):
         return str(self.code) if self.message is None else str(self.message)
 
 def cleanup(*args, **kwargs):
-    if state.get('input_loop') is not None:
-        state['input_loop'].stop()
-    state['input_loop'] = None
-    if state.get('time_loop') is not None:
-        state['time_loop'].stop()
-    state['time_loop'] = None
-    if state.get('twitter_stream') is not None:
-        state['twitter_stream'].stop()
-    state['twitter_stream'] = None
-    if state.get('bot') is not None:
-        state['bot'].stop()
-    state['bot'] = None
+    for thread in 'input_loop', 'time_loop', 'twitter_stream', 'bot':
+    if state.get(thread) is not None:
+        state[thread].stop()
+    state[thread] = None
 
 def config(key=None, default_value=None):
     default_config = {
@@ -534,7 +526,7 @@ def update_topic(force=None, special_status=object()):
             threading.Timer(60, update_topic).start()
             if state['special_status'] is None:
                 return
-    if config('irc').get('playerList', 'announce') == 'topic' and state['special_status'] is None:
+    if len(state['online_players']) and config('irc').get('playerList', 'announce') == 'topic' and state['special_status'] is None:
         server_status = 'Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])
     else:
         server_status = state['special_status']
