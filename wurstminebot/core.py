@@ -55,9 +55,9 @@ class TwitterError(Exception):
 
 def cleanup(*args, **kwargs):
     for thread in 'input_loop', 'time_loop', 'twitter_stream', 'bot':
-    if state.get(thread) is not None:
-        state[thread].stop()
-    state[thread] = None
+        if state.get(thread) is not None:
+            state[thread].stop()
+        state[thread] = None
 
 def config(key=None, default_value=None):
     default_config = {
