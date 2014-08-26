@@ -417,6 +417,7 @@ class InputLoop(threading.Thread):
             if self.stopped or 'bot' not in core.state or not core.state['bot'].keepGoing:
                 break
             InputLoop.process_log_line(log_line)
+        core.debug_print('InputLoop stopping')
     
     def start(self):
         self.stopped = False
@@ -449,6 +450,7 @@ class TimeLoop(threading.Thread):
             if self.stopped:
                 break
             tell_time(comment=True, restart=core.config('dailyRestart', True))
+        core.debug_print('TimeLoop stopping')
     
     def start(self):
         self.stopped = False
@@ -476,6 +478,7 @@ class TwitterStream(threading.Thread):
             irc_config = core.config('irc')
             if core.state.get('bot') and 'main_channel' in irc_config:
                 core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(tweet['id'], link=True, multi_line='truncate'))
+        core.debug_print('TwitterStream stopping')
     
     def start(self):
         self.stopped = False
