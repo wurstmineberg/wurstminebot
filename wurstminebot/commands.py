@@ -1620,6 +1620,7 @@ class Update(BaseCommand):
         'Minecraft is running... suspending saves',
         'Minecraft is running... re-enabling saves',
         'Symlinking to httpdocs...',
+        'SERVER SHUTTING DOWN IN 10 SECONDS. Saving map...',
         'Done.'
     }
     
