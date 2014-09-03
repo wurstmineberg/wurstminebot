@@ -560,11 +560,16 @@ def tell_time(func=None, comment=False, restart=False):
             players = set(minecraft.online_players())
             if len(players):
                 warning('The server is going to restart in 5 minutes.')
-                time.sleep(240)
-                players |= set(minecraft.online_players())
-                warning('The server is going to restart in 60 seconds.')
-                time.sleep(50)
-                players |= set(minecraft.online_players())
+                for _ in range(4):
+                    time.sleep(60)
+                    new_players = set(minecraft.online_players())
+                    if len(new_players) == 0:
+                        break
+                    players |= new_players
+                else:
+                    warning('The server is going to restart in 60 seconds.')
+                    time.sleep(50)
+                    players |= set(minecraft.online_players())
             core.update_topic(special_status='The server is restarting…')
             irc_config = core.config('irc')
             if minecraft.restart(reply=func, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'), notice=None):
