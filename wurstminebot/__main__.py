@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+
+### BEGIN INIT INFO
+# Provides:          wurstminebot
+# Required-Start:    $remote_fs $network
+# Required-Stop:     $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts the wurstminebot Minecraft/IRC bot
+# Description:       starts wurstminebot using the Python 3 daemon module
+### END INIT INFO
+
 """Minecraft IRC bot.
 
 Usage:
