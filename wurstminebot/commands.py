@@ -1616,7 +1616,7 @@ class Update(BaseCommand):
     """update Minecraft"""
     
     usage = '[release | snapshot [<snapshot_id>] | <version>]'
-    muted_backup_messages = {
+    muted_messages = {
         'Minecraft is running... suspending saves',
         'Minecraft is running... re-enabling saves',
         'Symlinking to httpdocs...',
@@ -1625,7 +1625,7 @@ class Update(BaseCommand):
     }
     
     def backup_reply(self, message):
-        if message not in self.muted_backup_messages:
+        if message not in self.muted_messages:
             self.reply(message)
     
     def parse_args(self):
@@ -1676,7 +1676,8 @@ class Update(BaseCommand):
             backup_thread.join()
             self.reply('Backup and download finished. Stopping server...')
         for message in update_iterator:
-            self.reply(message)
+            if message not in self.muted_messages:
+                self.reply(message)
         try:
             twid = core.tweet('Server updated to ' + version_text + '! Wheee! See ' + minecraft.wiki_version_link(version) + ' for details.')
         except (core.TwitterError, AttributeError):
