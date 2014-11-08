@@ -6,6 +6,7 @@ from datetime import datetime
 from wurstminebot import deaths
 import json
 import lazyjson
+import loops
 import minecraft
 from wurstminebot import nicksub
 import os.path
@@ -18,12 +19,10 @@ from datetime import timedelta
 from datetime import timezone
 import traceback
 
-class InputLoop(threading.Thread):
-    def __init__(self):
-        super().__init__(name='wurstminebot InputLoop')
-        self.stopped = False
-    
-    def log_tail(self, timeout=0.5, error_timeout=10):
+class InputLoop(loops.Loop):
+    def iterable(self):
+        timeout = 0.5
+        error_timeout = 10
         logpath = os.path.join(core.config('paths')['minecraft_server'], 'logs', 'latest.log')
         try:
             with open(logpath) as log:
@@ -45,7 +44,8 @@ class InputLoop(threading.Thread):
                 time.sleep(error_timeout)
     
     @staticmethod
-    def process_log_line(log_line):
+    def process_value(value):
+        log_line = value
         try:
             # server log output processing
             core.debug_print('[logpipe] ' + log_line)
@@ -411,27 +411,9 @@ class InputLoop(threading.Thread):
             core.debug_print('Exception in log input loop:')
             if core.state.get('is_daemon', False) or core.config('debug', False):
                 traceback.print_exc(file=sys.stdout)
-    
-    def run(self):
-        for log_line in self.log_tail():
-            if self.stopped or 'bot' not in core.state or not core.state['bot'].keepGoing:
-                break
-            InputLoop.process_log_line(log_line)
-        core.debug_print('InputLoop stopping')
-    
-    def start(self):
-        self.stopped = False
-        super().start()
-    
-    def stop(self):
-        self.stopped = True
 
-class TimeLoop(threading.Thread):
-    def __init__(self):
-        super().__init__(name='wurstminebot TimeLoop')
-        self.stopped = False
-    
-    def run(self):
+class TimeLoop(loops.Loop):
+    def iterable(self):
         #FROM http://stackoverflow.com/questions/9918972/running-a-line-in-1-hour-intervals-in-python
         # modified to work with leap seconds
         while not self.stopped:
@@ -449,24 +431,19 @@ class TimeLoop(threading.Thread):
                 time_until_hour -= 1
             if self.stopped:
                 break
-            tell_time(comment=True, restart=core.config('dailyRestart', True))
+            yield
         core.debug_print('TimeLoop stopping')
     
-    def start(self):
-        self.stopped = False
-        super().start()
-    
-    def stop(self):
-        self.stopped = True
+    @staticmethod
+    def process_value(value):
+        tell_time(comment=True, restart=core.config('dailyRestart', True))
 
-class TwitterStream(threading.Thread):
+class TwitterStream(loops.Loop):
     def __init__(self, twitter_api):
-        super().__init__(name='wurstminebot TwitterStream')
-        self.stopped = False
-        self.twitter_api = twitter_api
+        super().__init__(iterable=self.iterable(twitter_api))
     
-    def run(self):
-        response = self.twitter_api.request('user')
+    def iterable(self, twitter_api):
+        response = twitter_api.request('user')
         for tweet in response:
             if self.stopped:
                 break
@@ -474,18 +451,15 @@ class TwitterStream(threading.Thread):
                 continue
             if not any(entity.get('screen_name') == core.config('twitter').get('screen_name') for entity in tweet.get('entities', {}).get('user_mentions', [])):
                 continue
-            minecraft.tellraw(core.paste_tweet(tweet['id'], link=True, tellraw=True))
-            irc_config = core.config('irc')
-            if core.state.get('bot') and 'main_channel' in irc_config:
-                core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(tweet['id'], link=True, multi_line='truncate'))
+            yield tweet['id']
         core.debug_print('TwitterStream stopping')
     
-    def start(self):
-        self.stopped = False
-        super().start()
-    
-    def stop(self):
-        self.stopped = True
+    @staticmethod
+    def process_value(value):
+        minecraft.tellraw(core.paste_tweet(value, link=True, tellraw=True)
+        irc_config = core.config('irc')
+        if core.state.get('bot') and 'main_channel' in irc_config:
+            core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(value, link=True, multi_line='truncate'))
 
 def tell_time(func=None, comment=False, restart=False):
     if func is None:
@@ -556,32 +530,41 @@ def tell_time(func=None, comment=False, restart=False):
                 'Are you still going, just starting, or asking yourself the same thing?',
                 'So... good morning I guess?'
             ]))
-        elif localnow.hour == 11 and restart:
-            players = set(minecraft.online_players())
-            if len(players):
-                warning('The server is going to restart in 5 minutes.')
-                for _ in range(4):
-                    time.sleep(60)
-                    new_players = set(minecraft.online_players())
-                    if len(new_players) == 0:
-                        break
-                    players |= new_players
+        elif localnow.hour == 11:
+            if restart:
+                players = set(minecraft.online_players())
+                if len(players):
+                    warning('The server is going to restart in 5 minutes.')
+                    for _ in range(4):
+                        time.sleep(60)
+                        new_players = set(minecraft.online_players())
+                        if len(new_players) == 0:
+                            break
+                        players |= new_players
+                    else:
+                        warning('The server is going to restart in 60 seconds.')
+                        time.sleep(50)
+                        players |= set(minecraft.online_players())
+                if not core.state['server_control_lock'].acquire():
+                    warning('Server access is locked. Not restarting server.')
+                    return
+                core.update_topic(special_status='The server is restarting…')
+                irc_config = core.config('irc')
+                if minecraft.restart(reply=func, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'), notice=None):
+                    if len(players) and 'main_channel' in irc_config:
+                        irc_players = nicksub.sorted_people(players, context='minecraft')
+                        core.state['bot'].say(irc_config['main_channel'], ', '.join(player.irc_nick(respect_highlight_option=False) for player in irc_players) + ': The server has restarted.')
                 else:
-                    warning('The server is going to restart in 60 seconds.')
-                    time.sleep(50)
-                    players |= set(minecraft.online_players())
-            core.update_topic(special_status='The server is restarting…')
-            irc_config = core.config('irc')
-            if minecraft.restart(reply=func, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'), notice=None):
-                if len(players) and 'main_channel' in irc_config:
-                    irc_players = nicksub.sorted_people(players, context='minecraft')
-                    core.state['bot'].say(irc_config['main_channel'], ', '.join(player.irc_nick(respect_highlight_option=False) for player in irc_players) + ': The server has restarted.')
+                    core.debug_print('daily server restart failed')
+                    if 'main_channel' in irc_config:
+                        core.state['bot'].say(irc_config['main_channel'], 'Please help! Something went wrong with the server restart!')
+                core.update_topic(special_status=None)
+                core.state['dst'] = dst
+                core.state['server_control_lock'].release()
+                return
             else:
-                core.debug_print('daily server restart failed')
-                if 'main_channel' in irc_config:
-                    core.state['bot'].say(irc_config['main_channel'], 'Please help! Something went wrong with the server restart!')
-            core.update_topic(special_status=None)
-            core.state['dst'] = dst
-            return
+                func("No restart today, it's turned off for some reason.")
+        elif localnow.hour == 16:
+            func('Your ad here!')
     core.update_topic()
     core.state['dst'] = dst

@@ -2,6 +2,7 @@
 TwitterAPI>=2.1.9
 -e git://github.com/wurstmineberg/api.wurstmineberg.de.git#egg=api
 docopt>=0.6.1
+-e git://gitlab.com/fenhl/python-loops.git#egg=loops
 -e git://github.com/wurstmineberg/init-minecraft.git#egg=minecraft
 python-daemon>=1.5.5
 requests>=2.1.0

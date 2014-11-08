@@ -10,6 +10,7 @@ Requirements
 *   [TwitterAPI](https://github.com/geduldig/TwitterAPI) 2.1 (for Tweet command and other Twitter funcionality)
 *   [docopt](http://docopt.org/)
 *   [init-minecraft](https://github.com/wurstmineberg/init-minecraft) 2.19
+*   [loops](https://gitlab.com/fenhl/python-loops) 1.0
 *   [minecraft-api](https://github.com/wurstmineberg/minecraft-api) 1.1 (required for Cloud command only)
 *   [requests](http://www.python-requests.org/) 2.1
 
