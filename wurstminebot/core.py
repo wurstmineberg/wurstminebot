@@ -420,8 +420,8 @@ def run():
         minecraft.status()
     except KeyError:
         sys.exit(minecraft.user_not_found_error)
-    from wurstminebot import loops
-    state['time_loop'] = loops.TimeLoop()
+    from wurstminebot import loop
+    state['time_loop'] = loop.TimeLoop()
     state['time_loop'].start()
     try:
         from wurstminebot import irc

@@ -1451,8 +1451,8 @@ class Time(BaseCommand):
     
     @handle_exceptions
     def run(self):
-        from wurstminebot import loops
-        loops.tell_time(func=self.reply)
+        from wurstminebot import loop
+        loop.tell_time(func=self.reply)
 
 class Topic(BaseCommand):
     """change the main channel's topic"""

@@ -7,7 +7,7 @@ from wurstminebot import deaths
 import json
 import lazyjson
 import minecraft
-import loops as module_loops
+import loops
 from wurstminebot import nicksub
 import os.path
 import random
@@ -19,7 +19,7 @@ from datetime import timedelta
 from datetime import timezone
 import traceback
 
-class InputLoop(module_loops.Loop):
+class InputLoop(loops.Loop):
     def iterable(self):
         timeout = 0.5
         error_timeout = 10
@@ -412,7 +412,7 @@ class InputLoop(module_loops.Loop):
             if core.state.get('is_daemon', False) or core.config('debug', False):
                 traceback.print_exc(file=sys.stdout)
 
-class TimeLoop(module_loops.Loop):
+class TimeLoop(loops.Loop):
     def iterable(self):
         #FROM http://stackoverflow.com/questions/9918972/running-a-line-in-1-hour-intervals-in-python
         # modified to work with leap seconds
@@ -438,7 +438,7 @@ class TimeLoop(module_loops.Loop):
     def process_value(value):
         tell_time(comment=True, restart=core.config('dailyRestart', True))
 
-class TwitterStream(module_loops.Loop):
+class TwitterStream(loops.Loop):
     def __init__(self, twitter_api):
         super().__init__(iterable=self.iterable(twitter_api))
     

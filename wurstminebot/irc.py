@@ -3,7 +3,7 @@ import sys
 from wurstminebot import commands
 from wurstminebot import core
 import json
-from wurstminebot import loops
+from wurstminebot import loop
 import minecraft
 from wurstminebot import nicksub
 import random
@@ -35,10 +35,10 @@ def endMOTD(sender, headers, message):
     core.debug_print("aaand I'm back.")
     core.update_all()
     if core.state.get('input_loop') is None:
-        core.state['input_loop'] = loops.InputLoop()
+        core.state['input_loop'] = loop.InputLoop()
         core.state['input_loop'].start()
     if core.state.get('twitter_stream') is None and core.twitter is not None:
-        core.state['twitter_stream'] = loops.TwitterStream(core.twitter)
+        core.state['twitter_stream'] = loop.TwitterStream(core.twitter)
         core.state['twitter_stream'].start()
 
 def error_nick_in_use(sender, headers, message):
