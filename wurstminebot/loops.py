@@ -456,7 +456,7 @@ class TwitterStream(loops.Loop):
     
     @staticmethod
     def process_value(value):
-        minecraft.tellraw(core.paste_tweet(value, link=True, tellraw=True)
+        minecraft.tellraw(core.paste_tweet(value, link=True, tellraw=True))
         irc_config = core.config('irc')
         if core.state.get('bot') and 'main_channel' in irc_config:
             core.state['bot'].say(irc_config['main_channel'], core.paste_tweet(value, link=True, multi_line='truncate'))
