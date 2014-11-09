@@ -464,12 +464,13 @@ class TwitterStream(loops.Loop):
 def tell_time(func=None, comment=False, restart=False):
     if func is None:
         def func(msg, color='gold'):
-            for line in msg.splitlines():
+            if isinstance(msg, str):
+                lines = [{'text': line, 'color': color} for line in msg.splitlines()]
+            else:
+                lines = [msg]
+            for line in lines:
                 try:
-                    minecraft.tellraw({
-                        'text': line,
-                        'color': color
-                    })
+                    minecraft.tellraw(line)
                 except socket.error:
                     core.debug_print('telltime is disconnected from Minecraft')
                     irc_config = core.config('irc')
@@ -566,5 +567,27 @@ def tell_time(func=None, comment=False, restart=False):
                 func("No restart today, it's turned off for some reason.")
         elif localnow.hour == 16:
             func('Your ad here!')
+        elif localnow.hour == 21:
+            if core.config('usc').get('nextDate') is None:
+                if core.config('usc').get('nextPoll') is None:
+                    func(random.choice([
+                        'If you make a poll for the USC {} date, let me know.',
+                        'Is Ultra Softcore season {} going to be a thing?',
+                        'When is USC {} happening?'
+                    ].format(core.config('usc')['completedSeasons'] + 1) if 'completedSeasons' in core.config('usc') else [
+                        'No next USC planned yet?',
+                        'When is the next USC?'
+                    ]))
+                else:
+                    func({
+                        'text': 'Click here for the USC season {} date poll.'.format(core.config('usc')['completedSeasons'] + 1),
+                        'clickEvent': {
+                            'action': 'open_url',
+                            'value': core.config('usc')['nextPoll']
+                        }
+                    })
+            else:
+                next_usc_date = datetime.strptime(core.config('usc')['nextDate'], '%Y-%m-%d %H:%M:%S')
+                func('The next season of USC is {}. Are you participating?'.format('on ' + next_usc_date.strftime('%m-%d at %H:%M UTC' if next_usc_date.year == utcnow.year else '%Y-%m-%d at %H:%M UTC')))
     core.update_topic()
     core.state['dst'] = dst
