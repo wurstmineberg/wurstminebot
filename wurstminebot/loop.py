@@ -548,10 +548,12 @@ def tell_time(func=None, comment=False, restart=False):
                         players |= set(minecraft.online_players())
                 if not core.state['server_control_lock'].acquire():
                     warning('Server access is locked. Not restarting server.')
+                    core.debug_print('Server access locked. Not restarting server.')
                     return
                 core.update_topic(special_status='The server is restarting…')
                 irc_config = core.config('irc')
                 if minecraft.restart(reply=func, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'), notice=None):
+                    core.debug_print('daily server restart succeeded')
                     if len(players) and 'main_channel' in irc_config:
                         irc_players = nicksub.sorted_people(players, context='minecraft')
                         core.state['bot'].say(irc_config['main_channel'], ', '.join(player.irc_nick(respect_highlight_option=False) for player in irc_players) + ': The server has restarted.')
@@ -565,6 +567,7 @@ def tell_time(func=None, comment=False, restart=False):
                 return
             else:
                 func("No restart today, it's turned off for some reason.")
+                core.debug_print('Daily restart disabled. Not restarting server.')
         elif localnow.hour == 16:
             func('Your ad here!')
         elif localnow.hour == 21:
