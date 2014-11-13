@@ -45,6 +45,7 @@ def error_nick_in_use(sender, headers, message):
     core.state['bot'].send('NICK ' + core.config('irc').get('altNick', core.config('irc')['nick'] + '_'))
 
 def error_not_chan_op(sender, headers, message):
+    core.state['irc_topics'] = {}
     irc_config = core.config('irc')
     if 'nickserv_password' in irc_config:
         core.state['bot'].say('NickServ', 'IDENTIFY ' + irc_config['nickserv_password'])
