@@ -423,7 +423,7 @@ class TimeLoop(loops.Loop):
                 time.sleep(60)
                 if self.stopped:
                     break
-                time_until_hour -= 60
+                time_until_hour = 3601 - time.time() % 3600
             while time_until_hour >= 1:
                 time.sleep(1)
                 if self.stopped:
