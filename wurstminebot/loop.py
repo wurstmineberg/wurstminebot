@@ -490,6 +490,7 @@ def tell_time(func=None, comment=False, restart=False):
     localnow = datetime.now()
     utcnow = datetime.utcnow()
     dst = bool(time.localtime().tm_isdst)
+    core.debug_print('[tell_time] {:%H:%M:%S} UTC, {:%H:%M:%S} local'.format(utcnow, localnow))
     if dst != core.state['dst']:
         if dst:
             func('Daylight saving time is now in effect.')
