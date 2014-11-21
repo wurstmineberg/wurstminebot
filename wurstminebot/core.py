@@ -422,7 +422,7 @@ def run():
     except KeyError:
         sys.exit(minecraft.user_not_found_error)
     from wurstminebot import loop
-    state['time_loop'] = loop.TimeLoop()
+    state['time_loop'] = loop.TimeLoop(on_exception=('log_stdout',) if config('debug', False) or state.get('is_daemon', False) else ())
     state['time_loop'].start()
     try:
         from wurstminebot import irc
