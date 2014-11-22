@@ -578,20 +578,20 @@ def tell_time(func=None, comment=False, restart=False):
                         'If you make a poll for the USC {} date, let me know.',
                         'Is Ultra Softcore season {} going to be a thing?',
                         'When is USC {} happening?'
-                    ].format(core.config('usc')['completedSeasons'].value() + 1) if 'completedSeasons' in core.config('usc') else [
+                    ]).format(core.config('usc')['completedSeasons'] + 1) if 'completedSeasons' in core.config('usc') else [
                         'No next USC planned yet?',
                         'When is the next USC?'
-                    ]))
+                    ])
                 else:
                     func({
-                        'text': 'Click here for the USC season {} date poll.'.format(core.config('usc')['completedSeasons'].value() + 1),
+                        'text': 'Click here for the USC season {} date poll.'.format(core.config('usc')['completedSeasons'] + 1),
                         'clickEvent': {
                             'action': 'open_url',
-                            'value': core.config('usc')['nextPoll'].value()
+                            'value': core.config('usc')['nextPoll']
                         }
                     })
             else:
-                next_usc_date = datetime.strptime(core.config('usc')['nextDate'].value(), '%Y-%m-%d %H:%M:%S')
+                next_usc_date = datetime.strptime(core.config('usc')['nextDate'], '%Y-%m-%d %H:%M:%S')
                 func('The next season of USC is {}. Are you participating?'.format('on ' + next_usc_date.strftime('%m-%d at %H:%M UTC' if next_usc_date.year == utcnow.year else '%Y-%m-%d at %H:%M UTC')))
     core.update_topic()
     core.state['dst'] = dst
