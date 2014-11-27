@@ -373,6 +373,25 @@ class Cloud(BaseCommand):
     
     usage = '<item_id> [<damage>]'
     
+    @staticmethod
+    def cloud_iter(cloud_dict):
+        """Returns an iterator yielding tuples (x, floor, y, corridor, z, chest)."""
+        for y, floor in enumerate(cloud_dict):
+            for x, corridor in sorted(((int(x), corridor) for x, corridor in floor.items()), key=lambda tup: tup[0]):
+                for z, chest in enumerate(corridor):
+                    yield x, floor, y, corridor, z, chest
+    
+    @staticmethod
+    def ordinal(number):
+        decimal = str(number)
+        if decimal[-1] == '1' and number % 100 != 11:
+            return 'st'
+        elif decimal[-1] == '2' and number % 100 != 12:
+            return 'nd'
+        elif decimal[-1] == '3' and number % 100 != 13:
+            return 'rd'
+        return 'th'
+    
     def parse_args(self):
         if len(self.arguments) not in range(1, 3):
             return False
@@ -385,17 +404,6 @@ class Cloud(BaseCommand):
                     traceback.print_exc(file=sys.stdout)
                 return '<damage> must be a number'
         return True
-    
-    @staticmethod
-    def ordinal(number):
-        decimal = str(number)
-        if decimal[-1] == '1' and number % 100 != 11:
-            return 'st'
-        elif decimal[-1] == '2' and number % 100 != 12:
-            return 'nd'
-        elif decimal[-1] == '3' and number % 100 != 13:
-            return 'rd'
-        return 'th'
     
     @handle_exceptions
     def run(self):
@@ -419,12 +427,9 @@ class Cloud(BaseCommand):
         else:
             self.warning('Could not find cloud.json because config item .paths.json is missing')
             return
-        for y, floor in enumerate(cloud):
-            for x, corridor in floor.items():
-                x = int(x)
-                for z, chest in enumerate(corridor):
-                    if chest['id'] == item['stringID'] and chest['damage'] == damage:
-                        break
+        for x, floor, y, corridor, z, chest in self.cloud_iter(cloud):
+            if chest['id'] == item['stringID'] and chest['damage'] == damage:
+                break
         else:
             self.reply(item_name + ' is not available in the Cloud')
             return
