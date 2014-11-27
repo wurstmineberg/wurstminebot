@@ -500,6 +500,21 @@ def update_topic(force=None, special_status=object()):
     """
     from wurstminebot import irc
     
+    topic_parts = []
+    # main topic part, updated manually using !Topic
+    main_topic = config('irc').get('topic')
+    if main_topic:
+        topic_parts.append(main_topic)
+    # next USC poll or date
+    usc_config = config('usc')
+    if usc_config.get('nextDate') is not None:
+        topic_parts.append('{0} on {1:%Y-%m-%d} at {1:%H:%M}'.format('Next USC' if usc_config.get('completedSeasons', usc_config) is None else 'USC {}'.format(usc_config['completedSeasons'] + 1), datetime.strptime(usc_config['nextDate'], '%Y-%m-%d %H:%M:%S')))
+    elif usc_config.get('nextPoll') is not None:
+        if usc_config.get('completedSeasons', usc_config) is None:
+            topic_parts.append('Poll for next USC: {}'.format(usc_config['nextPoll']))
+        else:
+            topic_parts.append('USC {} poll: {}'.format(usc_config['completedSeasons'] + 1, usc_config['nextPoll']))
+    # special server status or online players
     if special_status is None or isinstance(special_status, str):
         state['special_status'] = special_status
     if force is None:
@@ -522,11 +537,10 @@ def update_topic(force=None, special_status=object()):
         server_status = 'Currently online: ' + ', '.join(p.irc_nick(respect_highlight_option=False) for p in state['online_players'])
     else:
         server_status = state['special_status']
-    topic = config('irc').get('topic')
-    if topic and server_status:
-        new_topic = topic + ' | ' + server_status
-    else:
-        new_topic = (topic or '') + (server_status or '')
+    if server_status:
+        topic_parts.append(server_status)
+    # build the topic
+    new_topic = ' | '.join(topic_parts)
     irc.set_topic(main_channel, new_topic, force=force)
 
 __version__ = str(parse_version_string())
