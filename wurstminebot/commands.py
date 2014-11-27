@@ -419,12 +419,10 @@ class Cloud(BaseCommand):
         else:
             self.warning('Could not find cloud.json because config item .paths.json is missing')
             return
-        for y in cloud:
-            floor = cloud[y]
+        for y, floor in enumerate(cloud):
             for x, corridor in floor.items():
                 x = int(x)
-                for z in corridor:
-                    chest = corridor[z]
+                for z, chest in enumerate(corridor):
                     if chest['id'] == item['stringID'] and chest['damage'] == damage:
                         break
         else:
