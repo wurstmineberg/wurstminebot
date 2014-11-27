@@ -1668,10 +1668,10 @@ class UltraSoftcore(BaseCommand):
                     })
             elif self.arguments[1].lower() == 'set':
                 core.update_config(['usc', 'nextPoll'], self.arguments[2])
-                self.reply('Poll link updated.')
+                core.update_topic()
             elif self.arguments[1].lower() in ('clear', 'delete', 'reset'):
                 core.update_config(['usc', 'nextPoll'], None)
-                self.reply('Poll link deleted.')
+                core.update_topic()
 
 class Update(BaseCommand):
     """update Minecraft"""
