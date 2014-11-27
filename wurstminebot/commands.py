@@ -1516,7 +1516,7 @@ class Tweet(BaseCommand):
 class UltraSoftcore(BaseCommand):
     """set up a game of Ultra Softcore"""
     
-    usage = '[prepare [[<date>] <time>] | stop | restart | end]'
+    usage = '[prepare [[<date>] <time>] | stop | restart | end | poll [set <poll_url> | clear]]'
     
     def default_subcommand(self): # the subcommand to use when !UltraSoftcore is called without arguments
         usc_config = core.config('usc')
@@ -1560,12 +1560,30 @@ class UltraSoftcore(BaseCommand):
             if len(self.arguments) <= 1:
                 return True
             return False
+        elif subcommand == 'poll':
+            if len(self.arguments) <= 1:
+                return True
+            elif self.arguments[1].lower() == 'set':
+                if len(self.arguments) == 3:
+                    return True #TODO parse doodle URL
+                else:
+                    return False
+            elif self.arguments[1].lower() in ('clear', 'delete', 'reset'):
+                if len(self.arguments) == 2:
+                    return True
+                else:
+                    return False
+            else:
+                return False
         elif len(self.arguments):
             return False
         else:
             return 'Usage: ' + self.name + ' (' + self.usage[1:-1] + ')' # the current default subcommand requires arguments
     
     def permission_level(self):
+        subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
+        if subcommand == 'poll' and len(self.arguments) <= 1:
+            return 0
         return 4
     
     @handle_exceptions
@@ -1582,8 +1600,6 @@ class UltraSoftcore(BaseCommand):
                 minecraft.command('op', self.sender.minecraft)
             #TODO if a datetime is specified, announce on twitter
             core.update_topic(special_status='The server is down for USC preparations.')
-            if os.path.exists('/etc/xdg/makeoverview/enable'):
-                os.remove('/etc/xdg/makeoverview/enable') # disable Overviewer
             minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log'))
             #TODO delete any existing USC world
             minecraft.enable_world('usc', reply=self.reply)
@@ -1611,6 +1627,26 @@ class UltraSoftcore(BaseCommand):
             core.update_config(['usc', 'state'], None)
             minecraft.enable_world('wurstmineberg', reply=self.reply) #TODO replace with default world name
             core.update_topic(special_status=None)
+        elif subcommand == 'poll':
+            if len(self.arguments) <= 1:
+                usc_config = core.config('usc')
+                if usc_config.get('nextPoll') is None:
+                    self.reply('No poll available.')
+                else:
+                    self.reply(usc_config['nextPoll'], {
+                        'text': 'click here',
+                        'color': 'gold',
+                        'clickEvent': {
+                            'action': 'open_url',
+                            'value': usc_config['nextPoll']
+                        }
+                    })
+            elif self.arguments[1].lower() == 'set':
+                core.update_config(['usc', 'nextPoll'], self.arguments[2])
+                self.reply('Poll link updated.')
+            elif self.arguments[1].lower() in ('clear', 'delete', 'reset'):
+                core.update_config(['usc', 'nextPoll'], None)
+                self.reply('Poll link deleted.')
 
 class Update(BaseCommand):
     """update Minecraft"""
