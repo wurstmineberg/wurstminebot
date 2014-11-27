@@ -407,7 +407,7 @@ class Cloud(BaseCommand):
         else:
             damage = int(self.arguments[1])
         try:
-            item = api.api_item_by_id(self.arguments[0], damage)
+            item = api.api_item_by_damage(self.arguments[0], damage)
         except bottle.HTTPError as e:
             self.reply(str(e.body))
             return
