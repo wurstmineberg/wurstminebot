@@ -1648,6 +1648,8 @@ class UltraSoftcore(BaseCommand):
         elif subcommand == 'end':
             core.update_config(['usc', 'completedSeasons'], core.config('usc').get('completedSeasons', 0) + 1)
             core.update_config(['usc', 'state'], None)
+            core.update_config(['usc', 'nextDate'], None)
+            core.update_config(['usc', 'nextPoll'], None)
             minecraft.enable_world('wurstmineberg', reply=self.reply) #TODO replace with default world name
             core.update_topic(special_status=None)
         elif subcommand == 'poll':
