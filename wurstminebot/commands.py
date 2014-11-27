@@ -447,7 +447,7 @@ class Cloud(BaseCommand):
                 direction = 'left'
             corridor_name = '{}{} corridor to the {}'.format(x, self.ordinal(x), direction)
         row = z // 2 + 1
-        chest_wall = 'right' if z % 0 else 'left'
+        chest_wall = 'right' if z % 2 else 'left'
         self.reply('{}: {}{} floor, {}, {}{} chest to the {}'.format(item_name, y, self.ordinal(y), corridor_name, row, self.ordinal(row), chest_wall))
 
 class Command(BaseCommand):
