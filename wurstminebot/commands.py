@@ -386,46 +386,66 @@ class Cloud(BaseCommand):
                 return '<damage> must be a number'
         return True
     
+    @staticmethod
+    def ordinal(number):
+        decimal = str(number)
+        if decimal[-1] == '1' and number % 100 != 11:
+            return 'st'
+        elif decimal[-1] == '2' and number % 100 != 12:
+            return 'nd'
+        elif decimal[-1] == '3' and number % 100 != 13:
+            return 'rd'
+        return 'th'
+    
     @handle_exceptions
     def run(self):
         import api
         import bottle
+        
+        if len(self.arguments) < 2:
+            damage = 0
+        else:
+            damage = int(self.arguments[1])
         try:
-            if len(self.arguments) < 2:
-                item = api.api_item_by_id(self.arguments[0])
-            else:
-                item = api.api_item_by_damage(self.arguments[0], int(self.arguments[1]))
+            item = api.api_item_by_id(self.arguments[0], damage)
         except bottle.HTTPError as e:
             self.reply(str(e.body))
             return
-        item_name = str(item['name'] if 'name' in item else self.arguments[0])
-        if 'cloud' not in item:
-            self.reply("I don't know where, if at all, " + item_name + ' is in the Cloud')
+        item_name = str(item['name'] if 'name' in item else item['stringID'])
+        paths_config = core.config('paths')
+        if 'json' in paths_config:
+            with open(os.path.join(paths_config['json'], 'cloud.json')) as cloud_json:
+                cloud = json.load(cloud_json)
+        else:
+            self.warning('Could not find cloud.json because config item .paths.json is missing')
             return
-        if item['cloud'] is None:
+        for y in cloud:
+            floor = cloud[y]
+            for x, corridor in floor.items():
+                x = int(x)
+                for z in corridor:
+                    chest = corridor[z]
+                    if chest['id'] == item['stringID'] and chest['damage'] == damage:
+                        break
+        else:
             self.reply(item_name + ' is not available in the Cloud')
             return
-        ordinals = {
-            1: 'st',
-            2: 'nd',
-            3: 'rd'
-        }
-        x = item['cloud']['x']
-        y = item['cloud']['y']
         if x == 0:
-            corridor = 'central corridor'
-        elif x == 1:
-            corridor = 'left corridor'
-        elif x == -1 and y != 1:
-            corridor = 'right corridor'
+            corridor_name = 'central corridor'
+        elif x == 1 and '2' not in floor:
+            corridor_name = 'left corridor'
+        elif x == -1 and '-2' not in floor:
+            corridor_name = 'right corridor'
         else:
             if x < 0:
                 direction = 'right'
                 x *= -1
             else:
                 direction = 'left'
-            corridor = str(x) + ordinals.get(x, 'th') + ' corridor to the ' + direction
-        self.reply(str(y) + ordinals.get(y, 'th') + ' floor, ' + corridor)
+            corridor_name = '{}{} corridor to the {}'.format(x, self.ordinal(x), direction)
+        row = z // 2 + 1
+        chest_wall = 'right' if z % 0 else 'left'
+        self.reply('{}: {}{} floor, {}, {}{} chest to the {}'.format(item_name, y, self.ordinal(y), corridor_name, row, self.ordinal(row), chest_wall))
 
 class Command(BaseCommand):
     """perform a Minecraft server command"""
