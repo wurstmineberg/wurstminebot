@@ -83,15 +83,11 @@ def config(key=None, default_value=None):
                 'type': 'command'
             }
         },
-        'advanced_comment_lines': {
-            'death': [],
-            'server_join': []
-        },
-        'comment_lines': {
+        'commentLines': {
             'death': ['Well done.'],
-            'server_join': []
+            'serverJoin': []
         },
-        'daily_restart': True,
+        'dailyRestart': True,
         'death_games': {
             'logfile': '/opt/wurstmineberg/config/deathgames.json',
             'enabled': False
@@ -117,6 +113,7 @@ def config(key=None, default_value=None):
             'assets': '/var/www/wurstmineberg.de/assets/serverstatus',
             'deathgames': '/opt/wurstmineberg/log/deathgames.json',
             'keepalive': '/var/local/wurstmineberg/wurstminebot_keepalive',
+            'json': '/opt/git/github.com/wurstmineberg/assets.wurstmineberg.de/master/json'
             'logs': '/opt/wurstmineberg/log',
             'minecraft_server': '/opt/wurstmineberg/server',
             'people': '/opt/wurstmineberg/config/people.json',
@@ -127,6 +124,8 @@ def config(key=None, default_value=None):
         },
         'usc': {
             'completedSeasons': 0,
+            'nextDate': None,
+            'nextPoll': None,
             'state': None
         }
     }
