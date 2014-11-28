@@ -375,11 +375,11 @@ class Cloud(BaseCommand):
     
     @staticmethod
     def cloud_iter(cloud_dict):
-        """Returns an iterator yielding tuples (x, floor, y, corridor, z, chest)."""
+        """Returns an iterator yielding tuples (x, corridor, y, floor, z, chest)."""
         for y, floor in enumerate(cloud_dict):
             for x, corridor in sorted(((int(x), corridor) for x, corridor in floor.items()), key=lambda tup: tup[0]):
                 for z, chest in enumerate(corridor):
-                    yield x, floor, y, corridor, z, chest
+                    yield x, corridor, y, floor, z, chest
     
     @staticmethod
     def ordinal(number):
@@ -427,7 +427,7 @@ class Cloud(BaseCommand):
         else:
             self.warning('Could not find cloud.json because config item .paths.json is missing')
             return
-        for x, floor, y, corridor, z, chest in self.cloud_iter(cloud):
+        for x, corridor, y, floor, z, chest in self.cloud_iter(cloud):
             if chest['id'] == item['stringID'] and chest['damage'] == damage:
                 break
         else:
