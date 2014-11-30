@@ -561,6 +561,31 @@ class DeathTweet(BaseCommand):
             core.state['death_tweets'] = False
             self.reply('Deathtweeting is now disabled')
 
+class EnableWorld(BaseCommand):
+    """switch to a different Minecraft world"""
+    
+    usage = '<world_name>'
+    
+    def parse_args(self):
+        if len(self.arguments) != 1:
+            return False
+        return True
+    
+    def permission_level(self):
+        return 4
+    
+    def run(self):
+        if not core.state['server_control_lock'].acquire():
+            self.warning('Server access is locked. Not switching worlds.')
+            return
+        core.update_topic(special_status='Switching to {} world…'.format(self.arguments[0]))
+        if minecraft.enable world(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
+            self.reply('Server restarted.')
+        else:
+            self.reply('Something went wrong while enabling the {} world!'.format(self.arguments[0]))
+        core.update_topic(special_status=None)
+        core.state['server_control_lock'].release()
+
 class FixStatus(BaseCommand):
     """update the server status on the website and in the channel topic"""
     
