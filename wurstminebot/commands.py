@@ -579,7 +579,7 @@ class EnableWorld(BaseCommand):
             self.warning('Server access is locked. Not switching worlds.')
             return
         core.update_topic(special_status='Switching to {} world…'.format(self.arguments[0]))
-        if minecraft.enable_world(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
+        if minecraft.enable_world(self.arguments[0], reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
             self.reply('Server restarted.')
         else:
             self.reply('Something went wrong while enabling the {} world!'.format(self.arguments[0]))
