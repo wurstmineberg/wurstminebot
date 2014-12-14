@@ -11,6 +11,7 @@ import os.path
 import random
 import re
 import requests
+import socket
 import subprocess
 import threading
 from datetime import timedelta
@@ -1242,10 +1243,16 @@ class Quit(ExitingCommand):
     @handle_exceptions
     def run(self):
         quitMsg = ' '.join(self.arguments) if len(self.arguments) else None
-        minecraft.tellraw({
-            'text': ('Shutting down the bot: ' + quitMsg) if quitMsg else 'Shutting down the bot...',
-            'color': 'red'
-        })
+        try:
+            minecraft.tellraw({
+                'text': ('Shutting down the bot: ' + quitMsg) if quitMsg else 'Shutting down the bot...',
+                'color': 'red'
+            })
+        except socket.error:
+            self.warning('{} while announcing shutdown in-game: {}'.format(e.__class__.__name__, e))
+            core.debug_print('Exception in {} command from {} to {}:'.format(self.name, self.sender, self.channel or self.context))
+            if core.config('debug', False):
+                traceback.print_exc(file=sys.stdout)
         irc_config = core.config('irc')
         if 'main_channel' in irc_config:
             core.state['bot'].say(irc_config['main_channel'], ('bye, ' + quitMsg) if quitMsg else random.choice(irc_config.get('quit_messages', ['bye'])))
