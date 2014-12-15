@@ -512,7 +512,7 @@ def update_topic(force=None, special_status=object()):
     if usc_config.get('nextDate') is not None:
         next_usc = datetime.strptime(usc_config['nextDate'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
         next_usc_local = next_usc.astimezone(tzlocal.get_localzone())
-        topic_parts.append('{0} on {1:%Y-%m-%d} at {1:%H:%M} UTC{2}'.format('Next USC' if usc_config.get('completedSeasons', usc_config) is None else 'USC {}'.format(usc_config['completedSeasons'] + 1), next_usc, '' if next_usc_local.replace(tzinfo=None) == next_usc.replace(tzinfo=None) else ' ({}{:%H:%M} local time)'.format('' if next_usc_local.date == next_usc.date else '{:%Y-%m-%d} '.format(next_usc_local), next_usc_local)))
+        topic_parts.append('{0} on {1:%Y-%m-%d} at {1:%H:%M} UTC{2}'.format('Next USC' if usc_config.get('completedSeasons', usc_config) is None else 'USC {}'.format(usc_config['completedSeasons'] + 1), next_usc, '' if next_usc_local.replace(tzinfo=None) == next_usc.replace(tzinfo=None) else ' ({}{:%H:%M} local time)'.format('' if next_usc_local.date() == next_usc.date() else '{:%Y-%m-%d} '.format(next_usc_local), next_usc_local)))
     elif usc_config.get('nextPoll') is not None:
         if usc_config.get('completedSeasons', usc_config) is None:
             topic_parts.append('Poll for next USC: {}'.format(usc_config['nextPoll']))
