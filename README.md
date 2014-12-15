@@ -13,6 +13,7 @@ Requirements
 *   [loops](https://gitlab.com/fenhl/python-loops) 1.2
 *   [minecraft-api](https://github.com/wurstmineberg/minecraft-api) 1.1 (required for Cloud command only)
 *   [requests](http://www.python-requests.org/) 2.1
+*   [tzlocal](https://pypi.python.org/pypi/tzlocal) 1.1
 
 Configuration
 =============

@@ -6,3 +6,4 @@ docopt>=0.6.1
 -e git://github.com/wurstmineberg/init-minecraft.git#egg=minecraft
 python-daemon>=1.5.5
 requests>=2.1.0
+tzlocal>=1.1.2
