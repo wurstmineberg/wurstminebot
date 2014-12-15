@@ -1589,20 +1589,23 @@ class UltraSoftcore(BaseCommand):
     def parse_args(self):
         subcommand = self.arguments[0].lower() if len(self.arguments) else self.default_subcommand()
         if subcommand == 'prepare':
-            if len(self.arguments) <= 1:
-                return True
-            elif len(self.arguments) == 2:
-                usc_date = date.today().strftime('%Y-%m-%d')
-                usc_time = self.arguments[1]
+            try:
+                if len(self.arguments) <= 1:
+                    return True
+                elif len(self.arguments) == 2:
+                    usc_date = date.today().strftime('%Y-%m-%d')
+                    usc_time = self.arguments[1]
+                    if datetime.strptime(usc_date + ' ' + usc_time, '%Y-%m-%d %H:%M:%S') < datetime.utcnow():
+                        usc_date = (date.today() + timedelta(days=1)).strftime('%Y-%m-%d')
+                elif len(self.arguments) == 3:
+                    usc_date = self.arguments[1]
+                    usc_time = self.arguments[2]
+                else:
+                    return False
                 if datetime.strptime(usc_date + ' ' + usc_time, '%Y-%m-%d %H:%M:%S') < datetime.utcnow():
-                    usc_date = (date.today() + timedelta(days=1)).strftime('%Y-%m-%d')
-            elif len(self.arguments) == 3:
-                usc_date = self.arguments[1]
-                usc_time = self.arguments[2]
-            else:
-                return False
-            if datetime.strptime(usc_date + ' ' + usc_time, '%Y-%m-%d %H:%M:%S') < datetime.utcnow():
-                return 'the announced date and time is in the past'
+                    return 'the announced date and time is in the past'
+            except ValueError:
+                return 'Invalid date/time. Please use the format “YYYY-MM-DD HH:MM:SS” or “HH:MM:SS”.'
         elif subcommand == 'restart':
             if len(self.arguments) <= 1:
                 return True
