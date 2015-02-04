@@ -86,7 +86,7 @@ def minecraft_nicks(include_ids=False):
 def minecraft_uuids(include_wurstmineberg_ids=False):
     for person in config():
         if 'minecraftUUID' in person:
-            yield (person['id'], uuid.UUID(person['minecraftUUID'])) if include_ids else uuid.UUID(person['minecraftUUID'])
+            yield (person['id'], uuid.UUID(person['minecraftUUID'])) if include_wurstmineberg_ids else uuid.UUID(person['minecraftUUID'])
 
 def other_nicks(mode='all', include_ids=False):
     for person in config():
