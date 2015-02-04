@@ -1,7 +1,10 @@
 import sys
 
+import datetime
 import json
 import re
+import requests
+import uuid
 import wurstminebot.core
 
 CONFIG_FILE = '/opt/wurstmineberg/config/people.json'
@@ -79,6 +82,11 @@ def minecraft_nicks(include_ids=False):
     for person in config():
         if 'minecraft' in person:
             yield (person['id'], person['minecraft']) if include_ids else person['minecraft']
+
+def minecraft_uuids(include_wurstmineberg_ids=False):
+    for person in config():
+        if 'minecraftUUID' in person:
+            yield (person['id'], uuid.UUID(person['minecraftUUID'])) if include_ids else uuid.UUID(person['minecraftUUID'])
 
 def other_nicks(mode='all', include_ids=False):
     for person in config():
@@ -202,39 +210,62 @@ class Person(BasePerson):
                 self.id = self.id.lower()
             config(self.id) # raises PersonNotFoundError if the id is invalid
         elif context == 'irc':
-            for id, irc_nick in irc_nicks(mode='all', include_ids=True):
+            for wurstmineberg_id, irc_nick in irc_nicks(mode='all', include_ids=True):
                 if irc_nick.lower() == id_or_nick.lower():
-                    self.id = id
-                    break
+                    self.id = wurstmineberg_id
+                    return
             else:
                 raise PersonNotFoundError('person with IRC nick ' + str(id_or_nick) + ' not found')
         elif context == 'minecraft':
-            for id, minecraft_nick in minecraft_nicks(include_ids=True):
+            try:
+                uuid = uuid.UUID(id_or_nick)
+            except ValueError:
+                if id_or_nick in core.state['minecraft_username_cache'] and core.state['minecraft_username_cache'][id_or_nick]['timestamp'] + datetime.timedelta(minutes=10) > datetime.datetime.utcnow(): # UUID is cached
+                    uuid = core.state['minecraft_username_cache'][id_or_nick]['uuid']
+                else:
+                    response = requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(id_or_nick))
+                    if response.status_code == 204:
+                        uuid = None
+                    else:
+                        uuid = uuid.UUID(response.json()['id'])
+                        id_or_nick = response.json()['name'] # case-corrected username
+                        core.state['minecraft_username_cache'][id_or_nick] = {
+                            'timestamp': datetime.datetime.utcnow(),
+                            'uuid': uuid
+                        }
+            if uuid is not None:
+                for wurstmineberg_id, iter_uuid in minecraft_uuids(include_wurstmineberg_ids=True):
+                    if uuid == iter_uuid:
+                        self.id = wurstmineberg_id
+                        self.minecraft = id_or_nick
+                        return
+            for wurstmineberg_id, minecraft_nick in minecraft_nicks(include_ids=True):
                 if minecraft_nick.lower() == id_or_nick.lower():
-                    self.id = id
-                    break
+                    self.id = wurstmineberg_id
+                    return
+            
             else:
-                raise PersonNotFoundError()
+                raise PersonNotFoundError('person with Minecraft username or UUID {!r} not found'.format(id_or_nick))
         elif context == 'reddit':
-            for id, reddit_nick in reddit_nicks(include_ids=True, format='plain'):
+            for wurstmineberg_id, reddit_nick in reddit_nicks(include_ids=True, format='plain'):
                 if id_or_nick.startswith('/u/'):
                     id_or_nick = id_or_nick[len('/u/'):]
                 if reddit_nick.lower() == id_or_nick.lower():
-                    self.id = id
-                    break
+                    self.id = wurstmineberg_id
+                    return
             else:
-                raise PersonNotFoundError('person with reddit nick ' + str(id_or_nick) + ' not found')
+                raise PersonNotFoundError('person with reddit nick {!r} not found'.format(id_or_nick))
         elif context == 'twitter':
-            for id, twitter_nick in twitter_nicks(include_ids=True, twitter_at_prefix=False):
+            for wurstmineberg_id, twitter_nick in twitter_nicks(include_ids=True, twitter_at_prefix=False):
                 if id_or_nick.startswith('@'):
                     id_or_nick = id_or_nick[len('@'):]
                 if twitter_nick.lower() == id_or_nick.lower():
-                    self.id = id
-                    break
+                    self.id = wurstmineberg_id
+                    return
             else:
-                raise PersonNotFoundError('person with twitter nick ' + str(id_or_nick) + ' not found')
+                raise PersonNotFoundError('person with twitter nick {!r} not found'.format(id_or_nick))
         else:
-            raise ValueError('unknown context: ' + str(context))
+            raise ValueError('no such nicksub context: {!r}'.format(context))
     
     @property
     def description(self):

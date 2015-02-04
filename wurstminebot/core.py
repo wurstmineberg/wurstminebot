@@ -560,6 +560,7 @@ state = {
     'is_daemon': False,
     'last_death': '',
     'log_lock': threading.Lock(),
+    'minecraft_username_cache': {},
     'online_players': [],
     'server_control_lock': threading.Lock(),
     'special_status': None,
