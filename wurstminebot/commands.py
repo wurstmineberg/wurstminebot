@@ -1484,17 +1484,18 @@ class Stop(ExitingCommand):
             # stop the bot
             Quit(args=self.arguments, sender=self.sender, context=self.context, channel=self.channel, addressing=self.addressing).run()
             self.exits = True
-        # stop the Minecraft server
-        self.exits = False
-        if not core.state['server_control_lock'].acquire():
-            self.warning('Server access is locked. Not stopping server.')
-            return
-        core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
-        if minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
-            self.reply('Server stopped.')
         else:
-            self.warning('The server could not be stopped! D:')
-        core.state['server_control_lock'].release()
+            # stop the Minecraft server
+            self.exits = False
+            if not core.state['server_control_lock'].acquire():
+                self.warning('Server access is locked. Not stopping server.')
+                return
+            core.update_topic(special_status='The server is down for now. Blame ' + self.sender.irc_nick(respect_highlight_option=False) + '.')
+            if minecraft.stop(reply=self.reply, log_path=os.path.join(core.config('paths')['logs'], 'logins.log')):
+                self.reply('Server stopped.')
+            else:
+                self.warning('The server could not be stopped! D:')
+            core.state['server_control_lock'].release()
 
 class Time(BaseCommand):
     """reply with the current time"""
