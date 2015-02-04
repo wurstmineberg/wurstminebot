@@ -218,24 +218,24 @@ class Person(BasePerson):
                 raise PersonNotFoundError('person with IRC nick ' + str(id_or_nick) + ' not found')
         elif context == 'minecraft':
             try:
-                uuid = uuid.UUID(id_or_nick)
+                minecraft_uuid = uuid.UUID(id_or_nick)
             except ValueError:
                 if id_or_nick in core.state['minecraft_username_cache'] and core.state['minecraft_username_cache'][id_or_nick]['timestamp'] + datetime.timedelta(minutes=10) > datetime.datetime.utcnow(): # UUID is cached
-                    uuid = core.state['minecraft_username_cache'][id_or_nick]['uuid']
+                    minecraft_uuid = core.state['minecraft_username_cache'][id_or_nick]['uuid']
                 else:
                     response = requests.get('https://api.mojang.com/users/profiles/minecraft/{}'.format(id_or_nick))
                     if response.status_code == 204:
-                        uuid = None
+                        minecraft_uuid = None
                     else:
-                        uuid = uuid.UUID(response.json()['id'])
+                        minecraft_uuid = uuid.UUID(response.json()['id'])
                         id_or_nick = response.json()['name'] # case-corrected username
                         core.state['minecraft_username_cache'][id_or_nick] = {
                             'timestamp': datetime.datetime.utcnow(),
-                            'uuid': uuid
+                            'uuid': minecraft_uuid
                         }
-            if uuid is not None:
+            if minecraft_uuid is not None:
                 for wurstmineberg_id, iter_uuid in minecraft_uuids(include_wurstmineberg_ids=True):
-                    if uuid == iter_uuid:
+                    if minecraft_uuid == iter_uuid:
                         self.id = wurstmineberg_id
                         self.minecraft = id_or_nick
                         return
