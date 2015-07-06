@@ -2,8 +2,8 @@
 
 ### BEGIN INIT INFO
 # Provides:          wurstminebot
-# Required-Start:    $remote_fs $network
-# Required-Stop:     $remote_fs $network
+# Required-Start:    $remote_fs $network minecraft
+# Required-Stop:     $remote_fs $network minecraft
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: starts the wurstminebot Minecraft/IRC bot
