@@ -1,3 +1,5 @@
+**Maintenance notice:** This was our IRC bot. We have since moved to Slack and then Discord. See [wurstminebot-discord](https://github.com/wurstmineberg/wurstminebot-discord) for our current Discord bot.
+
 **wurstminebot** is an IRC bot for Minecraft. It was written for [Wurstmineberg](http://wurstmineberg.de/) and may require some tweaking to run on your server.
 
 This is `wurstminebot` version 3.11.1 ([semver](http://semver.org/)). The versioned API includes the usage patterns of [`__main__.py`](wurstminebot/__main__.py), as found in the docstring, as well as the commands, as explained in the `help` command.
